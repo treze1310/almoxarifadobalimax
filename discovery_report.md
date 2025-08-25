@@ -41,3 +41,40 @@ tests
 ✓ Frontend SPA detected
 
 ## 7. FRAMEWORKS DETECTADOS:
+
+## 8. ANÁLISE DE ARQUIVOS POR EXTENSÃO:
+    142 tsx
+     39 ts
+      9 json
+      8 js
+      5 sql
+      5 png
+      5 md
+      3 html
+      3 css
+      2 xml
+      2 svg
+      2 jpg
+      2 ico
+      1 yaml
+      1 xlsx
+      1 txt
+      1 prettierrc
+      1 prettierignore
+      1 pdf
+      1 npmrc
+
+## 9. TECNOLOGIA DESCOBERTA PELO package.json:
+- React 19.1.1 (Frontend Framework)
+- Vite (Build Tool)
+- TypeScript 5.8.3 (Language)
+- Tailwind CSS (Styling)
+- Supabase (Backend/Database)
+- Radix UI (Component Library)
+
+## 10. ARQUIVOS DE MIGRAÇÃO ENCONTRADOS:
+total 8
+drwxrwxrwx 1 safetec safetec 4096 Aug 11 15:44 .
+drwxrwxrwx 1 safetec safetec 4096 Aug 25 10:05 ..
+-rwxrwxrwx 1 safetec safetec 3656 Aug 11 13:52 001_create_users_and_profiles.sql
+-rwxrwxrwx 1 safetec safetec 2798 Aug 12 11:07 002_update_material_equipamento_form.sql

@@ -235,60 +235,71 @@ const MateriaisEquipamentosPage = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Materiais e Equipamentos</h1>
+      {/* 📱 Header responsivo */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
+        <h1 className="text-xl md:text-2xl font-bold">Materiais e Equipamentos</h1>
         <PermissionGuard permission="materiais_create">
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="w-full sm:w-auto">
             <PlusCircle className="mr-2 h-4 w-4" />
-            Novo Item
+            <span className="hidden sm:inline">Novo Item</span>
+            <span className="sm:hidden">Adicionar</span>
           </Button>
         </PermissionGuard>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+      {/* 📱 Filtros responsivos */}
+      <div className="space-y-3">
+        {/* 📱 Busca */}
+        <div className="relative">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por código, nome ou categoria..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8"
+            className="pl-10 w-full"
           />
         </div>
-        <div className="flex items-center space-x-2">
-          <input
-            type="checkbox"
-            id="showInactive"
-            checked={showInactive}
-            onChange={(e) => setShowInactive(e.target.checked)}
-            className="rounded"
-          />
-          <label htmlFor="showInactive" className="text-sm text-muted-foreground cursor-pointer">
-            Mostrar inativos
-          </label>
+        
+        {/* 📱 Checkboxes e contador */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-4">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="showInactive"
+                checked={showInactive}
+                onChange={(e) => setShowInactive(e.target.checked)}
+                className="rounded"
+              />
+              <label htmlFor="showInactive" className="text-sm text-muted-foreground cursor-pointer">
+                Mostrar inativos
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="filtroCalibracaoVencida"
+                checked={filtroCalibracaoVencida}
+                onChange={(e) => setFiltroCalibracaoVencida(e.target.checked)}
+                className="rounded"
+              />
+              <label htmlFor="filtroCalibracaoVencida" className="text-sm text-muted-foreground cursor-pointer">
+                <span className="flex items-center gap-1">
+                  🔴 <span className="hidden sm:inline">Calibração vencida/próxima</span>
+                  <span className="sm:hidden">Vencidas</span>
+                  {equipamentosComProblemasCalibração > 0 && (
+                    <Badge variant="destructive" className="text-xs px-1 py-0 h-4">
+                      {equipamentosComProblemasCalibração}
+                    </Badge>
+                  )}
+                </span>
+              </label>
+            </div>
+          </div>
+          <Badge variant="secondary" className="self-start sm:self-auto">
+            {filteredMateriais.length} item{filteredMateriais.length !== 1 ? 's' : ''}
+          </Badge>
         </div>
-        <div className="flex items-center space-x-2">
-          <input
-            type="checkbox"
-            id="filtroCalibracaoVencida"
-            checked={filtroCalibracaoVencida}
-            onChange={(e) => setFiltroCalibracaoVencida(e.target.checked)}
-            className="rounded"
-          />
-          <label htmlFor="filtroCalibracaoVencida" className="text-sm text-muted-foreground cursor-pointer">
-            <span className="flex items-center gap-1">
-              🔴 Calibração vencida/próxima
-              {equipamentosComProblemasCalibração > 0 && (
-                <Badge variant="destructive" className="text-xs px-1 py-0 h-4">
-                  {equipamentosComProblemasCalibração}
-                </Badge>
-              )}
-            </span>
-          </label>
-        </div>
-        <Badge variant="secondary">
-          {filteredMateriais.length} item{filteredMateriais.length !== 1 ? 's' : ''}
-        </Badge>
       </div>
 
       <div className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
@@ -296,7 +307,156 @@ const MateriaisEquipamentosPage = () => {
         Clique para editar ou clique com o botão direito para mais opções
       </div>
 
-      <div className="border rounded-md">
+      {/* 📱 MOBILE: Cards layout */}
+      <div className="lg:hidden space-y-3">
+        {filteredMateriais.length > 0 ? (
+          filteredMateriais.map((material) => (
+            <ContextMenu key={material.id}>
+              <ContextMenuTrigger asChild>
+                <div 
+                  className={`border rounded-lg p-4 space-y-3 ${
+                    hasPermission('materiais_edit') 
+                      ? "cursor-pointer hover:bg-muted/50 transition-colors" 
+                      : ""
+                  }`}
+                  onClick={hasPermission('materiais_edit') ? () => setEditingMaterial(material) : undefined}
+                >
+                  {/* 📱 Header do card */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-2 min-w-0 flex-1">
+                      {material.tipo === 'equipamento' ? (
+                        <Wrench className="h-4 w-4 text-muted-foreground shrink-0" />
+                      ) : (
+                        <Package className="h-4 w-4 text-muted-foreground shrink-0" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="font-medium text-sm">{material.codigo}</span>
+                          <Badge variant="outline" className="text-xs px-1 py-0 h-4 shrink-0">
+                            {material.tipo}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground truncate">{material.nome}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 shrink-0">
+                      <Badge variant={getStatusVariant(material.status)} className="text-xs">
+                        {getStatusLabel(material.status)}
+                      </Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-6 w-6">
+                            <MoreHorizontal className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setEditingMaterial(material)}>
+                            <Edit className="mr-2 h-3 w-3" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setMovimentacaoMaterial(material)}>
+                            <Package className="mr-2 h-3 w-3" />
+                            Movimentar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => setDeletingMaterial(material)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-3 w-3" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                  
+                  {/* 📱 Informações principais */}
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-muted-foreground text-xs">Categoria</span>
+                      <div className="font-medium">
+                        {material.categoria || '-'}
+                        {material.subcategoria && (
+                          <div className="text-xs text-muted-foreground">{material.subcategoria}</div>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Localização</span>
+                      <div className="font-medium">
+                        {material.localizacao?.nome || (
+                          <span className="text-muted-foreground">Não definida</span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Estoque</span>
+                      <div className="font-medium">
+                        {material.quantidade_atual || 0} {material.unidade_medida || 'UN'}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Valor</span>
+                      <div className="font-medium">
+                        {formatCurrency(material.valor_unitario)}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* 📱 Informações adicionais */}
+                  {(material.marcas?.nome || material.centros_custo) && (
+                    <div className="pt-2 border-t text-xs space-y-1">
+                      {material.marcas?.nome && (
+                        <div className="flex items-center space-x-1">
+                          <Tag className="h-3 w-3 text-muted-foreground" />
+                          <span>{material.marcas.nome}</span>
+                          {material.modelo && <span className="text-muted-foreground">• {material.modelo}</span>}
+                        </div>
+                      )}
+                      {material.centros_custo && (
+                        <div>
+                          <CentroCustoLabel
+                            materialId={material.id}
+                            centroCusto={{
+                              codigo: material.centros_custo.codigo,
+                              nome: material.centros_custo.nome,
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </ContextMenuTrigger>
+              <ContextMenuContent>
+                <ContextMenuItem onClick={() => setEditingMaterial(material)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Editar
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => setMovimentacaoMaterial(material)}>
+                  <Package className="mr-2 h-4 w-4" />
+                  Movimentar Estoque
+                </ContextMenuItem>
+                <ContextMenuItem 
+                  onClick={() => setDeletingMaterial(material)}
+                  className="text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Excluir
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
+          ))
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <Package className="mx-auto h-12 w-12 mb-4 opacity-50" />
+            <p>Nenhum material encontrado</p>
+          </div>
+        )}
+      </div>
+
+      {/* 📱 DESKTOP: Table layout */}
+      <div className="hidden lg:block border rounded-md overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

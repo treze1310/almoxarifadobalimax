@@ -36,7 +36,8 @@
       "Bash(git add:*)",
       "Bash(git config:*)",
       "Bash(git push:*)",
-      "Read(//mnt/c/Users/Safetec/Documents/Projetos/CURSOR-PROJECTS/**)"
+      "Read(//mnt/c/Users/Safetec/Documents/Projetos/CURSOR-PROJECTS/**)",
+      "Bash(npm run test:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
