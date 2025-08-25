@@ -32,7 +32,7 @@ const SolicitacaoPrintPage = () => {
   useEffect(() => {
     const fetchCompany = async () => {
       try {
-        const companyData = await companyService.getActiveCompany(query)
+        const companyData = await companyService.getActiveCompany()
         setCompany(companyData)
       } catch (error) {
         console.error('Erro ao buscar dados da empresa:', error)

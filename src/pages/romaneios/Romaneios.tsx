@@ -185,7 +185,7 @@ const RomaneiosPage = () => {
       console.log('🔄 Iniciando geração de PDF para romaneio:', selectedRomaneio.numero)
       
       // Buscar dados da empresa com retry robusto
-      const company = await companyService.getActiveCompany(query)
+      const company = await companyService.getActiveCompany()
       
       if (!company) {
         throw new Error('Não foi possível carregar os dados da empresa')
