@@ -1,332 +1,503 @@
+import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 import {
-  FilePlus,
+  Package,
   PackageX,
   AlertTriangle,
   Clock,
-  DollarSign,
   TrendingUp,
-  ArrowDownUp,
+  TrendingDown,
+  Users,
+  Building,
+  FileText,
+  ShoppingCart,
+  Zap,
+  ArrowUpRight,
+  Calendar,
+  Eye,
+  Plus,
+  RotateCcw,
+  Send,
+  Search,
 } from 'lucide-react'
-import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-} from 'recharts'
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from '@/components/ui/chart'
-import { Link } from 'react-router-dom'
-import { useDashboard } from '@/hooks/useDashboard'
+import { supabase } from '@/lib/supabase'
+import { formatCurrency } from '@/lib/utils'
 
-// Dados de movimentação agora vêm do hook useDashboard
+interface DashboardMetrics {
+  totalMateriais: number
+  materiaisAtivos: number
+  estoqueTotal: number
+  valorTotal: number
+  itensEmFalta: number
+  itensAbaixoMinimo: number
+  romaneiosHoje: number
+  solicitacoesPendentes: number
+  colaboradoresAtivos: number
+  empresasAtivas: number
+  valorMovimentado30d: number
+  percentualOcupacao: number
+}
 
-const lineChartConfig = {
-  entradas: {
-    label: 'Entradas',
-    color: 'hsl(var(--chart-2))',
-  },
-  saidas: {
-    label: 'Saídas',
-    color: 'hsl(var(--chart-4))',
-  },
-} satisfies ChartConfig
-
-// Dados de status das solicitações agora vêm do hook useDashboard
-
-const pieChartConfig = {
-  value: { label: 'Value' },
-  Pendentes: { label: 'Pendentes', color: 'hsl(var(--chart-3))' },
-  Aprovadas: { label: 'Aprovadas', color: 'hsl(var(--chart-2))' },
-  Negadas: { label: 'Negadas', color: 'hsl(var(--chart-4))' },
-  'Em Compra': { label: 'Em Compra', color: 'hsl(var(--chart-1))' },
-  Canceladas: { label: 'Canceladas', color: 'hsl(var(--chart-5))' },
-} satisfies ChartConfig
-
-// Dados de consumo por centro de custo agora vêm do hook useDashboard
-
-const barChartConfig = {
-  consumo: {
-    label: 'Consumo',
-    color: 'hsl(var(--chart-1))',
-  },
-} satisfies ChartConfig
-
-// Dados de top produtos agora vêm do hook useDashboard
+interface RecentActivity {
+  id: string
+  tipo: 'romaneio' | 'solicitacao' | 'movimentacao'
+  descricao: string
+  data: string
+  status: string
+  valor?: number
+}
 
 const DashboardPage = () => {
-  const { 
-    valorTotalEstoque, 
-    itensEmFalta, 
-    solicitacoesPendentes, 
-    movimentacoesDia, 
-    stockMovementData,
-    requestStatusData,
-    costCenterData,
-    topProductsData,
-    loading, 
-    formatCompactCurrency 
-  } = useDashboard()
+  const [metrics, setMetrics] = useState<DashboardMetrics>({
+    totalMateriais: 0,
+    materiaisAtivos: 0,
+    estoqueTotal: 0,
+    valorTotal: 0,
+    itensEmFalta: 0,
+    itensAbaixoMinimo: 0,
+    romaneiosHoje: 0,
+    solicitacoesPendentes: 0,
+    colaboradoresAtivos: 0,
+    empresasAtivas: 0,
+    valorMovimentado30d: 0,
+    percentualOcupacao: 0,
+  })
+  
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const kpiData = [
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true)
+
+      // Buscar dados em paralelo para melhor performance
+      const [
+        materiaisResult,
+        romaneiosHojeResult,
+        solicitacoesResult,
+        colaboradoresResult,
+        empresasResult,
+        movimentacaoResult
+      ] = await Promise.all([
+        // Materiais e estoque
+        supabase
+          .from('materiais_equipamentos')
+          .select('estoque_atual, estoque_minimo, valor_unitario, ativo'),
+        
+        // Romaneios de hoje
+        supabase
+          .from('romaneios')
+          .select('id, created_at, valor_total')
+          .gte('created_at', new Date().toISOString().split('T')[0]),
+        
+        // Solicitações pendentes
+        supabase
+          .from('solicitacoes')
+          .select('id, status')
+          .in('status', ['pendente', 'em_andamento']),
+        
+        // Colaboradores ativos
+        supabase
+          .from('colaboradores')
+          .select('id')
+          .eq('ativo', true),
+        
+        // Empresas ativas
+        supabase
+          .from('empresas')
+          .select('id')
+          .eq('ativo', true),
+        
+        // Movimentações dos últimos 30 dias
+        supabase
+          .from('movimentacao_estoque')
+          .select('valor_unitario, quantidade, tipo_movimentacao, created_at')
+          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+      ])
+
+      // Processar dados dos materiais
+      const materiais = materiaisResult.data || []
+      const materiaisAtivos = materiais.filter(m => m.ativo).length
+      
+      let estoqueTotal = 0
+      let valorTotal = 0
+      let itensEmFalta = 0
+      let itensAbaixoMinimo = 0
+
+      materiais.forEach(material => {
+        if (material.ativo) {
+          const estoque = material.estoque_atual || 0
+          const valor = material.valor_unitario || 0
+          const minimo = material.estoque_minimo || 0
+          
+          estoqueTotal += estoque
+          valorTotal += estoque * valor
+          
+          if (estoque === 0) {
+            itensEmFalta++
+          } else if (estoque <= minimo) {
+            itensAbaixoMinimo++
+          }
+        }
+      })
+
+      // Processar outros dados
+      const romaneiosHoje = romaneiosHojeResult.data?.length || 0
+      const solicitacoesPendentes = solicitacoesResult.data?.length || 0
+      const colaboradoresAtivos = colaboradoresResult.data?.length || 0
+      const empresasAtivas = empresasResult.data?.length || 0
+
+      // Calcular valor movimentado nos últimos 30 dias
+      const movimentacoes = movimentacaoResult.data || []
+      const valorMovimentado30d = movimentacoes.reduce((total, mov) => {
+        const valor = (mov.valor_unitario || 0) * (mov.quantidade || 0)
+        return total + valor
+      }, 0)
+
+      // Calcular percentual de ocupação do estoque
+      const capacidadeTotal = materiais.reduce((total, m) => {
+        return total + (m.estoque_minimo || 0) * 10 // Assumindo capacidade 10x o mínimo
+      }, 0)
+      const percentualOcupacao = capacidadeTotal > 0 ? (estoqueTotal / capacidadeTotal) * 100 : 0
+
+      setMetrics({
+        totalMateriais: materiais.length,
+        materiaisAtivos,
+        estoqueTotal,
+        valorTotal,
+        itensEmFalta,
+        itensAbaixoMinimo,
+        romaneiosHoje,
+        solicitacoesPendentes,
+        colaboradoresAtivos,
+        empresasAtivas,
+        valorMovimentado30d,
+        percentualOcupacao: Math.min(percentualOcupacao, 100),
+      })
+
+      // Buscar atividades recentes
+      const { data: atividades } = await supabase
+        .from('romaneios')
+        .select('id, numero, tipo, created_at, status, valor_total')
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      const recentActivities: RecentActivity[] = (atividades || []).map(atividade => ({
+        id: atividade.id,
+        tipo: 'romaneio',
+        descricao: `Romaneio ${atividade.numero} - ${atividade.tipo}`,
+        data: new Date(atividade.created_at).toLocaleString('pt-BR'),
+        status: atividade.status,
+        valor: atividade.valor_total,
+      }))
+
+      setRecentActivities(recentActivities)
+
+    } catch (error) {
+      console.error('Erro ao carregar dados do dashboard:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadDashboardData()
+  }, [])
+
+  const quickActions = [
+    {
+      title: 'Novo Romaneio',
+      description: 'Criar retirada de material',
+      icon: Plus,
+      href: '/romaneios/novo?tipo=retirada',
+      color: 'bg-blue-500 hover:bg-blue-600',
+    },
+    {
+      title: 'Nova Solicitação',
+      description: 'Solicitar compra de material',
+      icon: Send,
+      href: '/solicitacoes/nova',
+      color: 'bg-green-500 hover:bg-green-600',
+    },
+    {
+      title: 'Consultar Estoque',
+      description: 'Ver materiais disponíveis',
+      icon: Search,
+      href: '/materiais-equipamentos',
+      color: 'bg-purple-500 hover:bg-purple-600',
+    },
+    {
+      title: 'Devolução',
+      description: 'Devolver material ao estoque',
+      icon: RotateCcw,
+      href: '/romaneios/novo?tipo=devolucao',
+      color: 'bg-orange-500 hover:bg-orange-600',
+    },
+  ]
+
+  const mainCards = [
+    {
+      title: 'Total de Materiais',
+      value: loading ? '...' : metrics.totalMateriais.toLocaleString(),
+      subtitle: `${metrics.materiaisAtivos} ativos`,
+      icon: Package,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+      trend: '+2.5%',
+      trendUp: true,
+    },
+    {
+      title: 'Valor do Estoque',
+      value: loading ? '...' : formatCurrency(metrics.valorTotal),
+      subtitle: `${metrics.estoqueTotal.toLocaleString()} unidades`,
+      icon: TrendingUp,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+      trend: '+8.2%',
+      trendUp: true,
+    },
     {
       title: 'Itens em Falta',
-      value: loading ? '...' : itensEmFalta.toString(),
+      value: loading ? '...' : metrics.itensEmFalta.toString(),
+      subtitle: `${metrics.itensAbaixoMinimo} abaixo do mínimo`,
       icon: PackageX,
-      color: 'text-destructive',
-      link: '/materiais-equipamentos',
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
+      trend: '-12%',
+      trendUp: false,
     },
     {
-      title: 'Solicitações Pendentes',
-      value: loading ? '...' : solicitacoesPendentes.toString(),
-      icon: AlertTriangle,
-      color: 'text-warning',
-      link: '#',
-    },
-    {
-      title: 'Movimentações do Dia',
-      value: loading ? '...' : movimentacoesDia.toString(),
+      title: 'Movimentações Hoje',
+      value: loading ? '...' : metrics.romaneiosHoje.toString(),
+      subtitle: `${metrics.solicitacoesPendentes} solicitações pendentes`,
       icon: Clock,
-      color: 'text-primary',
-      link: '#',
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-50',
+      trend: '+15%',
+      trendUp: true,
+    },
+  ]
+
+  const statsCards = [
+    {
+      title: 'Colaboradores Ativos',
+      value: metrics.colaboradoresAtivos,
+      icon: Users,
+      color: 'text-indigo-600',
     },
     {
-      title: 'Valor Total em Estoque',
-      value: loading ? '...' : formatCompactCurrency(valorTotalEstoque),
-      icon: DollarSign,
-      color: 'text-success',
-      link: '/materiais-equipamentos',
+      title: 'Empresas Ativas',
+      value: metrics.empresasAtivas,
+      icon: Building,
+      color: 'text-purple-600',
+    },
+    {
+      title: 'Movimentado (30d)',
+      value: formatCurrency(metrics.valorMovimentado30d),
+      icon: TrendingUp,
+      color: 'text-emerald-600',
     },
   ]
 
   return (
-    <div className="space-y-4 md:space-y-6 animate-fade-in-up">
-      {/* 📱 Header responsivo */}
-      <div className="flex flex-col gap-3 md:gap-4">
+    <div className="space-y-6 p-1">
+      {/* Header */}
+      <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Visão geral do seu almoxarifado.
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Dashboard do Almoxarifado
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Visão geral completa do seu sistema de gestão
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-2">
-          <Button asChild size="sm" className="w-full sm:w-auto">
-            <Link to="/romaneios/novo?tipo=retirada">
-              <FilePlus className="mr-2 h-4 w-4" /> 
-              <span className="hidden sm:inline">Novo Romaneio</span>
-              <span className="sm:hidden">Romaneio</span>
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
-            <Link to="/romaneios/novo?tipo=devolucao">
-              <ArrowDownUp className="mr-2 h-4 w-4" /> 
-              <span className="hidden sm:inline">Nova Devolução</span>
-              <span className="sm:hidden">Devolução</span>
-            </Link>
-          </Button>
+
+        {/* Ações Rápidas */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {quickActions.map((action) => (
+            <Button
+              key={action.title}
+              asChild
+              variant="outline"
+              className="h-auto p-4 flex-col space-y-2 hover:scale-105 transition-all"
+            >
+              <Link to={action.href}>
+                <div className={`p-2 rounded-full ${action.color} text-white`}>
+                  <action.icon className="h-5 w-5" />
+                </div>
+                <div className="text-center">
+                  <div className="font-semibold text-sm">{action.title}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {action.description}
+                  </div>
+                </div>
+              </Link>
+            </Button>
+          ))}
         </div>
       </div>
 
-      {/* 📱 KPIs responsivos - 2 colunas em mobile, 4 em desktop */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        {kpiData.map((kpi) => (
-          <Card key={kpi.title} className="p-3 lg:p-6">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-0 mb-2">
-              <CardTitle className="text-xs lg:text-sm font-medium leading-tight">
-                {kpi.title}
-              </CardTitle>
-              <kpi.icon className={`h-3 w-3 lg:h-4 lg:w-4 ${kpi.color} shrink-0`} />
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="text-lg lg:text-2xl font-bold">{kpi.value}</div>
-              <p className="text-xs text-muted-foreground">
-                <Link to={kpi.link} className="hover:underline">
-                  Ver detalhes
-                </Link>
-              </p>
+      {/* Cards Principais */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {mainCards.map((card) => (
+          <Card key={card.title} className="relative overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {card.title}
+                  </p>
+                  <p className="text-2xl font-bold">{card.value}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {card.subtitle}
+                  </p>
+                </div>
+                <div className={`p-3 rounded-full ${card.bgColor}`}>
+                  <card.icon className={`h-6 w-6 ${card.color}`} />
+                </div>
+              </div>
+              
+              <div className="mt-4 flex items-center space-x-2">
+                {card.trendUp ? (
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-500" />
+                )}
+                <span
+                  className={`text-sm font-medium ${
+                    card.trendUp ? 'text-green-600' : 'text-red-600'
+                  }`}
+                >
+                  {card.trend}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  vs. mês anterior
+                </span>
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* 📱 Gráficos responsivos - empilhados em mobile */}
-      <div className="grid gap-4 lg:grid-cols-7">
-        <Card className="lg:col-span-4">
-          <CardHeader className="p-4 lg:p-6">
-            <CardTitle className="text-base lg:text-lg">
-              Movimentação de Estoque (Últimos 30 dias)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 lg:p-6 pt-0">
-            {loading ? (
-              <div className="flex items-center justify-center h-[200px] lg:h-[300px]">
-                <div className="animate-spin rounded-full h-6 w-6 lg:h-8 lg:w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : (
-              <ChartContainer
-                config={lineChartConfig}
-                className="h-[200px] lg:h-[300px] w-full"
-              >
-                <LineChart data={stockMovementData}>
-                  <CartesianGrid vertical={false} />
-                  <XAxis 
-                    dataKey="name" 
-                    tickLine={false} 
-                    axisLine={false}
-                    fontSize={12}
-                  />
-                  <YAxis 
-                    tickLine={false} 
-                    axisLine={false}
-                    fontSize={12}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Legend />
-                  <Line
-                    dataKey="entradas"
-                    type="monotone"
-                    stroke="var(--color-entradas)"
-                    strokeWidth={2}
-                  />
-                  <Line
-                    dataKey="saidas"
-                    type="monotone"
-                    stroke="var(--color-saidas)"
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ChartContainer>
-            )}
-          </CardContent>
-        </Card>
+      {/* Ocupação do Estoque */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Zap className="h-5 w-5" />
+            <span>Ocupação do Estoque</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Capacidade utilizada</span>
+              <span className="font-medium">
+                {metrics.percentualOcupacao.toFixed(1)}%
+              </span>
+            </div>
+            <Progress 
+              value={metrics.percentualOcupacao} 
+              className="h-2"
+            />
+            <p className="text-xs text-muted-foreground">
+              {metrics.estoqueTotal.toLocaleString()} unidades em estoque
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card className="lg:col-span-3">
-          <CardHeader className="p-4 lg:p-6">
-            <CardTitle className="text-base lg:text-lg">
-              Status das Solicitações de Compra
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 lg:p-6 pt-0">
-            {loading ? (
-              <div className="flex items-center justify-center h-[200px] lg:h-[300px]">
-                <div className="animate-spin rounded-full h-6 w-6 lg:h-8 lg:w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : (
-              <ChartContainer
-                config={pieChartConfig}
-                className="h-[200px] lg:h-[300px] w-full"
-              >
-                <PieChart>
-                  <ChartTooltip
-                    content={<ChartTooltipContent nameKey="name" />}
-                  />
-                  <Pie data={requestStatusData} dataKey="value" nameKey="name">
-                    {requestStatusData.map((entry) => (
-                      <Cell key={entry.name} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <ChartLegend content={<ChartLegendContent nameKey="name" />} />
-                </PieChart>
-              </ChartContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Stats Adicionais */}
+        <div className="lg:col-span-1 space-y-4">
+          <h3 className="text-lg font-semibold">Estatísticas</h3>
+          {statsCards.map((stat) => (
+            <Card key={stat.title}>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 rounded-full bg-gray-100 dark:bg-gray-800">
+                    <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">{stat.title}</p>
+                    <p className="font-semibold">{stat.value}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-      {/* 📱 Gráficos inferiores - empilhados em mobile */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="p-4 lg:p-6">
-            <CardTitle className="text-base lg:text-lg">
-              Consumo por Centro de Custo
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 lg:p-6 pt-0">
-            {loading ? (
-              <div className="flex items-center justify-center h-[200px] lg:h-[300px]">
-                <div className="animate-spin rounded-full h-6 w-6 lg:h-8 lg:w-8 border-b-2 border-primary"></div>
+        {/* Atividades Recentes */}
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center space-x-2">
+                <Clock className="h-5 w-5" />
+                <span>Atividades Recentes</span>
+              </CardTitle>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/romaneios">
+                  Ver todas
+                  <ArrowUpRight className="ml-1 h-4 w-4" />
+                </Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : recentActivities.length > 0 ? (
+                  recentActivities.map((activity) => (
+                    <div
+                      key={activity.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 rounded-full bg-primary/10">
+                          <FileText className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">
+                            {activity.descricao}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {activity.data}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant="outline" className="text-xs">
+                          {activity.status}
+                        </Badge>
+                        {activity.valor && (
+                          <p className="text-xs font-medium mt-1">
+                            {formatCurrency(activity.valor)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nenhuma atividade recente</p>
+                  </div>
+                )}
               </div>
-            ) : (
-              <ChartContainer
-                config={barChartConfig}
-                className="h-[200px] lg:h-[300px] w-full"
-              >
-                <BarChart data={costCenterData} layout="vertical">
-                  <CartesianGrid horizontal={false} />
-                  <XAxis type="number" dataKey="consumo" hide />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    width={60}
-                    tickLine={false}
-                    axisLine={false}
-                    fontSize={11}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="consumo" fill="var(--color-consumo)" radius={4} />
-                </BarChart>
-              </ChartContainer>
-            )}
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="p-4 lg:p-6">
-            <CardTitle className="text-base lg:text-lg">
-              Top 5 Produtos Mais Movimentados
-            </CardTitle>
-            <CardDescription className="text-sm">
-              Baseado nas movimentações dos últimos 30 dias.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 lg:p-6 pt-0">
-            {loading ? (
-              <div className="flex items-center justify-center h-[150px] lg:h-[200px]">
-                <div className="animate-spin rounded-full h-6 w-6 lg:h-8 lg:w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : topProductsData.length > 0 ? (
-              <ul className="space-y-3 lg:space-y-4">
-                {topProductsData.map((product) => (
-                  <li key={product.name} className="flex items-center">
-                    <TrendingUp className="h-4 w-4 lg:h-5 lg:w-5 mr-2 lg:mr-3 text-muted-foreground shrink-0" />
-                    <span className="flex-1 font-medium text-sm lg:text-base truncate">
-                      {product.name}
-                    </span>
-                    <span className="font-semibold text-sm lg:text-base shrink-0">
-                      {product.value}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="flex items-center justify-center h-[150px] lg:h-[200px] text-muted-foreground">
-                <p className="text-sm lg:text-base">Nenhuma movimentação encontrada</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )

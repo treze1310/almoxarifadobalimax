@@ -43,4 +43,33 @@ export function formatDateTime(dateString: string | null | undefined): string {
   }
 }
 
+/**
+ * Formats a number as Brazilian currency (R$ 0.000,00)
+ * @param value - Number to format
+ * @returns Formatted currency string
+ */
+export function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value)
+}
+
+/**
+ * Formats a number as compact Brazilian currency (R$ 1,2K, R$ 1,5M)
+ * @param value - Number to format
+ * @returns Formatted compact currency string
+ */
+export function formatCompactCurrency(value: number): string {
+  if (value >= 1000000) {
+    return `R$ ${(value / 1000000).toFixed(1)}M`
+  } else if (value >= 1000) {
+    return `R$ ${(value / 1000).toFixed(1)}K`
+  } else {
+    return formatCurrency(value)
+  }
+}
+
 // Add any other utility functions here
