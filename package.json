@@ -1,6 +1,6 @@
 {
-  "name": "skip-react-template",
-  "description": "A frontend React Vite TypeScript Shadcn UI template for Skip projects",
+  "name": "sistema-de-almoxarifado",
+  "description": "Sistema de gerenciamento de almoxarifado com controle de estoque, colaboradores, EPIs e fornecedores",
   "private": true,
   "version": "0.0.29",
   "type": "module",
