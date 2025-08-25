@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { UploadCloud, FileText, History } from 'lucide-react'
@@ -353,6 +353,24 @@ const ImportacaoNFePage = () => {
   
   const { loading: importLoading, importNFe } = useNFeImport()
 
+  // Efeito para auto-selecionar itens quando arquivos são processados com sucesso
+  useEffect(() => {
+    files.forEach(file => {
+      if (file.status === 'success' && file.data && file.data.items.length > 0) {
+        // Verificar se os itens já foram selecionados para este arquivo
+        if (!selectedItems[file.id] || selectedItems[file.id].length === 0) {
+          const itemCodes = file.data.items.map(item => item.code)
+          console.log(`🔄 Auto-selecionando ${itemCodes.length} itens para arquivo ${file.id} via useEffect`)
+          
+          setSelectedItems(prev => ({
+            ...prev,
+            [file.id]: itemCodes
+          }))
+        }
+      }
+    })
+  }, [files])
+
   const handleFileChange = (selectedFiles: FileList | null) => {
     if (!selectedFiles) return
     const newFiles = Array.from(selectedFiles)
@@ -382,36 +400,7 @@ const ImportacaoNFePage = () => {
     const result = await parseAndValidateNFe(fileToProcess.file)
     updateFileState({ ...result, progress: 100 })
     
-    // Auto-selecionar todos os itens por padrão quando o parsing for bem-sucedido
-    if (result.status === 'success' && result.data && result.data.items.length > 0) {
-      const itemCodes = result.data.items.map(item => item.code)
-      console.log(`🔄 Auto-selecionando ${itemCodes.length} itens para o arquivo ${fileToProcess.id}`)
-      console.log('📋 Códigos dos itens:', itemCodes)
-      
-      // Atualizar o estado imediatamente após o processamento
-      setSelectedItems(prev => {
-        const updated = {
-          ...prev,
-          [fileToProcess.id]: itemCodes
-        }
-        console.log('📊 Estado de seleção atualizado:', updated)
-        return updated
-      })
-      
-      // Também forçar uma segunda atualização para garantir
-      setTimeout(() => {
-        setSelectedItems(prev => {
-          if (!prev[fileToProcess.id] || prev[fileToProcess.id].length !== itemCodes.length) {
-            console.log('🔄 Forçando segunda atualização de seleção')
-            return {
-              ...prev,
-              [fileToProcess.id]: itemCodes
-            }
-          }
-          return prev
-        })
-      }, 300)
-    }
+    // A auto-seleção será feita pelo useEffect quando o arquivo for atualizado
   }
 
   const handleRemoveFile = (id: string) => {
