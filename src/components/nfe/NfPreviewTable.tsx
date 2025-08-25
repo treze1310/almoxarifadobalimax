@@ -79,7 +79,13 @@ export const NfPreviewTable = ({
 }: NfPreviewTableProps) => {
   
   const isItemSelected = (fileId: string, itemCode: string) => {
-    return selectedItems[fileId]?.includes(itemCode) || false
+    const selected = selectedItems[fileId]?.includes(itemCode) || false
+    // Log apenas para debug específico
+    if (itemCode === 'CFOP5102') { // Exemplo de código para debug
+      console.log(`🔍 Debug seleção para ${itemCode}: ${selected}`)
+      console.log(`📋 Todos os itens selecionados:`, selectedItems[fileId])
+    }
+    return selected
   }
   
   const getSelectedItemsCount = (fileId: string) => {
@@ -212,7 +218,7 @@ export const NfPreviewTable = ({
                         const isSelected = isItemSelected(uploadedFile.id, item.code)
                         return (
                           <TableRow 
-                            key={index}
+                            key={`${uploadedFile.id}-${item.code}`}
                             className={isSelected ? 'bg-muted/50' : ''}
                           >
                             {onItemSelectionChange && (

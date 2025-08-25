@@ -414,26 +414,35 @@ const ImportacaoNFePage = () => {
   }
 
   const handleItemSelectionChange = (fileId: string, itemCode: string, selected: boolean) => {
+    console.log(`🔀 Seleção individual: Arquivo ${fileId}, Item ${itemCode}, Selecionado: ${selected}`)
+    
     setSelectedItems(prev => {
       const fileItems = prev[fileId] || []
+      console.log(`📝 Itens atuais antes da mudança:`, fileItems)
       
+      let newItems
       if (selected) {
         // Adicionar item se não estiver selecionado
         if (!fileItems.includes(itemCode)) {
-          return {
-            ...prev,
-            [fileId]: [...fileItems, itemCode]
-          }
+          newItems = [...fileItems, itemCode]
+          console.log(`➕ Adicionando item ${itemCode}. Novos itens:`, newItems)
+        } else {
+          newItems = fileItems
+          console.log(`⚠️ Item ${itemCode} já estava selecionado`)
         }
       } else {
         // Remover item
-        return {
-          ...prev,
-          [fileId]: fileItems.filter(code => code !== itemCode)
-        }
+        newItems = fileItems.filter(code => code !== itemCode)
+        console.log(`➖ Removendo item ${itemCode}. Novos itens:`, newItems)
       }
       
-      return prev
+      const updated = {
+        ...prev,
+        [fileId]: newItems
+      }
+      
+      console.log(`📊 Estado completo atualizado:`, updated)
+      return updated
     })
   }
 
@@ -493,6 +502,11 @@ const ImportacaoNFePage = () => {
       const fileNames = filesToImport.map(f => f.file.name)
       
       console.log(`🔄 Importando ${nfeDataArray.length} NFe(s) com itens selecionados`)
+      console.log(`📊 Detalhes dos itens por NFe:`)
+      nfeDataArray.forEach((nfe, index) => {
+        console.log(`   NFe ${index + 1}: ${nfe.items.length} itens`)
+        console.log(`   Códigos: ${nfe.items.map(item => item.code).join(', ')}`)
+      })
       
       const results = await importNFe(nfeDataArray, fileNames)
       
