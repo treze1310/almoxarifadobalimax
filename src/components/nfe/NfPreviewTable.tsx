@@ -90,13 +90,13 @@ export const NfPreviewTable = ({
   
   const getSelectedItemsCount = (fileId: string) => {
     const count = selectedItems[fileId]?.length || 0
-    console.log(`📊 Contando itens selecionados para arquivo ${fileId}: ${count}`)
+    // console.log(`📊 Contando itens selecionados para arquivo ${fileId}: ${count}`)
     return count
   }
   
   const getTotalItemsCount = (file: UploadedNFeFile) => {
     const total = file.data?.items.length || 0
-    console.log(`📦 Total de itens no arquivo ${file.id}: ${total}`)
+    // console.log(`📦 Total de itens no arquivo ${file.id}: ${total}`)
     return total
   }
   

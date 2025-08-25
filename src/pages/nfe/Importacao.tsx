@@ -377,16 +377,18 @@ const ImportacaoNFePage = () => {
         prev.map((f) => (f.id === fileToProcess.id ? { ...f, ...update } : f)),
       )
     }
+    
     updateFileState({ status: 'parsing' })
     const result = await parseAndValidateNFe(fileToProcess.file)
     updateFileState({ ...result, progress: 100 })
     
     // Auto-selecionar todos os itens por padrão quando o parsing for bem-sucedido
-    if (result.status === 'success' && result.data) {
+    if (result.status === 'success' && result.data && result.data.items.length > 0) {
       const itemCodes = result.data.items.map(item => item.code)
       console.log(`🔄 Auto-selecionando ${itemCodes.length} itens para o arquivo ${fileToProcess.id}`)
       console.log('📋 Códigos dos itens:', itemCodes)
       
+      // Atualizar o estado imediatamente após o processamento
       setSelectedItems(prev => {
         const updated = {
           ...prev,
@@ -395,6 +397,20 @@ const ImportacaoNFePage = () => {
         console.log('📊 Estado de seleção atualizado:', updated)
         return updated
       })
+      
+      // Também forçar uma segunda atualização para garantir
+      setTimeout(() => {
+        setSelectedItems(prev => {
+          if (!prev[fileToProcess.id] || prev[fileToProcess.id].length !== itemCodes.length) {
+            console.log('🔄 Forçando segunda atualização de seleção')
+            return {
+              ...prev,
+              [fileToProcess.id]: itemCodes
+            }
+          }
+          return prev
+        })
+      }, 300)
     }
   }
 
@@ -456,10 +472,10 @@ const ImportacaoNFePage = () => {
     const totalSelectedItems = Object.values(selectedItems).reduce((total, items) => total + items.length, 0)
     counts.selectedItems = totalSelectedItems
     
-    console.log(`📊 Recalculando contadores:`)
-    console.log(`   - Arquivos com sucesso: ${counts.success}`)
-    console.log(`   - Items selecionados: ${totalSelectedItems}`)
-    console.log(`   - Estado selectedItems:`, selectedItems)
+    // console.log(`📊 Recalculando contadores:`)
+    // console.log(`   - Arquivos com sucesso: ${counts.success}`)
+    // console.log(`   - Items selecionados: ${totalSelectedItems}`)
+    // console.log(`   - Estado selectedItems:`, selectedItems)
     
     return counts
   }, [files, selectedItems])
