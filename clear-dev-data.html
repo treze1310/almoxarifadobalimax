@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Limpando dados de desenvolvimento...</title>
+</head>
+<body>
+    <h1>Limpando dados de desenvolvimento...</h1>
+    <p>Redirecionando para o login...</p>
+    
+    <script>
+        // Limpar localStorage
+        localStorage.removeItem('dev_user');
+        localStorage.clear();
+        
+        // Limpar sessionStorage
+        sessionStorage.clear();
+        
+        // Redirecionar para a aplicação
+        setTimeout(() => {
+            window.location.href = 'http://localhost:5173';
+        }, 1000);
+    </script>
+</body>
+</html>

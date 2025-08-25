@@ -1,0 +1,379 @@
+/* Global styles - Theme, font, utilities, animations and global components */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Performance optimizations for scroll-linked effects */
+* {
+  /* Enable hardware acceleration for transforms */
+  transform-style: preserve-3d;
+}
+
+html {
+  /* Improve scroll performance */
+  scroll-behavior: smooth;
+  /* Reduce paint operations */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Enable GPU acceleration */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+body {
+  /* Prevent scroll-linked position changes */
+  overflow-x: hidden;
+  /* Reduce layout thrashing */
+  contain: layout style;
+}
+
+@layer base {
+  :root {
+    --background: 210 17% 98%; /* #f8f9fa */
+    --foreground: 210 10% 15%; /* #212529 */
+
+    --card: 0 0% 100%; /* #ffffff */
+    --card-foreground: 210 10% 15%; /* #212529 */
+
+    --popover: 0 0% 100%; /* #ffffff */
+    --popover-foreground: 210 10% 15%; /* #212529 */
+
+    --primary: 211 100% 50%; /* #007bff */
+    --primary-foreground: 0 0% 100%; /* #ffffff */
+
+    --secondary: 208 7% 46%; /* #6c757d */
+    --secondary-foreground: 0 0% 100%; /* #ffffff */
+
+    --muted: 210 17% 98%; /* #f8f9fa */
+    --muted-foreground: 208 7% 46%; /* #6c757d */
+
+    --accent: 210 16% 91%; /* #dee2e6 */
+    --accent-foreground: 210 10% 15%; /* #212529 */
+
+    --destructive: 354 70% 54%; /* #dc3545 */
+    --destructive-foreground: 0 0% 100%; /* #ffffff */
+
+    --success: 145 63% 49%; /* #28a745 */
+    --warning: 45 100% 51%; /* #ffc107 */
+
+    --border: 210 16% 91%; /* #dee2e6 */
+    --input: 210 16% 91%; /* #dee2e6 */
+    --ring: 211 100% 50%; /* #007bff */
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 210 10% 15%;
+    --sidebar-primary: 211 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 211 100% 97%;
+    --sidebar-accent-foreground: 211 100% 50%;
+    --sidebar-border: 210 16% 91%;
+    --sidebar-ring: 211 100% 50%;
+
+    --chart-1: 211 100% 50%;
+    --chart-2: 145 63% 49%;
+    --chart-3: 45 100% 51%;
+    --chart-4: 354 70% 54%;
+    --chart-5: 208 7% 46%;
+  }
+
+  .dark {
+    --background: 210 10% 15%;
+    --foreground: 210 17% 98%;
+
+    --card: 210 10% 15%;
+    --card-foreground: 210 17% 98%;
+
+    --popover: 210 10% 15%;
+    --popover-foreground: 210 17% 98%;
+
+    --primary: 211 100% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 208 7% 46%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 210 10% 20%;
+    --muted-foreground: 208 7% 60%;
+
+    --accent: 210 10% 20%;
+    --accent-foreground: 210 17% 98%;
+
+    --destructive: 354 70% 54%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 145 63% 49%;
+    --warning: 45 100% 51%;
+
+    --border: 210 10% 25%;
+    --input: 210 10% 25%;
+    --ring: 211 100% 50%;
+
+    --sidebar-background: 210 10% 15%;
+    --sidebar-foreground: 210 17% 98%;
+    --sidebar-primary: 211 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 10% 20%;
+    --sidebar-accent-foreground: 211 100% 50%;
+    --sidebar-border: 210 10% 25%;
+    --sidebar-ring: 211 100% 50%;
+
+    --chart-1: 211 100% 50%;
+    --chart-2: 145 63% 49%;
+    --chart-3: 45 100% 51%;
+    --chart-4: 354 70% 54%;
+    --chart-5: 208 7% 46%;
+  }
+
+  /* NEVER REMOVE THIS */
+  section[aria-label='Notifications alt+T'] {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer utilities {
+  @keyframes shake {
+    10%,
+    90% {
+      transform: translate3d(-1px, 0, 0);
+    }
+    20%,
+    80% {
+      transform: translate3d(2px, 0, 0);
+    }
+    30%,
+    50%,
+    70% {
+      transform: translate3d(-4px, 0, 0);
+    }
+    40%,
+    60% {
+      transform: translate3d(4px, 0, 0);
+    }
+  }
+
+  .animate-shake {
+    animation: shake 0.82s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  }
+
+  /* KEEP ALL THE ANIMATIONS CLASSES THAT ARE USED BELOW */
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes fade-in-up {
+    from {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-in-down {
+    from {
+      transform: translateY(-10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-out-up {
+    from {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(-10px);
+      opacity: 0;
+    }
+  }
+
+  @keyframes fade-out-down {
+    from {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+  }
+
+  @keyframes slide-up {
+    from {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-down {
+    from {
+      transform: translateY(-10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  @keyframes spotlight {
+    from {
+      opacity: 0;
+      transform: translate(-72%, -62%) scale(0.5);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -40%) scale(1);
+    }
+  }
+
+  .animate-accordion-down {
+    animation: accordion-down 0.2s ease-out;
+  }
+
+  .animate-accordion-up {
+    animation: accordion-up 0.2s ease-out;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-out;
+  }
+
+  .animate-fade-out {
+    animation: fade-out 0.5s ease-out;
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.6s ease-out;
+  }
+
+  .animate-fade-in-down {
+    animation: fade-in-down 0.6s ease-out;
+  }
+
+  .animate-fade-out-up {
+    animation: fade-out-up 0.6s ease-out;
+  }
+
+  .animate-fade-out-down {
+    animation: fade-out-down 0.6s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.6s ease-out;
+  }
+
+  .animate-slide-down {
+    animation: slide-down 0.6s ease-out;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-spotlight {
+    animation: spotlight 2s ease forwards;
+  }
+
+  /* Optimize Radix UI component animations */
+  [data-radix-popover-content],
+  [data-radix-dialog-content],
+  [data-radix-dropdown-menu-content] {
+    /* Use GPU acceleration for overlays */
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+
+  /* Optimize table scrolling */
+  .table-container {
+    /* Enable hardware acceleration */
+    transform: translateZ(0);
+    /* Improve scroll performance */
+    overflow: auto;
+    contain: layout style;
+  }
+
+  /* Reduce reflows on sidebar */
+  .sidebar {
+    /* Enable hardware acceleration */
+    transform: translateZ(0);
+    /* Contain layout changes */
+    contain: layout style;
+  }
+
+  /* Optimize form animations */
+  .form-field {
+    /* Reduce paint operations */
+    contain: layout style;
+  }
+}
