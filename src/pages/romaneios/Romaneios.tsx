@@ -26,7 +26,7 @@ import { useRomaneios } from '@/hooks/useRomaneios'
 import { useRobustSupabase } from '@/hooks/useRobustSupabase'
 import { formatDate } from '@/lib/utils'
 import { useCenteredDialog } from '@/hooks/useCenteredDialog'
-import { PermissionGuard } from '@/components/PermissionGuard'
+
 import { useAuth } from '@/contexts/AuthContext'
 import RomaneioDialog from '@/components/romaneios/RomaneioDialog'
 import DevolucaoDialog from '@/components/romaneios/DevolucaoDialog'
@@ -321,7 +321,7 @@ const RomaneiosPage = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <PermissionGuard permission="romaneios_edit">
+                
                   <DropdownMenuItem onClick={(e) => {
                     e.stopPropagation()
                     navigate(`/novo-romaneio?tipo=${romaneio.tipo}&edit=${romaneio.id}`)
@@ -329,7 +329,7 @@ const RomaneiosPage = () => {
                     <Edit className="h-4 w-4 mr-2" />
                     Editar
                   </DropdownMenuItem>
-                </PermissionGuard>
+                
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -415,22 +415,18 @@ const RomaneiosPage = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <PermissionGuard permission="romaneios_create">
-            <Link to="/romaneios/novo?tipo=retirada">
-              <Button>
-                <PlusSquare className="mr-2 h-4 w-4" />
-                Nova Retirada
-              </Button>
-            </Link>
-          </PermissionGuard>
-          <PermissionGuard permission="romaneios_create">
-            <Link to="/romaneios/novo?tipo=devolucao">
-              <Button variant="outline">
-                <ArrowLeftRight className="mr-2 h-4 w-4" />
-                Nova Devolução
-              </Button>
-            </Link>
-          </PermissionGuard>
+          <Link to="/romaneios/novo?tipo=retirada">
+            <Button>
+              <PlusSquare className="mr-2 h-4 w-4" />
+              Nova Retirada
+            </Button>
+          </Link>
+          <Link to="/romaneios/novo?tipo=devolucao">
+            <Button variant="outline">
+              <ArrowLeftRight className="mr-2 h-4 w-4" />
+              Nova Devolução
+            </Button>
+          </Link>
         </div>
       </div>
 

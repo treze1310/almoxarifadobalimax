@@ -37,7 +37,7 @@ import { Badge } from '@/components/ui/badge'
 import { useSupabaseTable } from '@/hooks/useSupabase'
 import { FornecedorForm } from '@/components/fornecedores/FornecedorForm'
 import type { Tables } from '@/types/database'
-import { PermissionGuard } from '@/components/PermissionGuard'
+
 
 type Fornecedor = Tables<'fornecedores'>
 
@@ -118,12 +118,12 @@ const FornecedoresPage = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Cadastro de Fornecedores</h1>
-        <PermissionGuard permission="fornecedores_create">
+        
           <Button onClick={() => setIsCreateDialogOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Novo Fornecedor
           </Button>
-        </PermissionGuard>
+        
       </div>
 
       <div className="flex items-center space-x-2">
@@ -202,13 +202,13 @@ const FornecedoresPage = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <PermissionGuard permission="fornecedores_edit">
+                        
                           <DropdownMenuItem onClick={() => setEditingFornecedor(fornecedor)}>
                             <Edit className="mr-2 h-4 w-4" />
                             Editar
                           </DropdownMenuItem>
-                        </PermissionGuard>
-                        <PermissionGuard permission="fornecedores_delete">
+                        
+                        
                           <DropdownMenuItem 
                             className="text-destructive"
                             onClick={() => setDeletingFornecedor(fornecedor)}
@@ -216,7 +216,7 @@ const FornecedoresPage = () => {
                             <Trash2 className="mr-2 h-4 w-4" />
                             Excluir
                           </DropdownMenuItem>
-                        </PermissionGuard>
+                        
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

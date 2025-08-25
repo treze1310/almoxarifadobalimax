@@ -106,12 +106,12 @@ const LocalizacaoPage = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Cadastro de Localização</h1>
-        <PermissionGuard permission="localizacao_create">
+        
           <Button onClick={() => setIsCreateDialogOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Nova Localização
           </Button>
-        </PermissionGuard>
+        
       </div>
 
       <div className="flex items-center space-x-2">
@@ -194,13 +194,13 @@ const LocalizacaoPage = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <PermissionGuard permission="localizacao_edit">
+                        
                           <DropdownMenuItem onClick={() => setEditingLocalizacao(localizacao)}>
                             <Edit className="mr-2 h-4 w-4" />
                             Editar
                           </DropdownMenuItem>
-                        </PermissionGuard>
-                        <PermissionGuard permission="localizacao_delete">
+                        
+                        
                           <DropdownMenuItem 
                             className="text-destructive"
                             onClick={() => setDeletingLocalizacao(localizacao)}
@@ -208,7 +208,7 @@ const LocalizacaoPage = () => {
                             <Trash2 className="mr-2 h-4 w-4" />
                             Excluir
                           </DropdownMenuItem>
-                        </PermissionGuard>
+                        
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

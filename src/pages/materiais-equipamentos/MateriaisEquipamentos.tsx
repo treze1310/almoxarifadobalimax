@@ -41,7 +41,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
-import { PermissionGuard } from '@/components/PermissionGuard'
+
 import { MaterialEquipamentoForm } from '@/components/materiais-equipamentos/MaterialEquipamentoForm'
 import { MaterialEquipamentoDialog } from '@/components/materiais-equipamentos/MaterialEquipamentoDialog'
 import { MovimentacaoEstoque } from '@/components/materiais-equipamentos/MovimentacaoEstoque'
@@ -238,13 +238,11 @@ const MateriaisEquipamentosPage = () => {
       {/* 📱 Header responsivo */}
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
         <h1 className="text-xl md:text-2xl font-bold">Materiais e Equipamentos</h1>
-        <PermissionGuard permission="materiais_create">
-          <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="w-full sm:w-auto">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Novo Item</span>
-            <span className="sm:hidden">Adicionar</span>
-          </Button>
-        </PermissionGuard>
+        <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="w-full sm:w-auto">
+          <PlusCircle className="mr-2 h-4 w-4" />
+          <span className="hidden sm:inline">Novo Item</span>
+          <span className="sm:hidden">Adicionar</span>
+        </Button>
       </div>
 
       {/* 📱 Filtros responsivos */}
@@ -585,19 +583,19 @@ const MateriaisEquipamentosPage = () => {
                     </TableRow>
                   </ContextMenuTrigger>
                   <ContextMenuContent>
-                    <PermissionGuard permission="materiais_edit">
+                    
                       <ContextMenuItem onClick={() => setEditingMaterial(material)}>
                         <Edit className="mr-2 h-4 w-4" />
                         Editar
                       </ContextMenuItem>
-                    </PermissionGuard>
-                    <PermissionGuard permission="materiais_edit">
+                    
+                    
                       <ContextMenuItem onClick={() => setMovimentacaoMaterial(material)}>
                         <MoreHorizontal className="mr-2 h-4 w-4" />
                         Movimentar Estoque
                       </ContextMenuItem>
-                    </PermissionGuard>
-                    <PermissionGuard permission="materiais_delete">
+                    
+                    
                       <ContextMenuItem 
                         className="text-destructive"
                         onClick={() => handleDeleteClick(material)}
@@ -605,7 +603,7 @@ const MateriaisEquipamentosPage = () => {
                         <Trash2 className="mr-2 h-4 w-4" />
                         Excluir
                       </ContextMenuItem>
-                    </PermissionGuard>
+                    
                   </ContextMenuContent>
                 </ContextMenu>
               ))

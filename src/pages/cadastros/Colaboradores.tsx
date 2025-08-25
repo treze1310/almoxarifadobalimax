@@ -35,7 +35,7 @@ import { formatDate, formatDateTime } from '@/lib/utils'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import type { Tables } from '@/types/database'
-import { PermissionGuard } from '@/components/PermissionGuard'
+
 
 type Colaborador = Tables<'colaboradores'>
 
@@ -461,12 +461,10 @@ const ColaboradoresPage = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Cadastro de Colaboradores</h1>
-        <PermissionGuard permission="colaboradores_create">
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Novo Colaborador
-          </Button>
-        </PermissionGuard>
+        <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Novo Colaborador
+        </Button>
       </div>
 
       <div className="flex items-center justify-between">
@@ -561,12 +559,12 @@ const ColaboradoresPage = () => {
                   {search ? 'Nenhum colaborador encontrado com os critérios de busca.' : 'Nenhum colaborador cadastrado.'}
                 </p>
                 {!search && (
-                  <PermissionGuard permission="colaboradores_create">
+                  
                     <Button className="mt-4" onClick={() => setIsCreateDialogOpen(true)}>
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Cadastrar Primeiro Colaborador
                     </Button>
-                  </PermissionGuard>
+                  
                 )}
               </CardContent>
             </Card>
@@ -623,7 +621,7 @@ const ColaboradoresPage = () => {
               
               <div className="flex items-center gap-2">
                 {/* Ações rápidas */}
-                <PermissionGuard permission="colaboradores_edit">
+                
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -633,9 +631,9 @@ const ColaboradoresPage = () => {
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
-                </PermissionGuard>
                 
-                <PermissionGuard permission="colaboradores_view">
+                
+                
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -649,10 +647,10 @@ const ColaboradoresPage = () => {
                       <FileText className="h-4 w-4" />
                     )}
                   </Button>
-                </PermissionGuard>
+                
 
                 {/* Ações de status e exclusão - movidas dos três pontos */}
-                <PermissionGuard permission="colaboradores_edit">
+                
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -665,9 +663,9 @@ const ColaboradoresPage = () => {
                       <UserCheck className="h-4 w-4" />
                     )}
                   </Button>
-                </PermissionGuard>
+                
 
-                <PermissionGuard permission="colaboradores_delete">
+                
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -677,7 +675,7 @@ const ColaboradoresPage = () => {
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
-                </PermissionGuard>
+                
               </div>
             </DialogTitle>
             <DialogDescription id="colaborador-details-description">

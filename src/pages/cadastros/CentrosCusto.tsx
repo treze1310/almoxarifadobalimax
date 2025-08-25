@@ -35,7 +35,7 @@ import type { Tables } from '@/types/database'
 import { CentroCustoForm } from '@/components/centros-custo/CentroCustoForm'
 import type { CentroCustoFormData } from '@/lib/validations'
 import { supabase } from '@/lib/supabase'
-import { PermissionGuard } from '@/components/PermissionGuard'
+
 
 export default function CentrosCusto() {
   const { data: centrosCusto, loading, fetchData: refetchCentrosCusto } = useSupabaseTable('centros_custo')
@@ -182,12 +182,12 @@ export default function CentrosCusto() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Cadastro de Centros de Custo</h1>
-        <PermissionGuard permission="centros_custo_create">
+        
           <Button onClick={() => setIsCreateDialogOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Novo Centro de Custo
           </Button>
-        </PermissionGuard>
+        
       </div>
 
       <div className="flex items-center space-x-2">
@@ -232,7 +232,7 @@ export default function CentrosCusto() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end space-x-2">
-                    <PermissionGuard permission="centros_custo_edit">
+                    
                       <Button
                         variant="outline"
                         size="sm"
@@ -240,8 +240,8 @@ export default function CentrosCusto() {
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
-                    </PermissionGuard>
-                    <PermissionGuard permission="centros_custo_delete">
+                    
+                    
                       <Button
                         variant="outline"
                         size="sm"
@@ -249,7 +249,7 @@ export default function CentrosCusto() {
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                    </PermissionGuard>
+                    
                   </div>
                 </TableCell>
               </TableRow>

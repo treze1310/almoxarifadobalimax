@@ -23,7 +23,7 @@ import {
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { useCenteredDialog } from '@/hooks/useCenteredDialog'
-import { PermissionGuard } from '@/components/PermissionGuard'
+
 import { SolicitacaoCompra } from '@/types'
 import { supabase } from '@/lib/supabase'
 import { companyService, CompanyWithLogo } from '@/services/companyService'
@@ -517,14 +517,12 @@ const SolicitacoesPage = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <PermissionGuard permission="solicitacoes_create">
-            <Link to="/solicitacoes/nova">
-              <Button>
-                <PlusSquare className="mr-2 h-4 w-4" />
-                Nova Solicitação
-              </Button>
-            </Link>
-          </PermissionGuard>
+          <Link to="/solicitacoes/nova">
+            <Button>
+              <PlusSquare className="mr-2 h-4 w-4" />
+              Nova Solicitação
+            </Button>
+          </Link>
         </div>
       </div>
 

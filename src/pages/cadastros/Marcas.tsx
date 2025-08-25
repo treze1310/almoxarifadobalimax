@@ -37,7 +37,7 @@ import { Badge } from '@/components/ui/badge'
 import { useSupabaseTable } from '@/hooks/useSupabase'
 import { MarcaForm } from '@/components/marcas/MarcaForm'
 import type { Tables } from '@/types/database'
-import { PermissionGuard } from '@/components/PermissionGuard'
+
 
 type Marca = Tables<'marcas'>
 
@@ -94,12 +94,12 @@ const MarcasPage = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Cadastro de Marcas</h1>
-        <PermissionGuard permission="marcas_create">
+        
           <Button onClick={() => setIsCreateDialogOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Nova Marca
           </Button>
-        </PermissionGuard>
+        
       </div>
 
       <div className="flex items-center space-x-2">
@@ -157,13 +157,13 @@ const MarcasPage = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <PermissionGuard permission="marcas_edit">
+                        
                           <DropdownMenuItem onClick={() => setEditingMarca(marca)}>
                             <Edit className="mr-2 h-4 w-4" />
                             Editar
                           </DropdownMenuItem>
-                        </PermissionGuard>
-                        <PermissionGuard permission="marcas_delete">
+                        
+                        
                           <DropdownMenuItem 
                             className="text-destructive"
                             onClick={() => setDeletingMarca(marca)}
@@ -171,7 +171,7 @@ const MarcasPage = () => {
                             <Trash2 className="mr-2 h-4 w-4" />
                             Excluir
                           </DropdownMenuItem>
-                        </PermissionGuard>
+                        
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

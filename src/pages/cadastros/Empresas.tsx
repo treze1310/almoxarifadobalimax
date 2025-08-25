@@ -35,7 +35,7 @@ import type { Tables } from '@/types/database'
 import { EmpresaForm } from '@/components/empresas/EmpresaForm'
 import type { EmpresaFormData } from '@/lib/validations'
 import { supabase } from '@/lib/supabase'
-import { PermissionGuard } from '@/components/PermissionGuard'
+
 
 export default function Empresas() {
   const { data: empresas, loading, fetchData: refetchEmpresas } = useSupabaseTable('empresas')
@@ -181,12 +181,10 @@ export default function Empresas() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Cadastro de Empresas</h1>
-        <PermissionGuard permission="empresas_create">
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Nova Empresa
-          </Button>
-        </PermissionGuard>
+        <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Nova Empresa
+        </Button>
       </div>
 
       <div className="flex items-center space-x-2">
@@ -233,7 +231,7 @@ export default function Empresas() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end space-x-2">
-                    <PermissionGuard permission="empresas_edit">
+                    
                       <Button
                         variant="outline"
                         size="sm"
@@ -241,8 +239,8 @@ export default function Empresas() {
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
-                    </PermissionGuard>
-                    <PermissionGuard permission="empresas_delete">
+                    
+                    
                       <Button
                         variant="outline"
                         size="sm"
@@ -250,7 +248,7 @@ export default function Empresas() {
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                    </PermissionGuard>
+                    
                   </div>
                 </TableCell>
               </TableRow>
