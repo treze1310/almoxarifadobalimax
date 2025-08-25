@@ -79,19 +79,31 @@ export const NfPreviewTable = ({
 }: NfPreviewTableProps) => {
   
   const isItemSelected = (fileId: string, itemCode: string) => {
-    return selectedItems[fileId]?.includes(itemCode) || false
+    const selected = selectedItems[fileId]?.includes(itemCode) || false
+    // Debug apenas no primeiro item para não poluir o console
+    if (itemCode === selectedItems[fileId]?.[0]) {
+      console.log(`🔍 Verificando seleção: Arquivo ${fileId}, Item ${itemCode}, Selecionado: ${selected}`)
+      console.log(`📊 Itens selecionados para arquivo:`, selectedItems[fileId])
+    }
+    return selected
   }
   
   const getSelectedItemsCount = (fileId: string) => {
-    return selectedItems[fileId]?.length || 0
+    const count = selectedItems[fileId]?.length || 0
+    console.log(`📊 Contando itens selecionados para arquivo ${fileId}: ${count}`)
+    return count
   }
   
   const getTotalItemsCount = (file: UploadedNFeFile) => {
-    return file.data?.items.length || 0
+    const total = file.data?.items.length || 0
+    console.log(`📦 Total de itens no arquivo ${file.id}: ${total}`)
+    return total
   }
   
   const toggleAllItems = (fileId: string, items: NFeItem[], selectAll: boolean) => {
     if (!onItemSelectionChange) return
+    
+    console.log(`🔄 ${selectAll ? 'Selecionando' : 'Desselecionando'} todos os ${items.length} itens do arquivo ${fileId}`)
     
     items.forEach(item => {
       onItemSelectionChange(fileId, item.code, selectAll)

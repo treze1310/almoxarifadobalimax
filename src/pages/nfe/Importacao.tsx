@@ -384,10 +384,17 @@ const ImportacaoNFePage = () => {
     // Auto-selecionar todos os itens por padrão quando o parsing for bem-sucedido
     if (result.status === 'success' && result.data) {
       const itemCodes = result.data.items.map(item => item.code)
-      setSelectedItems(prev => ({
-        ...prev,
-        [fileToProcess.id]: itemCodes
-      }))
+      console.log(`🔄 Auto-selecionando ${itemCodes.length} itens para o arquivo ${fileToProcess.id}`)
+      console.log('📋 Códigos dos itens:', itemCodes)
+      
+      setSelectedItems(prev => {
+        const updated = {
+          ...prev,
+          [fileToProcess.id]: itemCodes
+        }
+        console.log('📊 Estado de seleção atualizado:', updated)
+        return updated
+      })
     }
   }
 
@@ -402,24 +409,35 @@ const ImportacaoNFePage = () => {
   }
 
   const handleItemSelectionChange = (fileId: string, itemCode: string, selected: boolean) => {
+    console.log(`🔀 Alterando seleção: Arquivo ${fileId}, Item ${itemCode}, Selecionado: ${selected}`)
+    
     setSelectedItems(prev => {
       const fileItems = prev[fileId] || []
+      console.log(`📝 Itens atuais do arquivo: ${fileItems.length} itens`)
+      
+      let updated
       if (selected) {
         // Adicionar item se não estiver selecionado
         if (!fileItems.includes(itemCode)) {
-          return {
+          updated = {
             ...prev,
             [fileId]: [...fileItems, itemCode]
           }
+          console.log(`➕ Item ${itemCode} adicionado. Total: ${updated[fileId].length}`)
+        } else {
+          updated = prev
+          console.log(`⚠️ Item ${itemCode} já estava selecionado`)
         }
       } else {
         // Remover item
-        return {
+        updated = {
           ...prev,
           [fileId]: fileItems.filter(code => code !== itemCode)
         }
+        console.log(`➖ Item ${itemCode} removido. Total: ${updated[fileId].length}`)
       }
-      return prev
+      
+      return updated
     })
   }
 
@@ -435,7 +453,13 @@ const ImportacaoNFePage = () => {
     )
     
     // Contar itens selecionados
-    counts.selectedItems = Object.values(selectedItems).reduce((total, items) => total + items.length, 0)
+    const totalSelectedItems = Object.values(selectedItems).reduce((total, items) => total + items.length, 0)
+    counts.selectedItems = totalSelectedItems
+    
+    console.log(`📊 Recalculando contadores:`)
+    console.log(`   - Arquivos com sucesso: ${counts.success}`)
+    console.log(`   - Items selecionados: ${totalSelectedItems}`)
+    console.log(`   - Estado selectedItems:`, selectedItems)
     
     return counts
   }, [files, selectedItems])
