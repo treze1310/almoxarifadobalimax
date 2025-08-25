@@ -360,7 +360,7 @@ const ImportacaoNFePage = () => {
         // Verificar se os itens já foram selecionados para este arquivo
         if (!selectedItems[file.id] || selectedItems[file.id].length === 0) {
           const itemCodes = file.data.items.map(item => item.code)
-          console.log(`🔄 Auto-selecionando ${itemCodes.length} itens para arquivo ${file.id} via useEffect`)
+          console.log(`🔄 Auto-selecionando ${itemCodes.length} itens para arquivo ${file.id}`)
           
           setSelectedItems(prev => ({
             ...prev,
@@ -414,35 +414,26 @@ const ImportacaoNFePage = () => {
   }
 
   const handleItemSelectionChange = (fileId: string, itemCode: string, selected: boolean) => {
-    console.log(`🔀 Alterando seleção: Arquivo ${fileId}, Item ${itemCode}, Selecionado: ${selected}`)
-    
     setSelectedItems(prev => {
       const fileItems = prev[fileId] || []
-      console.log(`📝 Itens atuais do arquivo: ${fileItems.length} itens`)
       
-      let updated
       if (selected) {
         // Adicionar item se não estiver selecionado
         if (!fileItems.includes(itemCode)) {
-          updated = {
+          return {
             ...prev,
             [fileId]: [...fileItems, itemCode]
           }
-          console.log(`➕ Item ${itemCode} adicionado. Total: ${updated[fileId].length}`)
-        } else {
-          updated = prev
-          console.log(`⚠️ Item ${itemCode} já estava selecionado`)
         }
       } else {
         // Remover item
-        updated = {
+        return {
           ...prev,
           [fileId]: fileItems.filter(code => code !== itemCode)
         }
-        console.log(`➖ Item ${itemCode} removido. Total: ${updated[fileId].length}`)
       }
       
-      return updated
+      return prev
     })
   }
 

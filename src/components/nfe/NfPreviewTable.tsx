@@ -79,13 +79,7 @@ export const NfPreviewTable = ({
 }: NfPreviewTableProps) => {
   
   const isItemSelected = (fileId: string, itemCode: string) => {
-    const selected = selectedItems[fileId]?.includes(itemCode) || false
-    // Debug apenas no primeiro item para não poluir o console
-    if (itemCode === selectedItems[fileId]?.[0]) {
-      console.log(`🔍 Verificando seleção: Arquivo ${fileId}, Item ${itemCode}, Selecionado: ${selected}`)
-      console.log(`📊 Itens selecionados para arquivo:`, selectedItems[fileId])
-    }
-    return selected
+    return selectedItems[fileId]?.includes(itemCode) || false
   }
   
   const getSelectedItemsCount = (fileId: string) => {
@@ -102,8 +96,6 @@ export const NfPreviewTable = ({
   
   const toggleAllItems = (fileId: string, items: NFeItem[], selectAll: boolean) => {
     if (!onItemSelectionChange) return
-    
-    console.log(`🔄 ${selectAll ? 'Selecionando' : 'Desselecionando'} todos os ${items.length} itens do arquivo ${fileId}`)
     
     items.forEach(item => {
       onItemSelectionChange(fileId, item.code, selectAll)
