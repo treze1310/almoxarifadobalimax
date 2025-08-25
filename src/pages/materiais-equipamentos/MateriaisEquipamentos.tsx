@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { PlusCircle, MoreHorizontal, Edit, Trash2, Search, Package, Wrench, Tag, Eye } from 'lucide-react'
+import { PlusCircle, MoreHorizontal, Edit, Trash2, Search, Package, Wrench, Tag, Eye, RefreshCw } from 'lucide-react'
 import { verificarStatusCalibracao } from '@/utils/calibracao'
 import {
   DropdownMenu,
@@ -237,11 +237,26 @@ const MateriaisEquipamentosPage = () => {
       {/* 📱 Header responsivo */}
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
         <h1 className="text-xl md:text-2xl font-bold">Materiais e Equipamentos</h1>
-        <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="w-full sm:w-auto">
-          <PlusCircle className="mr-2 h-4 w-4" />
-          <span className="hidden sm:inline">Novo Item</span>
-          <span className="sm:hidden">Adicionar</span>
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => {
+              console.log('🔄 Forçando atualização dos materiais...')
+              fetchMateriais({ includeInactive: showInactive })
+            }} 
+            variant="outline" 
+            size="sm" 
+            className="flex-1 sm:flex-none"
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Atualizar</span>
+            <span className="sm:hidden">🔄</span>
+          </Button>
+          <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="flex-1 sm:flex-none">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Novo Item</span>
+            <span className="sm:hidden">Adicionar</span>
+          </Button>
+        </div>
       </div>
 
       {/* 📱 Filtros responsivos */}

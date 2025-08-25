@@ -59,6 +59,8 @@ export function useMateriaisEquipamentos() {
   }) => {
     setLoading(true)
     try {
+      console.log('🔍 Buscando materiais com opções:', options)
+      
       let query = supabase
         .from('materiais_equipamentos')
         .select(`
@@ -72,7 +74,10 @@ export function useMateriaisEquipamentos() {
 
       // Filtrar por ativo apenas se não foi solicitado incluir inativos
       if (!options?.includeInactive) {
+        console.log('📋 Filtrando apenas materiais ativos')
         query = query.eq('ativo', true)
+      } else {
+        console.log('📋 Incluindo materiais inativos')
       }
 
       if (options?.tipo) {
@@ -93,7 +98,13 @@ export function useMateriaisEquipamentos() {
 
       const { data, error } = await query
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Erro na consulta:', error)
+        throw error
+      }
+
+      console.log(`✅ Materiais encontrados: ${data?.length || 0}`)
+      console.log('📊 Primeiros 3 materiais:', data?.slice(0, 3))
 
       setMateriaisEquipamentos(data || [])
       return { data: data || [], error: null }
