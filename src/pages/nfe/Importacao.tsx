@@ -8,6 +8,7 @@ import { NfImportDialog } from '@/components/nfe/NfImportDialog'
 import { NfImportResult } from '@/components/nfe/NfImportResult'
 import { useNFeImport } from '@/hooks/useNFeImport'
 import { Link } from 'react-router-dom'
+import { testCodeGeneration } from '@/utils/testCodeGeneration'
 
 type ImportStage = 'upload' | 'preview' | 'result'
 
@@ -473,6 +474,10 @@ const ImportacaoNFePage = () => {
       const fileNames = filesToImport.map(f => f.file.name)
       
       console.log(`🔄 Importando ${nfeDataArray.length} NFe(s) com itens selecionados`)
+      
+      // Teste de geração de códigos
+      const testResult = await testCodeGeneration()
+      console.log('🧪 Resultado do teste:', testResult)
       
       const results = await importNFe(nfeDataArray, fileNames)
       

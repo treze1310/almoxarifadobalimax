@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/use-toast'
 import { useMateriaisEquipamentos } from './useMateriaisEquipamentos'
+import { CodeGenerationService } from '@/services/codeGenerationService'
 import type { Tables, TablesInsert } from '@/types/database'
 import type { NFe, NFeItem } from '@/types'
 
