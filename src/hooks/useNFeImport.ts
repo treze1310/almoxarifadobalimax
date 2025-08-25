@@ -177,15 +177,20 @@ export function useNFeImport() {
           
           for (const item of nfeData.items) {
             // Verificar se material já existe pelo código original da NFe
-            const { data: existingMaterial } = await supabase
+            const { data: existingMaterial, error: existingError } = await supabase
               .from('materiais_equipamentos')
               .select('id')
               .eq('codigo', item.code)
-              .single()
+              .maybeSingle() // ✅ Usar maybeSingle para não dar erro se não encontrar
 
-            if (existingMaterial) {
+            // Log debug para cada item
+            console.log(`🔍 Verificando item: ${item.code} - ${item.description}`)
+            
+            if (existingMaterial && !existingError) {
+              console.log(`✅ Material existente encontrado: ${item.code}`)
               itemsToLink.push({ item, materialId: existingMaterial.id })
             } else {
+              console.log(`➕ Novo material será criado: ${item.code}`)
               itemsToCreate.push(item)
             }
           }
@@ -193,14 +198,23 @@ export function useNFeImport() {
           // Gerar códigos sequenciais para itens novos
           let sequentialCodes: string[] = []
           if (itemsToCreate.length > 0) {
+            console.log(`🔢 Gerando códigos para ${itemsToCreate.length} itens novos...`)
             sequentialCodes = await CodeGenerationService.getMultipleSequentialCodes(itemsToCreate.length)
             console.log(`📋 Códigos gerados: ${sequentialCodes.join(', ')}`)
           }
 
+          console.log(`📊 Resumo da análise:`)
+          console.log(`   - Itens para criar: ${itemsToCreate.length}`)
+          console.log(`   - Itens para vincular: ${itemsToLink.length}`)
+          console.log(`   - Total de itens: ${nfeData.items.length}`)
+
           // 6. Criar materiais novos com códigos sequenciais
+          console.log(`🏭 Iniciando criação de ${itemsToCreate.length} materiais novos...`)
           for (let index = 0; index < itemsToCreate.length; index++) {
             const item = itemsToCreate[index]
             const newCode = sequentialCodes[index]
+            
+            console.log(`📦 Criando material ${index + 1}/${itemsToCreate.length}: ${item.description} (${item.code} → ${newCode})`)
             
             try {
               const materialResult = await createMaterialFromNFe({
@@ -220,20 +234,27 @@ export function useNFeImport() {
               })
 
               if (materialResult.data) {
+                console.log(`   ✅ Material criado com sucesso: ID ${materialResult.data.id}`)
                 itemsToLink.push({ item, materialId: materialResult.data.id })
                 result.materialsCreated++
               } else {
+                console.log(`   ❌ Erro ao criar material: ${materialResult.error}`)
                 result.errors.push(`Erro ao criar material ${item.code}: ${materialResult.error}`)
                 continue
               }
             } catch (error) {
+              console.log(`   ❌ Exceção ao criar material: ${error}`)
               result.errors.push(`Erro ao criar material ${item.code}: ${error}`)
               continue
             }
           }
 
           // 7. Processar itens (tanto novos quanto existentes)
-          for (const { item, materialId } of itemsToLink) {
+          console.log(`🔗 Processando ${itemsToLink.length} itens vinculados...`)
+          for (let i = 0; i < itemsToLink.length; i++) {
+            const { item, materialId } = itemsToLink[i]
+            console.log(`📋 Processando item ${i + 1}/${itemsToLink.length}: ${item.description}`)
+            
             try {
               result.materialsLinked++
 

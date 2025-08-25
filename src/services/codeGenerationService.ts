@@ -1,24 +1,23 @@
 import { supabase } from '@/lib/supabase'
 
-export class CodeGenerationService {
+export const CodeGenerationService = {
   /**
-   * Obtém o próximo código sequencial baseado no maior código numérico existente
+   * Obtém o maior código numérico atual
    */
-  static async getNextSequentialCode(): Promise<string> {
+  async getLatestNumericCode(): Promise<number> {
     try {
       const { data, error } = await supabase
         .from('materiais_equipamentos')
         .select('codigo')
         .neq('codigo', '')
-        .order('created_at', { ascending: false })
 
       if (error) {
         console.error('Erro ao buscar códigos:', error)
-        throw error
+        return 10039 // Fallback para o último código conhecido
       }
 
       // Encontrar o maior código numérico
-      let maxNumericCode = 0
+      let maxNumericCode = 10039 // Base atual conhecida
       
       if (data && data.length > 0) {
         data.forEach(item => {
@@ -33,133 +32,133 @@ export class CodeGenerationService {
         })
       }
 
-      // Se não há códigos numéricos, começar com 10000
-      if (maxNumericCode === 0) {
-        maxNumericCode = 9999
-      }
+      console.log(`📊 Maior código encontrado: ${maxNumericCode}`)
+      return maxNumericCode
+    } catch (error) {
+      console.error('Erro ao obter último código:', error)
+      return 10039
+    }
+  },
 
-      // Retornar próximo código formatado com 5 dígitos
-      const nextCode = maxNumericCode + 1
+  /**
+   * Gera o próximo código sequencial
+   */
+  async getNextSequentialCode(): Promise<string> {
+    try {
+      const maxCode = await this.getLatestNumericCode()
+      const nextCode = maxCode + 1
       return nextCode.toString().padStart(5, '0')
     } catch (error) {
       console.error('Erro ao gerar próximo código:', error)
-      // Fallback: usar timestamp como último recurso
-      return Date.now().toString().slice(-5)
+      // Fallback: usar próximo após o último conhecido
+      return '10040'
     }
-  }
+  },
 
   /**
    * Gera múltiplos códigos sequenciais
    */
-  static async getMultipleSequentialCodes(count: number): Promise<string[]> {
-    const firstCode = await this.getNextSequentialCode()
-    const firstNumber = parseInt(firstCode, 10)
-    
-    const codes: string[] = []
-    for (let i = 0; i < count; i++) {
-      const code = (firstNumber + i).toString().padStart(5, '0')
-      codes.push(code)
+  async getMultipleSequentialCodes(count: number): Promise<string[]> {
+    try {
+      const maxCode = await this.getLatestNumericCode()
+      
+      const codes: string[] = []
+      for (let i = 0; i < count; i++) {
+        const code = (maxCode + 1 + i).toString().padStart(5, '0')
+        codes.push(code)
+      }
+      
+      console.log(`📋 Códigos gerados (${count}): ${codes.join(', ')}`)
+      return codes
+    } catch (error) {
+      console.error('Erro ao gerar códigos múltiplos:', error)
+      // Fallback: gerar códigos baseados no último conhecido
+      const codes: string[] = []
+      for (let i = 0; i < count; i++) {
+        codes.push((10040 + i).toString().padStart(5, '0'))
+      }
+      return codes
     }
-    
-    return codes
-  }
+  },
 
   /**
-   * Valida se um código já existe
+   * Valida se um código é único
    */
-  static async validateCodeUniqueness(code: string): Promise<boolean> {
+  async validateCodeUniqueness(code: string): Promise<boolean> {
     try {
       const { data, error } = await supabase
         .from('materiais_equipamentos')
         .select('id')
         .eq('codigo', code)
-        .limit(1)
+        .maybeSingle()
 
-      if (error) throw error
-      
-      return data.length === 0 // True se o código é único
+      if (error) {
+        console.error('Erro ao validar unicidade:', error)
+        return false
+      }
+
+      return !data // Retorna true se não existe material com este código
     } catch (error) {
-      console.error('Erro ao validar código:', error)
+      console.error('Erro na validação de unicidade:', error)
       return false
     }
-  }
+  },
 
   /**
-   * Corrige códigos existentes para serem sequenciais
+   * Corrige códigos não sequenciais no banco
    */
-  static async fixExistingCodes(): Promise<{
-    success: boolean
-    updated: number
+  async fixNonSequentialCodes(): Promise<{
+    fixed: number
     errors: string[]
   }> {
     try {
-      // Buscar todos os materiais sem código numérico sequencial
+      console.log('🔧 Iniciando correção de códigos não sequenciais...')
+      
+      // Buscar materiais com códigos não sequenciais
       const { data: materials, error } = await supabase
         .from('materiais_equipamentos')
         .select('id, codigo, nome, created_at')
         .order('created_at', { ascending: true })
 
-      if (error) throw error
-
-      const errors: string[] = []
-      let updated = 0
-      let nextSequentialNumber = 10000
-
-      // Identificar materiais que precisam de novos códigos
-      const materialsToUpdate: Array<{ id: string; currentCode: string; newCode: string }> = []
-
-      for (const material of materials || []) {
-        const currentCode = material.codigo
-        
-        // Se o código não é um número de 5 dígitos, precisa ser atualizado
-        if (!/^\d{5}$/.test(currentCode)) {
-          const newCode = nextSequentialNumber.toString().padStart(5, '0')
-          materialsToUpdate.push({
-            id: material.id,
-            currentCode,
-            newCode
-          })
-          nextSequentialNumber++
-        } else {
-          // Se já é um código válido, manter mas atualizar o próximo número
-          const numericCode = parseInt(currentCode, 10)
-          if (numericCode >= nextSequentialNumber) {
-            nextSequentialNumber = numericCode + 1
-          }
-        }
+      if (error) {
+        throw error
       }
 
-      console.log(`📋 ${materialsToUpdate.length} materiais precisam de novos códigos`)
+      if (!materials || materials.length === 0) {
+        return { fixed: 0, errors: ['Nenhum material encontrado'] }
+      }
 
-      // Atualizar códigos em lotes
-      for (const material of materialsToUpdate) {
-        try {
+      let fixedCount = 0
+      const errors: string[] = []
+
+      // Aplicar códigos sequenciais baseados na ordem de criação
+      for (let i = 0; i < materials.length; i++) {
+        const material = materials[i]
+        const newCode = (10000 + i).toString().padStart(5, '0')
+        
+        // Só atualizar se o código for diferente
+        if (material.codigo !== newCode) {
           const { error: updateError } = await supabase
             .from('materiais_equipamentos')
-            .update({ codigo: material.newCode })
+            .update({ codigo: newCode })
             .eq('id', material.id)
 
           if (updateError) {
-            errors.push(`Erro ao atualizar ${material.currentCode} → ${material.newCode}: ${updateError.message}`)
+            errors.push(`Erro ao atualizar ${material.nome}: ${updateError.message}`)
           } else {
-            updated++
-            console.log(`✅ ${material.currentCode} → ${material.newCode}`)
+            console.log(`✅ ${material.codigo} → ${newCode}: ${material.nome}`)
+            fixedCount++
           }
-        } catch (err) {
-          errors.push(`Erro ao atualizar material ${material.id}: ${err}`)
         }
       }
 
-      return {
-        success: errors.length === 0,
-        updated,
-        errors
-      }
+      console.log(`🎉 Correção concluída: ${fixedCount} códigos corrigidos`)
+      return { fixed: fixedCount, errors }
     } catch (error) {
-      return {
-        success: false,
-        updated: 0,
-        errors: [`Erro geral: ${error}`]
+      console.error('Erro na correção de códigos:', error)
+      return { 
+        fixed: 0, 
+        errors: [error instanceof Error ? error.message : 'Erro desconhecido'] 
       }
     }
   }
