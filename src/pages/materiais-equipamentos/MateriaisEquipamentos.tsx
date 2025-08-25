@@ -49,11 +49,10 @@ import { MaterialDependenciesDialog } from '@/components/materiais-equipamentos/
 import CentroCustoLabel from '@/components/materiais-equipamentos/CentroCustoLabel'
 import { useMateriaisEquipamentos } from '@/hooks/useMateriaisEquipamentos'
 import { useCenteredDialog } from '@/hooks/useCenteredDialog'
-import { useAuth } from '@/contexts/AuthContext'
+
 import type { MaterialEquipamentoFormData } from '@/lib/validations'
 
 const MateriaisEquipamentosPage = () => {
-  const { hasPermission } = useAuth()
   const { 
     materiaisEquipamentos, 
     loading, 
@@ -312,12 +311,8 @@ const MateriaisEquipamentosPage = () => {
             <ContextMenu key={material.id}>
               <ContextMenuTrigger asChild>
                 <div 
-                  className={`border rounded-lg p-4 space-y-3 ${
-                    hasPermission('materiais_edit') 
-                      ? "cursor-pointer hover:bg-muted/50 transition-colors" 
-                      : ""
-                  }`}
-                  onClick={hasPermission('materiais_edit') ? () => setEditingMaterial(material) : undefined}
+                  className="border rounded-lg p-4 space-y-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => setEditingMaterial(material)}
                 >
                   {/* 📱 Header do card */}
                   <div className="flex items-start justify-between">
@@ -475,8 +470,8 @@ const MateriaisEquipamentosPage = () => {
                 <ContextMenu key={material.id}>
                   <ContextMenuTrigger asChild>
                     <TableRow 
-                      className={hasPermission('materiais_edit') ? "cursor-pointer hover:bg-muted/50 transition-colors h-12" : "h-12"}
-                      onClick={hasPermission('materiais_edit') ? () => setEditingMaterial(material) : undefined}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors h-12"
+                      onClick={() => setEditingMaterial(material)}
                     >
                   <TableCell className="py-2">
                     <div className="flex items-center space-x-2">

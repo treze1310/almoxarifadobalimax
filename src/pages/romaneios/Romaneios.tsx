@@ -27,7 +27,7 @@ import { useRobustSupabase } from '@/hooks/useRobustSupabase'
 import { formatDate } from '@/lib/utils'
 import { useCenteredDialog } from '@/hooks/useCenteredDialog'
 
-import { useAuth } from '@/contexts/AuthContext'
+
 import RomaneioDialog from '@/components/romaneios/RomaneioDialog'
 import DevolucaoDialog from '@/components/romaneios/DevolucaoDialog'
 import { generateRomaneoPDFContent } from '@/components/romaneios/RomaneioPDF'

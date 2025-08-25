@@ -7,7 +7,6 @@ import {
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { ConnectionIndicator } from '@/components/ui/connection-status'
 
 export const Header = () => {
   const [searchOpen, setSearchOpen] = useState(false)
@@ -66,11 +65,6 @@ export const Header = () => {
               />
             </div>
           </div>
-        </div>
-
-        {/* Indicador de conexão */}
-        <div className="ml-2 shrink-0">
-          <ConnectionIndicator />
         </div>
       </div>
     </header>

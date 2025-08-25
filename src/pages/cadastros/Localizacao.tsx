@@ -37,7 +37,7 @@ import { Badge } from '@/components/ui/badge'
 import { useSupabaseTable } from '@/hooks/useSupabase'
 import { LocalizacaoForm } from '@/components/localizacao/LocalizacaoForm'
 import type { Tables } from '@/types/database'
-import { PermissionGuard } from '@/components/PermissionGuard'
+
 
 type Localizacao = Tables<'localizacao'>
 
