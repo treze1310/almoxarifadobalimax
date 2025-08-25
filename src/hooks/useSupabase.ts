@@ -19,43 +19,50 @@ export function useSupabaseTable<T extends keyof Tables>(tableName: T) {
     try {
       setLoading(true)
       
-      const result = await query(() => {
-        let supabaseQuery = supabase.from(tableName).select(queryParams?.select || '*')
+      let supabaseQuery = supabase.from(tableName).select(queryParams?.select || '*')
 
-        if (queryParams?.filter) {
-          queryParams.filter.forEach(filter => {
-            switch (filter.operator) {
-              case 'eq':
-                supabaseQuery = supabaseQuery.eq(filter.column, filter.value)
-                break
-              case 'neq':
-                supabaseQuery = supabaseQuery.neq(filter.column, filter.value)
-                break
-              case 'like':
-                supabaseQuery = supabaseQuery.like(filter.column, filter.value)
-                break
-              case 'ilike':
-                supabaseQuery = supabaseQuery.ilike(filter.column, filter.value)
-                break
-              default:
-                supabaseQuery = supabaseQuery.eq(filter.column, filter.value)
-            }
-          })
-        }
+      if (queryParams?.filter) {
+        queryParams.filter.forEach(filter => {
+          switch (filter.operator) {
+            case 'eq':
+              supabaseQuery = supabaseQuery.eq(filter.column, filter.value)
+              break
+            case 'neq':
+              supabaseQuery = supabaseQuery.neq(filter.column, filter.value)
+              break
+            case 'like':
+              supabaseQuery = supabaseQuery.like(filter.column, filter.value)
+              break
+            case 'ilike':
+              supabaseQuery = supabaseQuery.ilike(filter.column, filter.value)
+              break
+            default:
+              supabaseQuery = supabaseQuery.eq(filter.column, filter.value)
+          }
+        })
+      }
 
-        if (queryParams?.order) {
-          supabaseQuery = supabaseQuery.order(queryParams.order.column, { 
-            ascending: queryParams.order.ascending ?? true 
-          })
-        }
+      if (queryParams?.order) {
+        supabaseQuery = supabaseQuery.order(queryParams.order.column, { 
+          ascending: queryParams.order.ascending ?? true 
+        })
+      }
 
-        return supabaseQuery
-      })
+      const { data: result, error } = await supabaseQuery
+
+      if (error) {
+        throw error
+      }
 
       setData(result || [])
       setError(null)
     } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido')
+      toast({
+        title: 'Erro ao carregar dados',
+        description: err instanceof Error ? err.message : 'Erro desconhecido',
+        variant: 'destructive'
+      })
     } finally {
       setLoading(false)
     }
@@ -65,13 +72,15 @@ export function useSupabaseTable<T extends keyof Tables>(tableName: T) {
     try {
       setLoading(true)
       
-      const result = await mutate(() => 
-        supabase
-          .from(tableName)
-          .insert(newData)
-          .select()
-          .single()
-      )
+      const { data: result, error } = await supabase
+        .from(tableName)
+        .insert(newData)
+        .select()
+        .single()
+
+      if (error) {
+        throw error
+      }
 
       setData(prev => [...prev, result])
       toast({
@@ -82,6 +91,11 @@ export function useSupabaseTable<T extends keyof Tables>(tableName: T) {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao criar registro'
       setError(errorMessage)
+      toast({
+        title: 'Erro ao criar registro',
+        description: errorMessage,
+        variant: 'destructive'
+      })
       return { data: null, error: errorMessage }
     } finally {
       setLoading(false)
@@ -92,14 +106,16 @@ export function useSupabaseTable<T extends keyof Tables>(tableName: T) {
     try {
       setLoading(true)
       
-      const result = await mutate(() =>
-        supabase
-          .from(tableName)
-          .update(updateData)
-          .eq('id', id)
-          .select()
-          .single()
-      )
+      const { data: result, error } = await supabase
+        .from(tableName)
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) {
+        throw error
+      }
 
       setData(prev => prev.map(item => 
         (item as any).id === id ? result : item
@@ -112,6 +128,11 @@ export function useSupabaseTable<T extends keyof Tables>(tableName: T) {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar registro'
       setError(errorMessage)
+      toast({
+        title: 'Erro ao atualizar registro',
+        description: errorMessage,
+        variant: 'destructive'
+      })
       return { data: null, error: errorMessage }
     } finally {
       setLoading(false)
@@ -122,12 +143,14 @@ export function useSupabaseTable<T extends keyof Tables>(tableName: T) {
     try {
       setLoading(true)
       
-      await mutate(() =>
-        supabase
-          .from(tableName)
-          .delete()
-          .eq('id', id)
-      )
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .eq('id', id)
+
+      if (error) {
+        throw error
+      }
 
       setData(prev => prev.filter(item => (item as any).id !== id))
       toast({
@@ -138,6 +161,11 @@ export function useSupabaseTable<T extends keyof Tables>(tableName: T) {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao remover registro'
       setError(errorMessage)
+      toast({
+        title: 'Erro ao remover registro',
+        description: errorMessage,
+        variant: 'destructive'
+      })
       return { error: errorMessage }
     } finally {
       setLoading(false)
