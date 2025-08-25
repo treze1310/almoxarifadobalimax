@@ -508,11 +508,14 @@ const ImportacaoNFePage = () => {
       const fileNames = filesToImport.map(f => f.file.name)
       
       console.log(`🔄 Importando ${nfeDataArray.length} NFe(s) com itens selecionados`)
-      console.log(`📊 Detalhes dos itens por NFe:`)
-      nfeDataArray.forEach((nfe, index) => {
-        console.log(`   NFe ${index + 1}: ${nfe.items.length} itens`)
-        console.log(`   Códigos: ${nfe.items.map(item => item.code).join(', ')}`)
-      })
+      const totalItemsToImport = nfeDataArray.reduce((total, nfe) => total + nfe.items.length, 0)
+      console.log(`📊 Total de itens que serão importados: ${totalItemsToImport}`)
+      
+      if (totalItemsToImport > 0) {
+        nfeDataArray.forEach((nfe, index) => {
+          console.log(`   NFe ${index + 1}: ${nfe.items.length} itens - ${nfe.items.map(item => item.code).slice(0, 3).join(', ')}${nfe.items.length > 3 ? '...' : ''}`)
+        })
+      }
       
       const results = await importNFe(nfeDataArray, fileNames)
       
