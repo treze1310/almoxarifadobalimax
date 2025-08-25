@@ -47,7 +47,7 @@ import { useSupabaseTable } from '@/hooks/useSupabase'
 import { useRomaneios } from '@/hooks/useRomaneios'
 import { romaneioSchema, type RomaneioFormData } from '@/lib/validations'
 import { estoqueService } from '@/services/estoqueService'
-import { useAuth } from '@/contexts/AuthContext'
+
 import type { Tables } from '@/types/database'
 
 type MaterialEquipamento = Tables<'materiais_equipamentos'>
@@ -101,7 +101,8 @@ type ComponentFormValues = {
 const NovoRomaneioPage = () => {
   const navigate = useNavigate()
   const { toast } = useToast()
-  const { usuario } = useAuth()
+  // TODO: Implementar sistema de usuário simplificado
+  const usuario = { id: 'temp-user-id' }
   const [searchParams] = useSearchParams()
   const tipo = searchParams.get('tipo') as 'retirada' | 'devolucao' | 'transferencia'
   const editId = searchParams.get('edit')

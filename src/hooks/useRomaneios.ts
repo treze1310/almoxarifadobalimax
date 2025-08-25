@@ -4,7 +4,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { estoqueService } from '@/services/estoqueService'
 import { devolucaoService } from '@/services/devolucaoService'
 import { romaneioNumberService } from '@/services/romaneioNumberService'
-import { useAuth } from '@/contexts/AuthContext'
+
 import type { Tables } from '@/types/database'
 import type { RomaneioFormData } from '@/lib/validations'
 
@@ -40,7 +40,8 @@ export function useRomaneios() {
   const [romaneios, setRomaneios] = useState<Romaneio[]>([])
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
-  const { usuario } = useAuth()
+  // TODO: Implementar sistema de usuário simplificado
+  const usuario = { id: 'temp-user-id' }
 
   // Função auxiliar para gerar número do romaneio
   const generateRomaneioNumber = useCallback(async (
@@ -393,23 +394,9 @@ export function useRomaneios() {
         // Para retiradas e transferências, voltar para centro de custo origem
         centroCustoAnterior = romaneio.centro_custo_origem_id || almoxarifadoCentroCustoId
       } else if (isDevolucao) {
-        // Para devoluções, precisa buscar o romaneio original
-        // Para simplificar, vamos buscar a movimentação anterior do material
-        const { data: movimentacaoAnterior } = await supabase
-          .from('movimentacao_estoque')
-          .select(`
-            romaneios:romaneio_id (
-              centro_custo_destino_id
-            )
-          `)
-          .eq('material_equipamento_id', item.material_equipamento_id)
-          .not('romaneio_id', 'is', null)
-          .neq('romaneio_id', romaneio.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single()
-
-        centroCustoAnterior = movimentacaoAnterior?.romaneios?.centro_custo_destino_id || romaneio.centro_custo_origem_id || almoxarifadoCentroCustoId
+        // Para devoluções, usar centro de custo origem ou almoxarifado
+        // TODO: Implementar busca do romaneio original adequadamente
+        centroCustoAnterior = romaneio.centro_custo_origem_id || almoxarifadoCentroCustoId
       }
 
       // Atualizar o centro de custo do material

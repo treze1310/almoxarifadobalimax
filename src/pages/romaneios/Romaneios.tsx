@@ -23,7 +23,7 @@ import {
   Copy
 } from 'lucide-react'
 import { useRomaneios } from '@/hooks/useRomaneios'
-import { useRobustSupabase } from '@/hooks/useRobustSupabase'
+
 import { formatDate } from '@/lib/utils'
 import { useCenteredDialog } from '@/hooks/useCenteredDialog'
 
@@ -128,7 +128,6 @@ const RomaneiosPage = () => {
   const [statusDevolucoes, setStatusDevolucoes] = useState<Map<string, StatusDevolucao>>(new Map())
   const [loadingStatus, setLoadingStatus] = useState(false)
   const { romaneios, loading, fetchRomaneios, approveRomaneio, cancelRomaneio, deleteRomaneio } = useRomaneios()
-  const { query } = useRobustSupabase()
 
   // Hook para centralização inteligente do dialog de detalhes
   const detailsDialogPosition = useCenteredDialog(!!selectedRomaneio)

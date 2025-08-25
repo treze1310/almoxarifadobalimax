@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ColaboradorSelector } from '@/components/forms/ColaboradorSelector'
 import { Calendar, CalendarIcon, User, Package, AlertTriangle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { useAuth } from '@/contexts/AuthContext'
+
 import { supabase } from '@/lib/supabase'
 import { epiService, EPIAtribuicaoInsert } from '@/services/epiService'
 import { format, addMonths } from 'date-fns'
@@ -35,7 +35,8 @@ interface EPIAtribuicaoDialogProps {
 
 export function EPIAtribuicaoDialog({ materialId, colaboradorId, onSuccess }: EPIAtribuicaoDialogProps) {
   const { toast } = useToast()
-  const { user } = useAuth()
+  // TODO: Implementar sistema de usuário simplificado
+  const user = { id: 'temp-user-id' }
   const [loading, setLoading] = useState(false)
   const [materiais, setMateriais] = useState<Material[]>([])
   const [dataVencimento, setDataVencimento] = useState<Date>()

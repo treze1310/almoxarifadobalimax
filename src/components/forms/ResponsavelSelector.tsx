@@ -25,7 +25,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/contexts/AuthContext'
+
 import type { Tables } from '@/types/database'
 
 type Colaborador = Tables<'colaboradores'>
@@ -52,7 +52,8 @@ const ResponsavelSelector = ({
   disabled = false,
   error 
 }: ResponsavelSelectorProps) => {
-  const { usuario } = useAuth()
+  // TODO: Implementar sistema de usuário simplificado
+  const usuario = { id: 'temp-user-id' }
   const [open, setOpen] = useState(false)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([])
