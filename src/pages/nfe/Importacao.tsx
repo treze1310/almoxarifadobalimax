@@ -353,23 +353,29 @@ const ImportacaoNFePage = () => {
   
   const { loading: importLoading, importNFe } = useNFeImport()
 
-  // Efeito para auto-selecionar itens quando arquivos são processados com sucesso
+  // Controlar auto-seleção apenas uma vez por arquivo
+  const [autoSelectedFiles, setAutoSelectedFiles] = useState<Set<string>>(new Set())
+
+  // Efeito para auto-selecionar itens quando arquivos são processados com sucesso (apenas uma vez)
   useEffect(() => {
     files.forEach(file => {
-      if (file.status === 'success' && file.data && file.data.items.length > 0) {
-        // Verificar se os itens já foram selecionados para este arquivo
-        if (!selectedItems[file.id] || selectedItems[file.id].length === 0) {
-          const itemCodes = file.data.items.map(item => item.code)
-          console.log(`🔄 Auto-selecionando ${itemCodes.length} itens para arquivo ${file.id}`)
-          
-          setSelectedItems(prev => ({
-            ...prev,
-            [file.id]: itemCodes
-          }))
-        }
+      if (file.status === 'success' && 
+          file.data && 
+          file.data.items.length > 0 && 
+          !autoSelectedFiles.has(file.id)) {
+        
+        const itemCodes = file.data.items.map(item => item.code)
+        console.log(`🔄 Auto-selecionando ${itemCodes.length} itens para arquivo ${file.id} (primeira vez)`)
+        
+        setSelectedItems(prev => ({
+          ...prev,
+          [file.id]: itemCodes
+        }))
+        
+        setAutoSelectedFiles(prev => new Set(prev).add(file.id))
       }
     })
-  }, [files])
+  }, [files, autoSelectedFiles])
 
   const handleFileChange = (selectedFiles: FileList | null) => {
     if (!selectedFiles) return
