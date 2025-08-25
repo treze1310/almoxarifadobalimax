@@ -365,7 +365,7 @@ const ImportacaoNFePage = () => {
           !autoSelectedFiles.has(file.id)) {
         
         const itemCodes = file.data.items.map(item => item.code)
-        console.log(`🔄 Auto-selecionando ${itemCodes.length} itens para arquivo ${file.id} (primeira vez)`)
+        console.log(`🔄 Auto-selecionando ${itemCodes.length} itens para arquivo ${file.id}`)
         
         // Usar setTimeout para evitar conflitos de estado
         setTimeout(() => {
@@ -429,30 +429,26 @@ const ImportacaoNFePage = () => {
   }
 
   const handleItemSelectionChange = (fileId: string, itemCode: string, selected: boolean) => {
-    console.log(`🔀 Seleção: ${selected ? 'Marcando' : 'Desmarcando'} item ${itemCode}`)
-    
     setSelectedItems(prev => {
       const fileItems = prev[fileId] || []
       
-      let newItems
       if (selected) {
         // Adicionar item se não estiver selecionado
         if (!fileItems.includes(itemCode)) {
-          newItems = [...fileItems, itemCode]
-          console.log(`➕ Total de itens selecionados: ${newItems.length}`)
-        } else {
-          newItems = fileItems
+          return {
+            ...prev,
+            [fileId]: [...fileItems, itemCode]
+          }
         }
       } else {
         // Remover item
-        newItems = fileItems.filter(code => code !== itemCode)
-        console.log(`➖ Total de itens selecionados: ${newItems.length}`)
+        return {
+          ...prev,
+          [fileId]: fileItems.filter(code => code !== itemCode)
+        }
       }
       
-      return {
-        ...prev,
-        [fileId]: newItems
-      }
+      return prev
     })
   }
 
