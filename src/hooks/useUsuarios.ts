@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useRobustSupabase } from '@/hooks/useRobustSupabase'
 import { User, UserProfile } from '@/types/auth'
 
 interface UsuarioFormData {
@@ -14,21 +15,23 @@ export function useUsuarios() {
   const [usuarios, setUsuarios] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { query, mutate } = useRobustSupabase()
 
   const fetchUsuarios = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select(`
-          *,
-          perfil_personalizado:perfis_acesso(nome, descricao)
-        `)
-        .order('nome')
-
-      if (error) throw error
+      const data = await query(() =>
+        supabase
+          .from('usuarios')
+          .select(`
+            *,
+            centros_custo:centro_custo_id(codigo, descricao),
+            perfil_personalizado:perfis_acesso(nome, descricao, permissoes)
+          `)
+          .order('nome')
+      )
 
       setUsuarios(data || [])
     } catch (error) {
@@ -45,14 +48,13 @@ export function useUsuarios() {
 
       // Primeiro criar o usuário no Auth do Supabase
       if (userData.senha) {
-        const { data: authData, error: authError } = await supabase.auth.signUp({
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
           email: userData.email,
           password: userData.senha,
-          options: {
-            data: {
-              nome: userData.nome,
-              perfil: userData.perfil
-            }
+          email_confirm: true,
+          user_metadata: {
+            nome: userData.nome,
+            perfil: userData.perfil
           }
         })
 
@@ -91,17 +93,17 @@ export function useUsuarios() {
     try {
       setError(null)
 
-      const { error } = await supabase
-        .from('usuarios')
-        .update({
-          nome: userData.nome,
-          perfil: userData.perfil,
-          perfil_acesso_id: (userData as any).perfil_acesso_id || null,
-          centro_custo_id: userData.centro_custo_id || null,
-        })
-        .eq('id', id)
-
-      if (error) throw error
+      await mutate(() =>
+        supabase
+          .from('usuarios')
+          .update({
+            nome: userData.nome,
+            perfil: userData.perfil,
+            perfil_acesso_id: (userData as any).perfil_acesso_id || null,
+            centro_custo_id: userData.centro_custo_id || null,
+          })
+          .eq('id', id)
+      )
 
       await fetchUsuarios()
       return { error: null }
@@ -118,25 +120,29 @@ export function useUsuarios() {
       setError(null)
 
       // Primeiro buscar o auth_user_id
-      const { data: usuario, error: fetchError } = await supabase
-        .from('usuarios')
-        .select('auth_user_id')
-        .eq('id', id)
-        .single()
-
-      if (fetchError) throw fetchError
+      const usuario = await query(() =>
+        supabase
+          .from('usuarios')
+          .select('auth_user_id')
+          .eq('id', id)
+          .single()
+      )
 
       // Deletar da tabela de usuários
-      const { error: deleteError } = await supabase
-        .from('usuarios')
-        .delete()
-        .eq('id', id)
-
-      if (deleteError) throw deleteError
+      await mutate(() =>
+        supabase
+          .from('usuarios')
+          .delete()
+          .eq('id', id)
+      )
 
       // Se tiver auth_user_id, deletar do Auth também
-      if (usuario.auth_user_id) {
-        await supabase.auth.admin.deleteUser(usuario.auth_user_id)
+      if (usuario?.auth_user_id) {
+        try {
+          await supabase.auth.admin.deleteUser(usuario.auth_user_id)
+        } catch (authError) {
+          console.warn('Erro ao deletar usuário do Auth:', authError)
+        }
       }
 
       await fetchUsuarios()
@@ -153,12 +159,12 @@ export function useUsuarios() {
     try {
       setError(null)
 
-      const { error } = await supabase
-        .from('usuarios')
-        .update({ ativo })
-        .eq('id', id)
-
-      if (error) throw error
+      await mutate(() =>
+        supabase
+          .from('usuarios')
+          .update({ ativo })
+          .eq('id', id)
+      )
 
       await fetchUsuarios()
       return { error: null }
@@ -175,25 +181,26 @@ export function useUsuarios() {
       setError(null)
 
       // Buscar dados do usuário
-      const { data: usuario, error: fetchError } = await supabase
-        .from('usuarios')
-        .select('email, nome, perfil')
-        .eq('id', userId)
-        .single()
+      const usuario = await query(() =>
+        supabase
+          .from('usuarios')
+          .select('email, nome, perfil')
+          .eq('id', userId)
+          .single()
+      )
 
-      if (fetchError || !usuario) {
+      if (!usuario) {
         throw new Error('Usuário não encontrado')
       }
 
       // Criar usuário no Auth do Supabase
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: usuario.email,
         password: password,
-        options: {
-          data: {
-            nome: usuario.nome,
-            perfil: usuario.perfil
-          }
+        email_confirm: true,
+        user_metadata: {
+          nome: usuario.nome,
+          perfil: usuario.perfil
         }
       })
 
@@ -201,31 +208,12 @@ export function useUsuarios() {
 
       if (authData.user) {
         // Vincular o auth_user_id ao usuário existente
-        const { error: updateError } = await supabase
-          .from('usuarios')
-          .update({ auth_user_id: authData.user.id })
-          .eq('id', userId)
-
-        if (updateError) throw updateError
-
-        // Em desenvolvimento, confirmar email automaticamente
-        if (import.meta.env.DEV) {
-          try {
-            await supabase.rpc('confirm_user_email', { 
-              user_email: usuario.email 
-            })
-          } catch (emailError) {
-            // Se a função não existir, tentar update direto na tabela auth.users
-            try {
-              await supabase
-                .from('auth.users')
-                .update({ email_confirmed_at: new Date().toISOString() })
-                .eq('email', usuario.email)
-            } catch (directUpdateError) {
-              console.warn('Não foi possível confirmar email automaticamente:', directUpdateError)
-            }
-          }
-        }
+        await mutate(() =>
+          supabase
+            .from('usuarios')
+            .update({ auth_user_id: authData.user.id })
+            .eq('id', userId)
+        )
       }
 
       await fetchUsuarios()

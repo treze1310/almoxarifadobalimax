@@ -15,18 +15,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: true,
     flowType: 'pkce',
-    debug: false,
-    storageKey: 'sb-auth-token'
+    debug: import.meta.env.DEV
   },
   global: {
     headers: {
       'x-client-info': 'supabase-js-web'
-    },
-    fetch: (url, options = {}) => {
-      return fetch(url, {
-        ...options,
-        signal: AbortSignal.timeout(20000) // 20 segundos timeout
-      })
     }
   },
   db: {

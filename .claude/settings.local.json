@@ -37,7 +37,9 @@
       "Bash(git config:*)",
       "Bash(git push:*)",
       "Read(//mnt/c/Users/Safetec/Documents/Projetos/CURSOR-PROJECTS/**)",
-      "Bash(npm run test:*)"
+      "Bash(npm run test:*)",
+      "Bash(cd:*)",
+      "mcp__supabase__get_advisors"
     ]
   },
   "enableAllProjectMcpServers": true,

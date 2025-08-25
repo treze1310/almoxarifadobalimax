@@ -140,13 +140,34 @@ const ProfilePage = () => {
     await loadEmpresaAtiva()
   }
 
-  const onPasswordSubmit = (data: PasswordFormValues) => {
-    console.log(data)
-    toast({
-      title: 'Senha alterada!',
-      description: 'Sua senha foi alterada com sucesso.',
-    })
-    passwordForm.reset()
+  const onPasswordSubmit = async (data: PasswordFormValues) => {
+    if (!user) return
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: data.newPassword
+      })
+
+      if (error) {
+        toast({
+          title: 'Erro',
+          description: 'Erro ao alterar senha.',
+          variant: 'destructive'
+        })
+      } else {
+        toast({
+          title: 'Senha alterada!',
+          description: 'Sua senha foi alterada com sucesso.',
+        })
+        passwordForm.reset()
+      }
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao alterar senha.',
+        variant: 'destructive'
+      })
+    }
   }
 
   const toggleTheme = () => {

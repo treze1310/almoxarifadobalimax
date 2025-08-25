@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -20,6 +20,7 @@ import {
 import { formatDate, formatDateTime } from '@/lib/utils'
 import { generateRomaneoPDFContent } from './RomaneioPDF'
 import { companyService } from '@/services/companyService'
+import pdfService from '@/services/pdfService'
 import { useRomaneios } from '@/hooks/useRomaneios'
 import { useToast } from '@/components/ui/use-toast'
 import ItensStatusTable from './ItensStatusTable'
@@ -89,6 +90,18 @@ const RomaneioDialog = ({ romaneio, trigger, onRomaneioUpdated }: RomaneioDialog
   const { deleteRomaneio } = useRomaneios()
   const { toast } = useToast()
 
+  // 🧹 Cleanup quando componente é desmontado
+  useEffect(() => {
+    return () => {
+      // Abortar geração de PDF em andamento se componente for desmontado
+      if (isGeneratingPDF) {
+        console.log('🧹 Component unmounting, aborting PDF generation...')
+        pdfService.abort()
+        setIsGeneratingPDF(false)
+      }
+    }
+  }, [isGeneratingPDF])
+
   const handleDelete = async () => {
     setIsDeleting(true)
     try {
@@ -129,6 +142,8 @@ const RomaneioDialog = ({ romaneio, trigger, onRomaneioUpdated }: RomaneioDialog
     }
   }
 
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+
   const handleDownloadPDF = async (event?: React.MouseEvent) => {
     // Prevenir propagação de eventos
     if (event) {
@@ -136,87 +151,59 @@ const RomaneioDialog = ({ romaneio, trigger, onRomaneioUpdated }: RomaneioDialog
       event.stopPropagation()
     }
 
-    let printElement: HTMLElement | null = null
+    // 🚫 Evitar múltiplas gerações simultâneas
+    if (isGeneratingPDF || pdfService.isGenerating) {
+      toast({
+        title: 'Aguarde',
+        description: 'Uma geração de PDF já está em andamento.',
+        variant: 'default',
+      })
+      return
+    }
 
     try {
-      // Importação dinâmica com fallback para commonjs
-      const jsPDFModule = await import('jspdf')
-      const html2canvasModule = await import('html2canvas')
-      
-      const jsPDF = jsPDFModule.default || jsPDFModule
-      const html2canvas = html2canvasModule.default || html2canvasModule
-      
-      // Create a temporary element with the print content
+      // 🏢 Buscar dados da empresa com cache
       const company = await companyService.getActiveCompany()
-      printElement = document.createElement('div')
-      printElement.id = `pdf-temp-${Date.now()}` // ID único
-      printElement.innerHTML = generateRomaneoPDFContent(romaneio, company)
-      printElement.style.position = 'absolute'
-      printElement.style.left = '-9999px'
-      printElement.style.top = '0'
-      printElement.style.width = '210mm'
-      printElement.style.backgroundColor = 'white'
-      printElement.style.zIndex = '-1000'
-      document.body.appendChild(printElement)
-
-      // Wait for images to load
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      // Convert to canvas and then to PDF
-      const canvas = await html2canvas(printElement, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: 'white',
-        logging: false,
-        removeContainer: false
-      })
-      const imgData = canvas.toDataURL('image/png')
-      
-      const pdf = new jsPDF()
-      const imgWidth = 210 // A4 width in mm
-      const pageHeight = 295 // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
-      let heightLeft = imgHeight
-
-      let position = 0
-
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight
-        pdf.addPage()
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-        heightLeft -= pageHeight
+      if (!company) {
+        throw new Error('Dados da empresa não encontrados')
       }
 
-      pdf.save(`romaneio-${romaneio.numero}.pdf`)
-      
-      toast({
-        title: 'Sucesso',
-        description: 'PDF gerado com sucesso!',
+      // 🚀 Gerar PDF usando o serviço otimizado
+      const success = await pdfService.generatePDF({
+        filename: `romaneio-${romaneio.numero}.pdf`,
+        htmlContent: generateRomaneoPDFContent(romaneio, company),
+        onStart: () => {
+          setIsGeneratingPDF(true)
+          console.log('🚀 Starting PDF generation for romaneio:', romaneio.numero)
+        },
+        onFinish: () => {
+          setIsGeneratingPDF(false)
+          console.log('✅ PDF generation finished for romaneio:', romaneio.numero)
+        },
+        onError: (error) => {
+          console.error('❌ PDF generation failed:', error)
+          toast({
+            title: 'Erro',
+            description: error.message || 'Erro ao gerar PDF',
+            variant: 'destructive',
+          })
+        }
       })
-    } catch (error) {
-      console.error('Erro ao gerar PDF:', error)
+
+      if (success) {
+        toast({
+          title: 'Sucesso',
+          description: 'PDF gerado com sucesso!',
+        })
+      }
+    } catch (error: any) {
+      console.error('❌ Unexpected error in PDF generation:', error)
+      setIsGeneratingPDF(false)
       toast({
         title: 'Erro',
-        description: 'Erro ao gerar PDF',
+        description: error.message || 'Erro inesperado ao gerar PDF',
         variant: 'destructive',
       })
-    } finally {
-      // Garantir limpeza do elemento temporário com delay
-      if (printElement) {
-        setTimeout(() => {
-          if (printElement && printElement.parentNode) {
-            try {
-              document.body.removeChild(printElement)
-            } catch (cleanupError) {
-              console.warn('Erro na limpeza do elemento temporário:', cleanupError)
-            }
-          }
-        }, 100)
-      }
     }
   }
 
@@ -244,8 +231,17 @@ const RomaneioDialog = ({ romaneio, trigger, onRomaneioUpdated }: RomaneioDialog
                 <Button variant="outline" size="sm" onClick={handlePrint}>
                   <Printer className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
-                  <Download className="h-4 w-4" />
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleDownloadPDF}
+                  disabled={isGeneratingPDF || pdfService.isGenerating}
+                >
+                  {(isGeneratingPDF || pdfService.isGenerating) ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
                 </Button>
                 <Button variant="outline" size="sm">
                   <Edit className="h-4 w-4" />

@@ -23,6 +23,7 @@ import {
   Copy
 } from 'lucide-react'
 import { useRomaneios } from '@/hooks/useRomaneios'
+import { useRobustSupabase } from '@/hooks/useRobustSupabase'
 import { formatDate } from '@/lib/utils'
 import { useCenteredDialog } from '@/hooks/useCenteredDialog'
 import { PermissionGuard } from '@/components/PermissionGuard'
@@ -127,6 +128,7 @@ const RomaneiosPage = () => {
   const [statusDevolucoes, setStatusDevolucoes] = useState<Map<string, StatusDevolucao>>(new Map())
   const [loadingStatus, setLoadingStatus] = useState(false)
   const { romaneios, loading, fetchRomaneios, approveRomaneio, cancelRomaneio, deleteRomaneio } = useRomaneios()
+  const { query } = useRobustSupabase()
 
   // Hook para centralização inteligente do dialog de detalhes
   const detailsDialogPosition = useCenteredDialog(!!selectedRomaneio)
@@ -181,8 +183,16 @@ const RomaneiosPage = () => {
     setIsGeneratingPDF(true)
 
     try {
-      // Buscar dados da empresa
-      const company = await companyService.getActiveCompany()
+      console.log('🔄 Iniciando geração de PDF para romaneio:', selectedRomaneio.numero)
+      
+      // Buscar dados da empresa com retry robusto
+      const company = await companyService.getActiveCompany(query)
+      
+      if (!company) {
+        throw new Error('Não foi possível carregar os dados da empresa')
+      }
+
+      console.log('✅ Dados da empresa carregados')
       
       // Create a temporary element with the new PDF content
       const printElement = document.createElement('div')
@@ -196,18 +206,44 @@ const RomaneiosPage = () => {
       document.body.appendChild(printElement)
 
       // Wait a bit for images to load
-      await new Promise(resolve => setTimeout(resolve, 500))
+      console.log('⏳ Aguardando carregamento de imagens...')
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
-      // Convert to canvas and then to PDF
-      const canvas = await html2canvas(printElement, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: 'white',
-        width: printElement.scrollWidth,
-        height: printElement.scrollHeight
-      })
-      
+      console.log('🖨️ Convertendo para canvas...')
+      // Convert to canvas and then to PDF with retry logic
+      let canvas
+      let retryCount = 0
+      const maxRetries = 3
+
+      while (retryCount < maxRetries) {
+        try {
+          canvas = await html2canvas(printElement, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: 'white',
+            width: printElement.scrollWidth,
+            height: printElement.scrollHeight,
+            timeout: 10000
+          })
+          break
+        } catch (canvasError) {
+          retryCount++
+          console.warn(`⚠️ Tentativa ${retryCount}/${maxRetries} de conversão falhou:`, canvasError)
+          
+          if (retryCount < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
+          } else {
+            throw canvasError
+          }
+        }
+      }
+
+      if (!canvas) {
+        throw new Error('Falha na conversão para canvas após todas as tentativas')
+      }
+
+      console.log('📄 Gerando PDF...')
       const imgData = canvas.toDataURL('image/png')
       const pdf = new jsPDF('p', 'mm', 'a4')
       
@@ -229,13 +265,23 @@ const RomaneiosPage = () => {
       }
       
       pdf.save(`romaneio-${selectedRomaneio.numero}.pdf`)
+      console.log('✅ PDF gerado com sucesso!')
       
       // Clean up
       document.body.removeChild(printElement)
       
     } catch (error) {
-      console.error('Erro ao gerar PDF:', error)
-      alert('Erro ao gerar PDF. Tente novamente.')
+      console.error('💥 Erro ao gerar PDF:', error)
+      
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
+      
+      if (errorMessage.includes('Session expired') || errorMessage.includes('JWT')) {
+        alert('Sessão expirada. Faça login novamente.')
+      } else if (errorMessage.includes('Network') || errorMessage.includes('timeout')) {
+        alert('Problema de conexão. Verifique sua internet e tente novamente.')
+      } else {
+        alert(`Erro ao gerar PDF: ${errorMessage}. Tente novamente.`)
+      }
     } finally {
       setIsGeneratingPDF(false)
     }

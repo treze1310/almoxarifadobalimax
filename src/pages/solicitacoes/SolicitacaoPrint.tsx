@@ -7,12 +7,14 @@ import { ArrowLeft, Printer, Download } from 'lucide-react'
 // Dynamic imports para jsPDF e html2canvas
 import { supabase } from '@/lib/supabase'
 import { companyService, CompanyWithLogo } from '@/services/companyService'
+import { useRobustSupabase } from '@/hooks/useRobustSupabase'
 
 const SolicitacaoPrintPage = () => {
   const { state } = useLocation()
   const navigate = useNavigate()
   const { id } = useParams()
   const requestData: SolicitacaoCompra | null = state
+  const { query } = useRobustSupabase()
   
   const [centroCustoOrigem, setCentroCustoOrigem] = useState<string>('')
   const [centroCustoDestino, setCentroCustoDestino] = useState<string>('')
@@ -30,7 +32,7 @@ const SolicitacaoPrintPage = () => {
   useEffect(() => {
     const fetchCompany = async () => {
       try {
-        const companyData = await companyService.getActiveCompany()
+        const companyData = await companyService.getActiveCompany(query)
         setCompany(companyData)
       } catch (error) {
         console.error('Erro ao buscar dados da empresa:', error)

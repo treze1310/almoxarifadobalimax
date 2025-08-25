@@ -340,7 +340,7 @@ const MateriaisEquipamentosPage = () => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2 shrink-0">
-                      <Badge variant={getStatusVariant(material.status)} className="text-xs">
+                      <Badge variant={getStatusColor(material.status)} className="text-xs">
                         {getStatusLabel(material.status)}
                       </Badge>
                       <DropdownMenu>

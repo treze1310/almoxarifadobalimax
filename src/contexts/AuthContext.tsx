@@ -4,12 +4,15 @@ import { supabase } from '@/lib/supabase'
 import { User, UserProfile, UserPermissions, PROFILE_PERMISSIONS } from '@/types/auth'
 import { PermissoesPerfil } from '@/types/perfil'
 
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+
 interface AuthContextType {
   user: SupabaseUser | null
   usuario: User | null
   session: Session | null
   loading: boolean
   connectionError: boolean
+  retryAttempts: number
   
   // Permissões
   permissions: UserPermissions
@@ -106,19 +109,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [connectionError, setConnectionError] = useState(false)
+  const [retryAttempts, setRetryAttempts] = useState(0)
 
-  // Função para testar conectividade
+  // Função simplificada para testar conectividade apenas quando necessário
   const testConnection = async (): Promise<boolean> => {
     try {
-      const { error } = await Promise.race([
-        supabase.from('usuarios').select('id').limit(1).single(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Connection test timeout')), 8000)
-        )
-      ]) as any
-      return !error || error.code !== 'PGRST301' // 301 significa que não encontrou resultado, mas a conexão funciona
-    } catch {
-      return false
+      // Fazer uma query simples e rápida
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000)
+      
+      const response = await fetch(`${supabaseUrl}/rest/v1/`, {
+        method: 'HEAD',
+        headers: {
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
+        },
+        signal: controller.signal
+      })
+      
+      clearTimeout(timeoutId)
+      
+      const isConnected = response.status < 500 // Qualquer coisa exceto erro de servidor
+      
+      if (isConnected) {
+        setConnectionError(false)
+      }
+      
+      return isConnected
+    } catch (error: any) {
+      console.debug('🔗 Connection test failed, but continuing...', error.message)
+      
+      // Para qualquer erro, deixar o Supabase lidar com retry interno
+      // Não marcar como erro de conexão para não confundir o usuário
+      return true
     }
   }
 
@@ -199,6 +221,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
+  // Função para verificar e restaurar sessão expirada
+  const restoreSession = async (): Promise<boolean> => {
+    try {
+      console.log('🔄 Attempting to restore session...')
+      
+      const { data: { session }, error } = await supabase.auth.refreshSession()
+      
+      if (error || !session) {
+        console.log('❌ Session restore failed:', error?.message)
+        return false
+      }
+      
+      console.log('✅ Session restored successfully')
+      setSession(session)
+      setUser(session.user)
+      setConnectionError(false)
+      
+      if (session.user) {
+        const usuario = await loadUsuarioFromDatabase(session.user)
+        setUsuario(usuario)
+      }
+      
+      return true
+    } catch (error) {
+      console.error('💥 Session restore error:', error)
+      return false
+    }
+  }
+
   const updateLastAccess = async () => {
     if (user) {
       try {
@@ -212,8 +263,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     let isMounted = true
     let retryCount = 0
-    const maxRetries = 2 // Reduzido para evitar loops longos
+    const maxRetries = 3
     const controller = new AbortController()
+    let connectionMonitor: NodeJS.Timeout | null = null
     
     const initializeAuth = async () => {
       if (!isMounted) return
@@ -221,56 +273,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         console.log('🚀 Initializing authentication...')
         
-        // Verificar se existe uma sessão válida no localStorage primeiro
-        const localSessionData = localStorage.getItem('sb-emcyvosymdelzxrokdvf-auth-token')
+        // Não testar conectividade na inicialização - confiar no Supabase
+        // O teste de conexão será feito apenas durante o monitoramento
         
-        // Se não há dados de sessão local, pular tentativa de auth
-        if (!localSessionData && retryCount === 0) {
-          console.log('📋 No local session found, proceeding without auth...')
-          setSession(null)
-          setUser(null)
-          setUsuario(null)
-          setLoading(false)
-          setConnectionError(false)
-          return
-        }
+        // Debug: listar todas as chaves de auth no localStorage
+        const allKeys = Object.keys(localStorage).filter(k => k.includes('supabase') || k.includes('auth'))
+        console.log('🗂️ All auth keys:', allKeys)
         
-        // Tentar usar a sessão existente primeiro sem timeout agressivo
+        // Tentar usar a sessão existente
         let sessionResult
         try {
-          // Usar timeout mais generoso apenas se temos dados locais
-          const timeoutMs = 15000
-          
+          console.log('🔐 Getting current session...')
           sessionResult = await Promise.race([
             supabase.auth.getSession(),
             new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Auth timeout')), timeoutMs)
+              setTimeout(() => reject(new Error('Auth timeout')), 10000)
             )
           ]) as any
-        } catch (authError) {
-          // Se falhar, tentar recuperar do localStorage diretamente
-          console.log('🔄 Trying local session recovery...')
-          if (localSessionData) {
-            try {
-              const sessionData = JSON.parse(localSessionData)
-              if (sessionData.access_token) {
-                // Simular uma sessão básica para continuar
-                sessionResult = {
-                  data: { session: sessionData },
-                  error: null
-                }
-              }
-            } catch (e) {
-              console.warn('⚠️ Failed to parse local session data')
-            }
-          }
           
-          if (!sessionResult) {
-            throw authError
+          console.log('📋 Session result:', {
+            hasSession: !!sessionResult?.data?.session,
+            hasUser: !!sessionResult?.data?.session?.user,
+            hasAccessToken: !!sessionResult?.data?.session?.access_token,
+            error: sessionResult?.error?.message
+          })
+        } catch (authError) {
+          console.log('🔄 Session recovery failed, trying again...')
+          if (retryCount < maxRetries) {
+            retryCount++
+            setRetryAttempts(retryCount)
+            setTimeout(initializeAuth, 2000 * retryCount)
+            return
           }
+          throw authError
         }
         
-        const { data: { session }, error } = sessionResult
+        let { data: { session }, error } = sessionResult
         
         if (!isMounted || controller.signal.aborted) return
         
@@ -278,19 +316,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.error('❌ Auth error:', error)
         }
         
+        // Verificar se a sessão é válida (não expirada)
+        if (session) {
+          const now = Math.floor(Date.now() / 1000)
+          const expiresAt = session.expires_at || 0
+          
+          if (expiresAt <= now) {
+            console.log('⏰ Session is expired, attempting refresh...')
+            const restored = await restoreSession()
+            if (!restored) {
+              console.log('❌ Could not restore expired session')
+              setSession(null)
+              setUser(null)
+              setUsuario(null)
+              setLoading(false)
+              setConnectionError(true)
+              return
+            }
+            // Se restaurou com sucesso, usar a nova sessão
+            const { data: { session: newSession } } = await supabase.auth.getSession()
+            session = newSession
+          }
+        }
+
         console.log('📋 Session status:', session ? '✅ Active' : '❌ None')
         setSession(session)
         setUser(session?.user ?? null)
-        setConnectionError(false) // Reset connection error on successful auth
+        setConnectionError(false)
+        setRetryAttempts(0)
         
         if (session?.user && isMounted) {
           try {
-            const usuario = await Promise.race([
-              loadUsuarioFromDatabase(session.user),
-              new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('User load timeout')), 10000)
-              )
-            ]) as User | null
+            const usuario = await loadUsuarioFromDatabase(session.user)
             
             if (isMounted && !controller.signal.aborted) {
               setUsuario(usuario)
@@ -311,20 +368,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
         console.log('🎉 Auth initialization complete')
         
+        // O Supabase já cuida do refresh automático de tokens
+        // Não precisamos de monitoramento adicional
+        console.log('🔄 Supabase auto-refresh enabled, no additional monitoring needed')
+        
       } catch (error) {
         console.error('💥 Auth initialization error:', error)
         if (isMounted && !controller.signal.aborted) {
           if (retryCount < maxRetries) {
             retryCount++
+            setRetryAttempts(retryCount)
             console.log(`🔄 Retrying auth (${retryCount}/${maxRetries})...`)
-            setTimeout(initializeAuth, 1000)
+            setTimeout(initializeAuth, 2000 * retryCount)
           } else {
             console.log('🛑 Auth initialization failed, proceeding without session...')
             setSession(null)
             setUser(null)
             setUsuario(null)
             setLoading(false)
-            setConnectionError(false)
+            setConnectionError(true)
+            setRetryAttempts(0)
           }
         }
       }
@@ -343,15 +406,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         setSession(session)
         setUser(session?.user ?? null)
+        setConnectionError(false)
+        setRetryAttempts(0)
         
         if (session?.user) {
           const usuario = await loadUsuarioFromDatabase(session.user)
           setUsuario(usuario)
-          if (event === 'SIGNED_IN') {
+          
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
             updateLastAccess()
+            console.log('🔑 Session refreshed or signed in, updating last access')
           }
         } else {
           setUsuario(null)
+          
+          // Se perdeu a sessão, tentar restaurar
+          if (event === 'SIGNED_OUT' && user) {
+            console.log('🔄 Session lost, attempting restore...')
+            setTimeout(async () => {
+              if (isMounted) {
+                await restoreSession()
+              }
+            }, 1000)
+          }
         }
         
         setLoading(false)
@@ -361,10 +438,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     })
 
+    // Monitor simplificado apenas para visibilidade da página
+    const handleVisibilityChange = () => {
+      if (!document.hidden && session) {
+        console.log('👁️ Page visible again, refreshing user data...')
+        refreshUsuario()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // Monitor básico de conectividade
+    const handleOnline = () => {
+      console.log('🌐 Back online')
+      setConnectionError(false)
+    }
+
+    const handleOffline = () => {
+      console.log('📴 Offline detected') 
+      setConnectionError(true)
+    }
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
     return () => {
       isMounted = false
       controller.abort()
       subscription.unsubscribe()
+      if (connectionMonitor) clearInterval(connectionMonitor)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
     }
   }, [])
 
@@ -502,6 +607,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     session,
     loading,
     connectionError,
+    retryAttempts,
     permissions,
     hasPermission,
     isAdmin,
