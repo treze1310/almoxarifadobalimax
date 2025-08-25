@@ -122,37 +122,45 @@ const DashboardPage = () => {
   ]
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-4 md:space-y-6 animate-fade-in-up">
+      {/* 📱 Header responsivo */}
+      <div className="flex flex-col gap-3 md:gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Visão geral do seu almoxarifado.
           </p>
         </div>
-        <div className="flex space-x-2">
-          <Button asChild size="sm">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-2">
+          <Button asChild size="sm" className="w-full sm:w-auto">
             <Link to="/romaneios/novo?tipo=retirada">
-              <FilePlus className="mr-2 h-4 w-4" /> Novo Romaneio
+              <FilePlus className="mr-2 h-4 w-4" /> 
+              <span className="hidden sm:inline">Novo Romaneio</span>
+              <span className="sm:hidden">Romaneio</span>
             </Link>
           </Button>
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
             <Link to="/romaneios/novo?tipo=devolucao">
-              <ArrowDownUp className="mr-2 h-4 w-4" /> Nova Devolução
+              <ArrowDownUp className="mr-2 h-4 w-4" /> 
+              <span className="hidden sm:inline">Nova Devolução</span>
+              <span className="sm:hidden">Devolução</span>
             </Link>
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* 📱 KPIs responsivos - 2 colunas em mobile, 4 em desktop */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         {kpiData.map((kpi) => (
-          <Card key={kpi.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{kpi.title}</CardTitle>
-              <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
+          <Card key={kpi.title} className="p-3 lg:p-6">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-0 mb-2">
+              <CardTitle className="text-xs lg:text-sm font-medium leading-tight">
+                {kpi.title}
+              </CardTitle>
+              <kpi.icon className={`h-3 w-3 lg:h-4 lg:w-4 ${kpi.color} shrink-0`} />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{kpi.value}</div>
+            <CardContent className="p-0">
+              <div className="text-lg lg:text-2xl font-bold">{kpi.value}</div>
               <p className="text-xs text-muted-foreground">
                 <Link to={kpi.link} className="hover:underline">
                   Ver detalhes
@@ -163,25 +171,37 @@ const DashboardPage = () => {
         ))}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      {/* 📱 Gráficos responsivos - empilhados em mobile */}
+      <div className="grid gap-4 lg:grid-cols-7">
         <Card className="lg:col-span-4">
-          <CardHeader>
-            <CardTitle>Movimentação de Estoque (Últimos 30 dias)</CardTitle>
+          <CardHeader className="p-4 lg:p-6">
+            <CardTitle className="text-base lg:text-lg">
+              Movimentação de Estoque (Últimos 30 dias)
+            </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 lg:p-6 pt-0">
             {loading ? (
-              <div className="flex items-center justify-center h-[300px]">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <div className="flex items-center justify-center h-[200px] lg:h-[300px]">
+                <div className="animate-spin rounded-full h-6 w-6 lg:h-8 lg:w-8 border-b-2 border-primary"></div>
               </div>
             ) : (
               <ChartContainer
                 config={lineChartConfig}
-                className="h-[300px] w-full"
+                className="h-[200px] lg:h-[300px] w-full"
               >
                 <LineChart data={stockMovementData}>
                   <CartesianGrid vertical={false} />
-                  <XAxis dataKey="name" tickLine={false} axisLine={false} />
-                  <YAxis tickLine={false} axisLine={false} />
+                  <XAxis 
+                    dataKey="name" 
+                    tickLine={false} 
+                    axisLine={false}
+                    fontSize={12}
+                  />
+                  <YAxis 
+                    tickLine={false} 
+                    axisLine={false}
+                    fontSize={12}
+                  />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Legend />
                   <Line
@@ -203,18 +223,20 @@ const DashboardPage = () => {
         </Card>
 
         <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Status das Solicitações de Compra</CardTitle>
+          <CardHeader className="p-4 lg:p-6">
+            <CardTitle className="text-base lg:text-lg">
+              Status das Solicitações de Compra
+            </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 lg:p-6 pt-0">
             {loading ? (
-              <div className="flex items-center justify-center h-[300px]">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <div className="flex items-center justify-center h-[200px] lg:h-[300px]">
+                <div className="animate-spin rounded-full h-6 w-6 lg:h-8 lg:w-8 border-b-2 border-primary"></div>
               </div>
             ) : (
               <ChartContainer
                 config={pieChartConfig}
-                className="h-[300px] w-full"
+                className="h-[200px] lg:h-[300px] w-full"
               >
                 <PieChart>
                   <ChartTooltip
@@ -233,20 +255,23 @@ const DashboardPage = () => {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+      {/* 📱 Gráficos inferiores - empilhados em mobile */}
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle>Consumo por Centro de Custo</CardTitle>
+          <CardHeader className="p-4 lg:p-6">
+            <CardTitle className="text-base lg:text-lg">
+              Consumo por Centro de Custo
+            </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 lg:p-6 pt-0">
             {loading ? (
-              <div className="flex items-center justify-center h-[300px]">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <div className="flex items-center justify-center h-[200px] lg:h-[300px]">
+                <div className="animate-spin rounded-full h-6 w-6 lg:h-8 lg:w-8 border-b-2 border-primary"></div>
               </div>
             ) : (
               <ChartContainer
                 config={barChartConfig}
-                className="h-[300px] w-full"
+                className="h-[200px] lg:h-[300px] w-full"
               >
                 <BarChart data={costCenterData} layout="vertical">
                   <CartesianGrid horizontal={false} />
@@ -254,9 +279,10 @@ const DashboardPage = () => {
                   <YAxis
                     dataKey="name"
                     type="category"
-                    width={80}
+                    width={60}
                     tickLine={false}
                     axisLine={false}
+                    fontSize={11}
                   />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Bar dataKey="consumo" fill="var(--color-consumo)" radius={4} />
@@ -265,31 +291,38 @@ const DashboardPage = () => {
             )}
           </CardContent>
         </Card>
+        
         <Card>
-          <CardHeader>
-            <CardTitle>Top 5 Produtos Mais Movimentados</CardTitle>
-            <CardDescription>
+          <CardHeader className="p-4 lg:p-6">
+            <CardTitle className="text-base lg:text-lg">
+              Top 5 Produtos Mais Movimentados
+            </CardTitle>
+            <CardDescription className="text-sm">
               Baseado nas movimentações dos últimos 30 dias.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 lg:p-6 pt-0">
             {loading ? (
-              <div className="flex items-center justify-center h-[200px]">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <div className="flex items-center justify-center h-[150px] lg:h-[200px]">
+                <div className="animate-spin rounded-full h-6 w-6 lg:h-8 lg:w-8 border-b-2 border-primary"></div>
               </div>
             ) : topProductsData.length > 0 ? (
-              <ul className="space-y-4">
+              <ul className="space-y-3 lg:space-y-4">
                 {topProductsData.map((product) => (
                   <li key={product.name} className="flex items-center">
-                    <TrendingUp className="h-5 w-5 mr-3 text-muted-foreground" />
-                    <span className="flex-1 font-medium">{product.name}</span>
-                    <span className="font-semibold">{product.value}</span>
+                    <TrendingUp className="h-4 w-4 lg:h-5 lg:w-5 mr-2 lg:mr-3 text-muted-foreground shrink-0" />
+                    <span className="flex-1 font-medium text-sm lg:text-base truncate">
+                      {product.name}
+                    </span>
+                    <span className="font-semibold text-sm lg:text-base shrink-0">
+                      {product.value}
+                    </span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <div className="flex items-center justify-center h-[200px] text-muted-foreground">
-                <p>Nenhuma movimentação encontrada</p>
+              <div className="flex items-center justify-center h-[150px] lg:h-[200px] text-muted-foreground">
+                <p className="text-sm lg:text-base">Nenhuma movimentação encontrada</p>
               </div>
             )}
           </CardContent>

@@ -1,0 +1,10 @@
+.
+..
+.claude
+.git
+dist
+migrations
+node_modules
+public
+src
+tests

@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useState } from 'react'
 import {
   ChevronDown,
   Home,
@@ -26,6 +27,8 @@ import {
   User,
   Settings,
   LogOut,
+  Menu,
+  X,
 } from 'lucide-react'
 import {
   Collapsible,
@@ -45,6 +48,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
+  SheetClose,
 } from '@/components/ui/sheet'
 import {
   DropdownMenu,
@@ -142,7 +146,8 @@ const menuItems = [
   },
 ]
 
-export const Sidebar = () => {
+// 📱 Componente de Menu (usado tanto na sidebar desktop quanto mobile)
+const MenuContent = ({ onNavigate }: { onNavigate?: () => void }) => {
   const location = useLocation()
   const { usuario, signOut } = useAuth()
   const { toast } = useToast()
@@ -176,7 +181,6 @@ export const Sidebar = () => {
     const [path] = href.split('?')
     const [locationPath] = location.pathname.split('?')
     if (path === locationPath) {
-      // If paths match, check query params for /romaneios/novo
       if (path === '/romaneios/novo') {
         const hrefParams = new URLSearchParams(href.split('?')[1])
         const locationParams = new URLSearchParams(location.search)
@@ -191,14 +195,14 @@ export const Sidebar = () => {
     return subItems.some((sub) => isActive(sub.href))
   }
 
+  const handleNavClick = () => {
+    onNavigate?.()
+  }
+
   return (
-    <aside className="hidden lg:flex flex-col w-64 border-r bg-card">
-      <div className="flex items-center h-16 border-b px-6">
-        <SidebarIcon className="h-6 w-6 mr-2" />
-        <h2 className="font-bold text-lg">Menu</h2>
-      </div>
+    <div className="flex flex-col h-full">
       <ScrollArea className="flex-1">
-        <nav className="p-4 space-y-2">
+        <nav className="p-3 space-y-1">
           {menuItems.map((item) =>
             item.subItems ? (
               <Collapsible
@@ -206,50 +210,52 @@ export const Sidebar = () => {
                 defaultOpen={isParentActive(item.subItems)}
               >
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-start">
-                    <item.icon className="mr-2 h-4 w-4" />
-                    {item.title}
-                    <ChevronDown className="ml-auto h-4 w-4" />
+                  <Button variant="ghost" className="w-full justify-start text-sm py-2 h-auto">
+                    <item.icon className="mr-2 h-4 w-4 shrink-0" />
+                    <span className="truncate">{item.title}</span>
+                    <ChevronDown className="ml-auto h-4 w-4 shrink-0" />
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="pl-4">
+                <CollapsibleContent className="pl-3">
                   {item.subItems.map((subItem) => (
-                    <Link to={subItem.href} key={subItem.title}>
+                    <Link to={subItem.href} key={subItem.title} onClick={handleNavClick}>
                       <Button
                         variant={isActive(subItem.href) ? 'secondary' : 'ghost'}
-                        className="w-full justify-start mt-1"
+                        className="w-full justify-start mt-1 text-sm py-2 h-auto"
                       >
-                        <subItem.icon className="mr-2 h-4 w-4" />
-                        {subItem.title}
+                        <subItem.icon className="mr-2 h-4 w-4 shrink-0" />
+                        <span className="truncate">{subItem.title}</span>
                       </Button>
                     </Link>
                   ))}
                 </CollapsibleContent>
               </Collapsible>
             ) : (
-              <Link to={item.href!} key={item.title}>
+              <Link to={item.href!} key={item.title} onClick={handleNavClick}>
                 <Button
                   variant={isActive(item.href!) ? 'secondary' : 'ghost'}
-                  className="w-full justify-start"
+                  className="w-full justify-start text-sm py-2 h-auto"
                 >
-                  <item.icon className="mr-2 h-4 w-4" />
-                  {item.title}
+                  <item.icon className="mr-2 h-4 w-4 shrink-0" />
+                  <span className="truncate">{item.title}</span>
                 </Button>
               </Link>
             ),
           )}
         </nav>
       </ScrollArea>
-      <div className="border-t p-4 space-y-2">
+      
+      {/* 📱 Footer com notificações e usuário */}
+      <div className="border-t p-3 space-y-2">
         {/* Notificações */}
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" className="w-full justify-start relative">
-              <Bell className="mr-2 h-4 w-4" />
-              Notificações
+            <Button variant="ghost" className="w-full justify-start relative text-sm py-2 h-auto">
+              <Bell className="mr-2 h-4 w-4 shrink-0" />
+              <span className="truncate">Notificações</span>
               <Badge
                 variant="destructive"
-                className="ml-auto h-4 w-4 justify-center rounded-full p-0 text-xs"
+                className="ml-auto h-4 w-4 justify-center rounded-full p-0 text-xs shrink-0"
               >
                 3
               </Badge>
@@ -259,10 +265,10 @@ export const Sidebar = () => {
             <SheetHeader>
               <SheetTitle>Notificações</SheetTitle>
             </SheetHeader>
-            <div className="py-4">
-              <p>Estoque mínimo atingido para "Produto A".</p>
-              <p>Solicitação de compra #123 aguardando aprovação.</p>
-              <p>Nova devolução registrada.</p>
+            <div className="py-4 space-y-2">
+              <p className="text-sm">Estoque mínimo atingido para "Produto A".</p>
+              <p className="text-sm">Solicitação de compra #123 aguardando aprovação.</p>
+              <p className="text-sm">Nova devolução registrada.</p>
             </div>
           </SheetContent>
         </Sheet>
@@ -270,8 +276,8 @@ export const Sidebar = () => {
         {/* Menu do usuário */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="w-full justify-start p-2">
-              <Avatar className="mr-2 h-6 w-6">
+            <Button variant="ghost" className="w-full justify-start p-2 h-auto">
+              <Avatar className="mr-2 h-6 w-6 shrink-0">
                 <AvatarImage
                   src={usuario?.foto_url || undefined}
                   alt="Avatar do usuário"
@@ -280,11 +286,11 @@ export const Sidebar = () => {
                   {usuario ? getInitials(usuario.nome) : 'U'}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-col items-start flex-1">
-                <p className="text-sm font-medium truncate max-w-[140px]">
+              <div className="flex flex-col items-start flex-1 min-w-0">
+                <p className="text-sm font-medium truncate w-full">
                   {usuario?.nome || 'Usuário'}
                 </p>
-                <p className="text-xs text-muted-foreground truncate max-w-[140px]">
+                <p className="text-xs text-muted-foreground truncate w-full">
                   {usuario?.email || ''}
                 </p>
               </div>
@@ -318,6 +324,46 @@ export const Sidebar = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </aside>
+    </div>
+  )
+}
+
+export const Sidebar = () => {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      {/* 📱 MOBILE: Botão do menu hambúrguer */}
+      <div className="lg:hidden fixed top-3 left-3 z-50">
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="icon" className="h-10 w-10 bg-background border shadow-md">
+              <Menu className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-72 p-0">
+            <div className="flex items-center h-14 border-b px-4">
+              <SidebarIcon className="h-5 w-5 mr-2" />
+              <h2 className="font-bold text-base">Almoxarifado</h2>
+              <SheetClose asChild>
+                <Button variant="ghost" size="icon" className="ml-auto h-8 w-8">
+                  <X className="h-4 w-4" />
+                </Button>
+              </SheetClose>
+            </div>
+            <MenuContent onNavigate={() => setOpen(false)} />
+          </SheetContent>
+        </Sheet>
+      </div>
+
+      {/* 📱 DESKTOP: Sidebar tradicional */}
+      <aside className="hidden lg:flex flex-col w-64 border-r bg-card">
+        <div className="flex items-center h-16 border-b px-6">
+          <SidebarIcon className="h-6 w-6 mr-2" />
+          <h2 className="font-bold text-lg">Almoxarifado</h2>
+        </div>
+        <MenuContent />
+      </aside>
+    </>
   )
 }
