@@ -21,7 +21,10 @@ import {
   Upload,
   Menu,
   X,
+  LogOut,
+  User,
 } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   Collapsible,
   CollapsibleContent,
@@ -118,9 +121,10 @@ const menuItems = [
   },
 ]
 
-// 📱 Componente de Menu Simplificado (sem autenticação)
+// 📱 Componente de Menu com Autenticação
 const MenuContent = ({ onNavigate }: { onNavigate?: () => void }) => {
   const location = useLocation()
+  const { user, signOut } = useAuth()
 
   const isActive = (href: string) => {
     const [path] = href.split('?')
@@ -141,6 +145,11 @@ const MenuContent = ({ onNavigate }: { onNavigate?: () => void }) => {
   }
 
   const handleNavClick = () => {
+    onNavigate?.()
+  }
+
+  const handleSignOut = async () => {
+    await signOut()
     onNavigate?.()
   }
 
@@ -190,14 +199,39 @@ const MenuContent = ({ onNavigate }: { onNavigate?: () => void }) => {
         </nav>
       </ScrollArea>
       
-      {/* 📱 Footer simples */}
-      <div className="border-t p-3">
-        <div className="text-center">
+      {/* 📱 Footer com usuário */}
+      <div className="border-t">
+        <div className="p-3 space-y-2">
+          {/* Informações do usuário */}
+          <div className="flex items-center space-x-2 p-2 rounded-lg bg-muted/50">
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <User className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">
+                {user?.email?.split('@')[0] || 'Usuário'}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {user?.email}
+              </p>
+            </div>
+          </div>
+          
+          {/* Botão de logout */}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleSignOut}
+            className="w-full justify-start text-muted-foreground hover:text-destructive"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Sair
+          </Button>
+        </div>
+        
+        <div className="p-3 pt-0 text-center">
           <p className="text-xs text-muted-foreground">
-            Sistema de Almoxarifado
-          </p>
-          <p className="text-xs text-muted-foreground">
-            v1.0.0
+            Sistema de Almoxarifado v1.0.0
           </p>
         </div>
       </div>

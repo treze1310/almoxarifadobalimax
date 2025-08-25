@@ -1,12 +1,15 @@
-/* 🧹 Simplified App Component - NO AUTHENTICATION */
+/* 🔐 App Component - WITH AUTHENTICATION */
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { AuthProvider } from '@/contexts/AuthContext'
+import ProtectedRoute from '@/components/ProtectedRoute'
 import Layout from './components/Layout'
 import NotFound from './pages/NotFound'
+import LoginPage from './pages/Login'
 
-// 📱 Pages (Simplified - No Auth Required)
+// 📱 Pages (Protected Routes)
 import DashboardPage from './pages/Dashboard'
 import NovoRomaneioPage from './pages/romaneios/NovoRomaneio'
 import RomaneiosPage from './pages/romaneios/Romaneios'
@@ -28,12 +31,20 @@ import RelatoriosPage from './pages/relatorios/Relatorios'
 
 const App = () => (
   <BrowserRouter>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <Routes>
-        {/* 🏠 Main Layout - Sem autenticação */}
-        <Route path="/" element={<Layout />}>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <Routes>
+          {/* 🔓 Public Routes */}
+          <Route path="/login" element={<LoginPage />} />
+          
+          {/* 🔐 Protected Routes */}
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }>
           <Route index element={<DashboardPage />} />
           <Route path="dashboard" element={<DashboardPage />} />
 
@@ -70,13 +81,18 @@ const App = () => (
           <Route path="relatorios" element={<RelatoriosPage />} />
         </Route>
 
-        {/* 🖨️ Página de impressão (fora do layout) */}
-        <Route path="/cadastros/colaboradores/:id/ficha" element={<FichaPrintPage />} />
-        
-        {/* ❌ Página não encontrada */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </TooltipProvider>
+          {/* 🖨️ Página de impressão (protegida) */}
+          <Route path="/cadastros/colaboradores/:id/ficha" element={
+            <ProtectedRoute>
+              <FichaPrintPage />
+            </ProtectedRoute>
+          } />
+          
+          {/* ❌ Página não encontrada */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </TooltipProvider>
+    </AuthProvider>
   </BrowserRouter>
 )
 

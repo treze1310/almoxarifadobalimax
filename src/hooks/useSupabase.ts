@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/use-toast'
-import { useRobustSupabase } from '@/hooks/useRobustSupabase'
+
 import type { Tables, TablesInsert, TablesUpdate } from '@/types/database'
 
 export function useSupabaseTable<T extends keyof Tables>(tableName: T) {
@@ -9,7 +9,7 @@ export function useSupabaseTable<T extends keyof Tables>(tableName: T) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
-  const { query, mutate } = useRobustSupabase()
+  // Usar supabase diretamente
 
   const fetchData = async (queryParams?: {
     select?: string

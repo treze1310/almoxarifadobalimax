@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRobustSupabase } from '@/hooks/useRobustSupabase'
+
 import { User, UserProfile } from '@/types/auth'
 
 interface UsuarioFormData {
@@ -15,7 +15,7 @@ export function useUsuarios() {
   const [usuarios, setUsuarios] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { query, mutate } = useRobustSupabase()
+  // Usar supabase diretamente
 
   const fetchUsuarios = async () => {
     try {
