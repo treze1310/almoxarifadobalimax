@@ -451,6 +451,7 @@ export function useMateriaisEquipamentos() {
     fornecedor?: string
     aplicacao?: string
     data_emissao?: string
+    codigo_original_nfe?: string
   }) => {
     try {
       // Criar descrição detalhada incluindo informações que não cabem em campos específicos
@@ -458,6 +459,7 @@ export function useMateriaisEquipamentos() {
       if (nfeItem.fornecedor) descricaoCompleta += ` (Fornecedor: ${nfeItem.fornecedor})`
       if (nfeItem.cest) descricaoCompleta += ` - CEST: ${nfeItem.cest}`
       if (nfeItem.aplicacao) descricaoCompleta += ` - Aplicação: ${nfeItem.aplicacao}`
+      if (nfeItem.codigo_original_nfe) descricaoCompleta += ` - Cód. Original NFe: ${nfeItem.codigo_original_nfe}`
 
       // Buscar centro de custo do almoxarifado como padrão
       const almoxarifadoCentroCustoId = await getAlmoxarifadoCentroCusto()

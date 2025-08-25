@@ -6,6 +6,7 @@ import {
 } from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Table,
   TableBody,
@@ -14,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { UploadedNFeFile } from '@/types'
+import { UploadedNFeFile, NFeItem } from '@/types'
 import { format } from 'date-fns'
 import {
   CheckCircle,
@@ -22,11 +23,14 @@ import {
   XCircle,
   Loader2,
   Trash2,
+  Package,
 } from 'lucide-react'
 
 interface NfPreviewTableProps {
   files: UploadedNFeFile[]
   onRemoveFile: (id: string) => void
+  selectedItems?: Record<string, string[]> // fileId -> itemCodes[]
+  onItemSelectionChange?: (fileId: string, itemCode: string, selected: boolean) => void
 }
 
 const statusConfig = {
@@ -70,7 +74,29 @@ const statusConfig = {
 export const NfPreviewTable = ({
   files,
   onRemoveFile,
+  selectedItems = {},
+  onItemSelectionChange,
 }: NfPreviewTableProps) => {
+  
+  const isItemSelected = (fileId: string, itemCode: string) => {
+    return selectedItems[fileId]?.includes(itemCode) || false
+  }
+  
+  const getSelectedItemsCount = (fileId: string) => {
+    return selectedItems[fileId]?.length || 0
+  }
+  
+  const getTotalItemsCount = (file: UploadedNFeFile) => {
+    return file.data?.items.length || 0
+  }
+  
+  const toggleAllItems = (fileId: string, items: NFeItem[], selectAll: boolean) => {
+    if (!onItemSelectionChange) return
+    
+    items.forEach(item => {
+      onItemSelectionChange(fileId, item.code, selectAll)
+    })
+  }
   return (
     <Accordion type="single" collapsible className="w-full">
       {files.map((uploadedFile) => {
@@ -136,11 +162,41 @@ export const NfPreviewTable = ({
                       <p>{format(uploadedFile.data.issueDate, 'dd/MM/yyyy')}</p>
                     </div>
                   </div>
-                  <h4 className="font-semibold">Itens da Nota:</h4>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-semibold flex items-center">
+                      <Package className="mr-2 h-4 w-4" />
+                      Itens da Nota:
+                    </h4>
+                    {onItemSelectionChange && (
+                      <div className="flex items-center space-x-4 text-sm">
+                        <span className="text-muted-foreground">
+                          {getSelectedItemsCount(uploadedFile.id)} de {getTotalItemsCount(uploadedFile)} selecionados
+                        </span>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleAllItems(uploadedFile.id, uploadedFile.data!.items, true)}
+                          >
+                            Todos
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleAllItems(uploadedFile.id, uploadedFile.data!.items, false)}
+                          >
+                            Nenhum
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Cód.</TableHead>
+                        {onItemSelectionChange && <TableHead className="w-12">Sel.</TableHead>}
+                        <TableHead>Cód. Original</TableHead>
+                        <TableHead>Novo Cód.</TableHead>
                         <TableHead>Descrição</TableHead>
                         <TableHead>Qtd.</TableHead>
                         <TableHead>Vlr. Unit.</TableHead>
@@ -148,25 +204,48 @@ export const NfPreviewTable = ({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {uploadedFile.data.items.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{item.code}</TableCell>
-                          <TableCell>{item.description}</TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                          <TableCell>
-                            {item.unitValue.toLocaleString('pt-BR', {
-                              style: 'currency',
-                              currency: 'BRL',
-                            })}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {item.totalValue.toLocaleString('pt-BR', {
-                              style: 'currency',
-                              currency: 'BRL',
-                            })}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {uploadedFile.data.items.map((item, index) => {
+                        const isSelected = isItemSelected(uploadedFile.id, item.code)
+                        return (
+                          <TableRow 
+                            key={index}
+                            className={isSelected ? 'bg-muted/50' : ''}
+                          >
+                            {onItemSelectionChange && (
+                              <TableCell>
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={(checked) => 
+                                    onItemSelectionChange(uploadedFile.id, item.code, !!checked)
+                                  }
+                                />
+                              </TableCell>
+                            )}
+                            <TableCell className="text-xs text-muted-foreground">
+                              {item.code}
+                            </TableCell>
+                            <TableCell className="font-mono">
+                              <Badge variant="outline" className="text-xs">
+                                {isSelected ? 'Auto' : 'N/A'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{item.description}</TableCell>
+                            <TableCell>{item.quantity}</TableCell>
+                            <TableCell>
+                              {item.unitValue.toLocaleString('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL',
+                              })}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {item.totalValue.toLocaleString('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL',
+                              })}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
                     </TableBody>
                   </Table>
                 </div>

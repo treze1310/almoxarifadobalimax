@@ -349,6 +349,7 @@ const ImportacaoNFePage = () => {
     errorCount: 0,
     totalFiles: 0,
   })
+  const [selectedItems, setSelectedItems] = useState<Record<string, string[]>>({})
   
   const { loading: importLoading, importNFe } = useNFeImport()
 
@@ -379,22 +380,65 @@ const ImportacaoNFePage = () => {
     updateFileState({ status: 'parsing' })
     const result = await parseAndValidateNFe(fileToProcess.file)
     updateFileState({ ...result, progress: 100 })
+    
+    // Auto-selecionar todos os itens por padrão quando o parsing for bem-sucedido
+    if (result.status === 'success' && result.data) {
+      const itemCodes = result.data.items.map(item => item.code)
+      setSelectedItems(prev => ({
+        ...prev,
+        [fileToProcess.id]: itemCodes
+      }))
+    }
   }
 
-  const handleRemoveFile = (id: string) =>
+  const handleRemoveFile = (id: string) => {
     setFiles((prev) => prev.filter((f) => f.id !== id))
+    // Remover seleções do arquivo removido
+    setSelectedItems(prev => {
+      const updated = { ...prev }
+      delete updated[id]
+      return updated
+    })
+  }
+
+  const handleItemSelectionChange = (fileId: string, itemCode: string, selected: boolean) => {
+    setSelectedItems(prev => {
+      const fileItems = prev[fileId] || []
+      if (selected) {
+        // Adicionar item se não estiver selecionado
+        if (!fileItems.includes(itemCode)) {
+          return {
+            ...prev,
+            [fileId]: [...fileItems, itemCode]
+          }
+        }
+      } else {
+        // Remover item
+        return {
+          ...prev,
+          [fileId]: fileItems.filter(code => code !== itemCode)
+        }
+      }
+      return prev
+    })
+  }
 
   const importCounts = useMemo(() => {
-    return files.reduce(
+    const counts = files.reduce(
       (acc, file) => {
         if (file.status === 'success') acc.success++
         if (file.status === 'warning') acc.warning++
         if (file.status === 'error') acc.error++
         return acc
       },
-      { success: 0, warning: 0, error: 0 },
+      { success: 0, warning: 0, error: 0, selectedItems: 0 },
     )
-  }, [files])
+    
+    // Contar itens selecionados
+    counts.selectedItems = Object.values(selectedItems).reduce((total, items) => total + items.length, 0)
+    
+    return counts
+  }, [files, selectedItems])
 
   const handleImport = async () => {
     const filesToImport = files.filter(f => f.status === 'success' || f.status === 'warning')
@@ -406,12 +450,29 @@ const ImportacaoNFePage = () => {
     setDialogOpen(false)
     
     try {
-      // Extrair dados NFe já parseados e nomes dos arquivos
+      // Filtrar apenas itens selecionados para cada NFe
       const nfeDataArray = filesToImport
-        .map(f => f.data)
+        .map(f => {
+          if (!f.data) return undefined
+          
+          const selectedItemsForFile = selectedItems[f.id] || []
+          if (selectedItemsForFile.length === 0) return undefined
+          
+          // Filtrar apenas os itens selecionados
+          const filteredItems = f.data.items.filter(item => 
+            selectedItemsForFile.includes(item.code)
+          )
+          
+          return {
+            ...f.data,
+            items: filteredItems
+          }
+        })
         .filter(data => data !== undefined) as NFe[]
       
       const fileNames = filesToImport.map(f => f.file.name)
+      
+      console.log(`🔄 Importando ${nfeDataArray.length} NFe(s) com itens selecionados`)
       
       const results = await importNFe(nfeDataArray, fileNames)
       
@@ -437,6 +498,7 @@ const ImportacaoNFePage = () => {
 
   const handleStartNewImport = () => {
     setFiles([])
+    setSelectedItems({})
     setStage('upload')
   }
 
@@ -512,19 +574,27 @@ const ImportacaoNFePage = () => {
                 <div className="w-1/4 text-right">Valor Total</div>
               </div>
               {files.length > 0 ? (
-                <NfPreviewTable files={files} onRemoveFile={handleRemoveFile} />
+                <NfPreviewTable 
+                  files={files} 
+                  onRemoveFile={handleRemoveFile}
+                  selectedItems={selectedItems}
+                  onItemSelectionChange={handleItemSelectionChange}
+                />
               ) : (
                 <div className="text-center p-10 text-muted-foreground">
                   <FileText className="mx-auto h-10 w-10 mb-4" />
                   Nenhum arquivo para pré-visualizar.
                 </div>
               )}
-              <div className="pt-6 flex justify-end">
+              <div className="pt-6 flex justify-between items-center">
+                <div className="text-sm text-muted-foreground">
+                  📦 <strong>{importCounts.selectedItems}</strong> itens selecionados para importação
+                </div>
                 <Button
                   onClick={() => setDialogOpen(true)}
-                  disabled={importCounts.success + importCounts.warning === 0}
+                  disabled={importCounts.selectedItems === 0}
                 >
-                  Importar NF-e(s)
+                  Importar {importCounts.selectedItems} Item(s)
                 </Button>
               </div>
             </CardContent>

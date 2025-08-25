@@ -170,45 +170,71 @@ export function useNFeImport() {
 
           result.nfeId = nfeImport.id
 
-          // 5. Processar itens da NFe
+          // 5. Gerar códigos sequenciais para os itens que serão criados
+          const itemsToCreate: typeof nfeData.items = []
+          const itemsToLink: Array<{ item: typeof nfeData.items[0], materialId: string }> = []
+          
           for (const item of nfeData.items) {
+            // Verificar se material já existe pelo código original da NFe
+            const { data: existingMaterial } = await supabase
+              .from('materiais_equipamentos')
+              .select('id')
+              .eq('codigo', item.code)
+              .single()
+
+            if (existingMaterial) {
+              itemsToLink.push({ item, materialId: existingMaterial.id })
+            } else {
+              itemsToCreate.push(item)
+            }
+          }
+
+          // Gerar códigos sequenciais para itens novos
+          let sequentialCodes: string[] = []
+          if (itemsToCreate.length > 0) {
+            sequentialCodes = await CodeGenerationService.getMultipleSequentialCodes(itemsToCreate.length)
+            console.log(`📋 Códigos gerados: ${sequentialCodes.join(', ')}`)
+          }
+
+          // 6. Criar materiais novos com códigos sequenciais
+          for (let index = 0; index < itemsToCreate.length; index++) {
+            const item = itemsToCreate[index]
+            const newCode = sequentialCodes[index]
+            
             try {
-              // Verificar se material já existe
-              const { data: existingMaterial } = await supabase
-                .from('materiais_equipamentos')
-                .select('id')
-                .eq('codigo', item.code)
-                .single()
+              const materialResult = await createMaterialFromNFe({
+                codigo_produto: newCode, // ✅ Usar código sequencial gerado
+                descricao_produto: item.description,
+                ncm: item.ncm,
+                cest: item.cest,
+                codigo_ean: item.ean,
+                unidade: item.unit || 'UN',
+                valor_unitario: item.unitValue,
+                quantidade: item.quantity,
+                categoria: 'MATERIAL DE CONSUMO',
+                fornecedor: nfeData.emitter.name,
+                aplicacao: 'Diversos',
+                data_emissao: nfeData.issueDate.toISOString().split('T')[0],
+                codigo_original_nfe: item.code // ✅ Guardar código original da NFe
+              })
 
-              let materialId = existingMaterial?.id
-
-              // Se não existe, criar novo material com dados completos
-              if (!materialId) {
-                const materialResult = await createMaterialFromNFe({
-                  codigo_produto: item.code,
-                  descricao_produto: item.description,
-                  ncm: item.ncm, // ✅ NCM do item da NFe
-                  cest: item.cest,
-                  codigo_ean: item.ean,
-                  unidade: item.unit || 'UN',
-                  valor_unitario: item.unitValue,
-                  quantidade: item.quantity, // ✅ Quantidade correta da NFe
-                  categoria: 'MATERIAL DE CONSUMO',
-                  fornecedor: nfeData.emitter.name,
-                  aplicacao: 'Diversos',
-                  data_emissao: nfeData.issueDate.toISOString().split('T')[0] // ✅ Data de emissão da NFe
-                })
-
-                if (materialResult.data) {
-                  materialId = materialResult.data.id
-                  result.materialsCreated++
-                } else {
-                  result.errors.push(`Erro ao criar material ${item.code}: ${materialResult.error}`)
-                  continue
-                }
+              if (materialResult.data) {
+                itemsToLink.push({ item, materialId: materialResult.data.id })
+                result.materialsCreated++
               } else {
-                result.materialsLinked++
+                result.errors.push(`Erro ao criar material ${item.code}: ${materialResult.error}`)
+                continue
               }
+            } catch (error) {
+              result.errors.push(`Erro ao criar material ${item.code}: ${error}`)
+              continue
+            }
+          }
+
+          // 7. Processar itens (tanto novos quanto existentes)
+          for (const { item, materialId } of itemsToLink) {
+            try {
+              result.materialsLinked++
 
               // Criar item da NFe (apenas campos existentes na tabela)
               const nfeItemData: TablesInsert<'nfe_itens'> = {

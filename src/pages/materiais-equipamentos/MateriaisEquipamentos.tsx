@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { PlusCircle, MoreHorizontal, Edit, Trash2, Search, Package, Wrench, Tag, Eye, RefreshCw } from 'lucide-react'
+import { PlusCircle, MoreHorizontal, Edit, Trash2, Search, Package, Wrench, Tag, Eye, RefreshCw, Settings } from 'lucide-react'
 import { verificarStatusCalibracao } from '@/utils/calibracao'
 import {
   DropdownMenu,
@@ -46,6 +46,7 @@ import { MaterialEquipamentoForm } from '@/components/materiais-equipamentos/Mat
 import { MaterialEquipamentoDialog } from '@/components/materiais-equipamentos/MaterialEquipamentoDialog'
 import { MovimentacaoEstoque } from '@/components/materiais-equipamentos/MovimentacaoEstoque'
 import { MaterialDependenciesDialog } from '@/components/materiais-equipamentos/MaterialDependenciesDialog'
+import { CodesFixDialog } from '@/components/admin/CodesFixDialog'
 import CentroCustoLabel from '@/components/materiais-equipamentos/CentroCustoLabel'
 import { useMateriaisEquipamentos } from '@/hooks/useMateriaisEquipamentos'
 import { useCenteredDialog } from '@/hooks/useCenteredDialog'
@@ -73,6 +74,7 @@ const MateriaisEquipamentosPage = () => {
   const [movimentacaoMaterial, setMovimentacaoMaterial] = useState<any>(null)
   const [dependenciesDialogOpen, setDependenciesDialogOpen] = useState(false)
   const [materialWithDependencies, setMaterialWithDependencies] = useState<any>(null)
+  const [codesFixDialogOpen, setCodesFixDialogOpen] = useState(false)
   const [dialogPosition, setDialogPosition] = useState({ top: '50vh', left: '50vw' })
 
   // Calcular posição central da viewport atual quando abre qualquer dialog
@@ -250,6 +252,16 @@ const MateriaisEquipamentosPage = () => {
             <RefreshCw className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Atualizar</span>
             <span className="sm:hidden">🔄</span>
+          </Button>
+          <Button 
+            onClick={() => setCodesFixDialogOpen(true)}
+            variant="outline" 
+            size="sm" 
+            className="flex-1 sm:flex-none"
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Corrigir Códigos</span>
+            <span className="sm:hidden">🔧</span>
           </Button>
           <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="flex-1 sm:flex-none">
             <PlusCircle className="mr-2 h-4 w-4" />
@@ -732,6 +744,18 @@ const MateriaisEquipamentosPage = () => {
         materialId={materialWithDependencies?.id}
         materialName={materialWithDependencies?.nome}
         onDeleted={handleDependenciesResolved}
+      />
+
+      {/* Diálogo de Correção de Códigos */}
+      <CodesFixDialog
+        open={codesFixDialogOpen}
+        onOpenChange={(open) => {
+          setCodesFixDialogOpen(open)
+          if (!open) {
+            // Atualizar materiais após correção
+            fetchMateriais({ includeInactive: showInactive })
+          }
+        }}
       />
     </div>
   )
