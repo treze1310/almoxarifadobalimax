@@ -367,15 +367,18 @@ const ImportacaoNFePage = () => {
         const itemCodes = file.data.items.map(item => item.code)
         console.log(`🔄 Auto-selecionando ${itemCodes.length} itens para arquivo ${file.id} (primeira vez)`)
         
-        setSelectedItems(prev => ({
-          ...prev,
-          [file.id]: itemCodes
-        }))
-        
-        setAutoSelectedFiles(prev => new Set(prev).add(file.id))
+        // Usar setTimeout para evitar conflitos de estado
+        setTimeout(() => {
+          setSelectedItems(prev => ({
+            ...prev,
+            [file.id]: itemCodes
+          }))
+          
+          setAutoSelectedFiles(prev => new Set([...prev, file.id]))
+        }, 50)
       }
     })
-  }, [files, autoSelectedFiles])
+  }, [files]) // Remover autoSelectedFiles das dependências para evitar loops
 
   const handleFileChange = (selectedFiles: FileList | null) => {
     if (!selectedFiles) return
@@ -416,6 +419,12 @@ const ImportacaoNFePage = () => {
       const updated = { ...prev }
       delete updated[id]
       return updated
+    })
+    // Remover da lista de auto-selecionados
+    setAutoSelectedFiles(prev => {
+      const newSet = new Set(prev)
+      newSet.delete(id)
+      return newSet
     })
   }
 
