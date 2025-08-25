@@ -420,35 +420,30 @@ const ImportacaoNFePage = () => {
   }
 
   const handleItemSelectionChange = (fileId: string, itemCode: string, selected: boolean) => {
-    console.log(`🔀 Seleção individual: Arquivo ${fileId}, Item ${itemCode}, Selecionado: ${selected}`)
+    console.log(`🔀 Seleção: ${selected ? 'Marcando' : 'Desmarcando'} item ${itemCode}`)
     
     setSelectedItems(prev => {
       const fileItems = prev[fileId] || []
-      console.log(`📝 Itens atuais antes da mudança:`, fileItems)
       
       let newItems
       if (selected) {
         // Adicionar item se não estiver selecionado
         if (!fileItems.includes(itemCode)) {
           newItems = [...fileItems, itemCode]
-          console.log(`➕ Adicionando item ${itemCode}. Novos itens:`, newItems)
+          console.log(`➕ Total de itens selecionados: ${newItems.length}`)
         } else {
           newItems = fileItems
-          console.log(`⚠️ Item ${itemCode} já estava selecionado`)
         }
       } else {
         // Remover item
         newItems = fileItems.filter(code => code !== itemCode)
-        console.log(`➖ Removendo item ${itemCode}. Novos itens:`, newItems)
+        console.log(`➖ Total de itens selecionados: ${newItems.length}`)
       }
       
-      const updated = {
+      return {
         ...prev,
         [fileId]: newItems
       }
-      
-      console.log(`📊 Estado completo atualizado:`, updated)
-      return updated
     })
   }
 
