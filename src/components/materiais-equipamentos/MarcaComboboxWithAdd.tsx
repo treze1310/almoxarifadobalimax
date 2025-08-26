@@ -120,7 +120,7 @@ export function MarcaComboboxWithAdd({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0" align="start">
+        <PopoverContent className="w-full p-0 z-[10001]" align="start">
           <Command>
             <CommandInput 
               placeholder="Buscar marca..." 
@@ -187,7 +187,7 @@ export function MarcaComboboxWithAdd({
       {/* Add New Brand Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent 
-          className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto items-start fixed"
+          className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto items-start fixed z-[10002]"
           style={{
             top: addDialogPosition.top,
             left: addDialogPosition.left,

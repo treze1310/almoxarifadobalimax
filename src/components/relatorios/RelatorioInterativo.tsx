@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
-import { TrendingUp, TrendingDown, RotateCcw, Download, Filter } from 'lucide-react'
+import { TrendingUp, TrendingDown, RotateCcw, Download, Filter, FileText, Activity } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -21,9 +21,19 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useMateriaisEquipamentos } from '@/hooks/useMateriaisEquipamentos'
+import { useReports } from '@/hooks/useReports'
+import { ReportRequest } from '@/types/reports'
 
-const RelatorioMovimentacaoPage = () => {
+interface RelatorioInterativoProps {
+  reportId: string
+  titulo: string
+  onClose: () => void
+}
+
+const RelatorioInterativo = ({ reportId, titulo, onClose }: RelatorioInterativoProps) => {
   const { movimentacoes, fetchMovimentacoes, loading } = useMateriaisEquipamentos()
+  const { generateReport, isGenerating } = useReports()
+  
   const [search, setSearch] = useState('')
   const [tipoFilter, setTipoFilter] = useState<string>('')
   const [dateFrom, setDateFrom] = useState('')
@@ -83,11 +93,33 @@ const RelatorioMovimentacaoPage = () => {
   const valorTotalMovimentado = filteredMovimentacoes
     .reduce((sum, m) => sum + ((m.valor_unitario || 0) * m.quantidade), 0)
 
+  const handleExportReport = async () => {
+    const request: ReportRequest = {
+      reportId: 'movimentacao',
+      filtros: {
+        dataInicio: dateFrom || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        dataFim: dateTo || new Date().toISOString().split('T')[0],
+        tipoMovimentacao: tipoFilter || 'todos',
+        formato: 'analitico'
+      },
+      formato: 'pdf',
+      titulo: 'Relatório de Movimentação de Estoque'
+    }
+
+    await generateReport(request)
+  }
+
   if (loading) {
     return (
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Relatório de Movimentação de Estoque</h1>
+          <div className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            <h2 className="text-xl font-bold">{titulo}</h2>
+          </div>
+          <Button variant="outline" onClick={onClose}>
+            Fechar
+          </Button>
         </div>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
@@ -99,11 +131,32 @@ const RelatorioMovimentacaoPage = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Relatório de Movimentação de Estoque</h1>
-        <Button variant="outline">
-          <Download className="mr-2 h-4 w-4" />
-          Exportar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Activity className="h-5 w-5" />
+          <h2 className="text-xl font-bold">{titulo}</h2>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleExportReport}
+            disabled={isGenerating}
+          >
+            {isGenerating ? (
+              <>
+                <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin mr-2" />
+                Gerando...
+              </>
+            ) : (
+              <>
+                <FileText className="mr-2 h-4 w-4" />
+                Exportar PDF
+              </>
+            )}
+          </Button>
+          <Button variant="outline" onClick={onClose}>
+            Fechar
+          </Button>
+        </div>
       </div>
 
       {/* Cards de Resumo */}
@@ -214,7 +267,7 @@ const RelatorioMovimentacaoPage = () => {
               </TableHeader>
               <TableBody>
                 {filteredMovimentacoes.length > 0 ? (
-                  filteredMovimentacoes.map((movimentacao) => (
+                  filteredMovimentacoes.slice(0, 20).map((movimentacao) => (
                     <TableRow key={movimentacao.id}>
                       <TableCell>
                         {movimentacao.data_movimentacao
@@ -290,10 +343,15 @@ const RelatorioMovimentacaoPage = () => {
               </TableBody>
             </Table>
           </div>
+          {filteredMovimentacoes.length > 20 && (
+            <div className="text-center mt-4 text-sm text-muted-foreground">
+              Mostrando 20 de {filteredMovimentacoes.length} registros. Use o botão "Exportar PDF" para ver todos.
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   )
 }
 
-export default RelatorioMovimentacaoPage
+export default RelatorioInterativo

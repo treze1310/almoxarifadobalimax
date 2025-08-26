@@ -27,6 +27,7 @@ import CentrosCustoPage from './pages/cadastros/CentrosCusto'
 import MarcasPage from './pages/cadastros/Marcas'
 import LocalizacaoPage from './pages/localizacao/Localizacao'
 import MapaPage from './pages/localizacao/Mapa'
+import LocalizacaoCadastroPage from './pages/cadastros/Localizacao'
 import RelatoriosPage from './pages/relatorios/Relatorios'
 
 const App = () => (
@@ -72,6 +73,7 @@ const App = () => (
           <Route path="cadastros/fornecedores" element={<FornecedoresPage />} />
           <Route path="cadastros/centros-custo" element={<CentrosCustoPage />} />
           <Route path="cadastros/marcas" element={<MarcasPage />} />
+          <Route path="cadastros/localizacao" element={<LocalizacaoCadastroPage />} />
 
           {/* 📍 Gestão de Localização */}
           <Route path="localizacao" element={<LocalizacaoPage />} />

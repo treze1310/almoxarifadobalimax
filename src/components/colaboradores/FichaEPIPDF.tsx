@@ -100,7 +100,6 @@ export const generateFichaEPIPDFContent = (
                      .company-logo {
              width: 100px;
              height: 50px;
-             border: 1px solid #000;
              border-radius: 25px;
              text-align: center;
              line-height: 50px;
@@ -340,7 +339,7 @@ export const generateFichaEPIPDFContent = (
               <tr>
                 <th style="width: 40px;">ITEM</th>
                 <th style="width: 70px;">EPI'S</th>
-                <th style="width: 200px;">BOTIJU / EQUIPAMENTO SOLDA</th>
+                <th style="width: 200px;">DESCRIÇÃO</th>
                 <th style="width: 120px;">NOME/TIPO/COR/TAMANHO</th>
                 <th style="width: 50px;">QUANT.</th>
                 <th style="width: 80px;">DATA ENTREGA</th>

@@ -77,14 +77,13 @@ export const MaterialEquipamentoDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="sm:max-w-2xl max-h-[90vh] overflow-y-auto z-[9999]"
         style={{
           position: 'absolute',
           top: dialogPosition.top,
           left: dialogPosition.left,
           transform: 'translate(-50%, -50%)',
           margin: 0,
-          zIndex: 9999,
           maxHeight: '90vh',
           width: 'min(95vw, 672px)',
           overflowY: 'auto'

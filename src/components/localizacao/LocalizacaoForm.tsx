@@ -56,7 +56,11 @@ export function LocalizacaoForm({ initialData, onSubmit, onCancel }: Localizacao
   }, [initialData, form])
 
   const handleSubmit = async (data: LocalizacaoFormData) => {
-    await onSubmit(data)
+    try {
+      await onSubmit(data)
+    } catch (error) {
+      console.error('❌ Erro no submit:', error)
+    }
   }
 
   return (

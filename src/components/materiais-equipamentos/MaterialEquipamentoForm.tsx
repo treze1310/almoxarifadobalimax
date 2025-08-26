@@ -120,21 +120,35 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
     await onSubmit(data)
   }
 
-  const handleBuscarNCM = async () => {
+  const handleBuscarNCM = async (event?: React.MouseEvent) => {
+    // Prevent form submission
+    if (event) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+    
     const nome = form.getValues('nome')
     
-    if (!nome) {
-      alert('Para buscar o NCM ideal, preencha o nome do item.')
+    if (!nome || nome.trim().length < 3) {
+      alert('Para buscar o NCM ideal, preencha o nome do item (mínimo 3 caracteres).')
       return
     }
 
     setLoadingNCM(true)
     try {
-      const resultados = await buscarNCMPorDescricao(nome)
-      setNcmSuggestions(resultados)
+      console.log('Buscando NCM para:', nome)
+      const resultados = await buscarNCMPorDescricao(nome.trim())
+      console.log('Resultados NCM:', resultados)
+      
+      if (resultados.length === 0) {
+        alert('Nenhum NCM encontrado para este item. Tente com um nome mais específico.')
+      } else {
+        setNcmSuggestions(resultados)
+      }
     } catch (error) {
       console.error('Erro ao buscar NCM:', error)
       alert('Erro ao buscar NCM. Tente novamente.')
+      setNcmSuggestions([])
     } finally {
       setLoadingNCM(false)
     }
@@ -310,7 +324,7 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
                       <SelectValue placeholder="Selecione uma localização" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
+                  <SelectContent className="z-[10001]">
                     {activeLocalizacoes.map((localizacao) => (
                       <SelectItem key={localizacao.id} value={localizacao.id}>
                         {localizacao.codigo} - {localizacao.nome}
@@ -335,7 +349,7 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
                       <SelectValue placeholder="Selecione um fornecedor" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
+                  <SelectContent className="z-[10001]">
                     {activeFornecedores.map((fornecedor) => (
                       <SelectItem key={fornecedor.id} value={fornecedor.id}>
                         {fornecedor.nome}
@@ -359,22 +373,33 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
                 <FormLabel>Código NCM</FormLabel>
                 <div className="flex gap-2">
                   <FormControl>
-                    <Input placeholder="Ex: 8205.40.00" {...field} />
+                    <Input 
+                      placeholder="Ex: 8205.40.00" 
+                      {...field} 
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          handleBuscarNCM()
+                        }
+                      }}
+                    />
                   </FormControl>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={handleBuscarNCM}
+                    onMouseDown={(e) => e.preventDefault()}
                     disabled={loadingNCM}
                     title="Buscar NCM ideal baseado no nome"
+                    className="min-w-[90px] shrink-0"
                   >
                     <Search className="h-4 w-4" />
                     {loadingNCM ? 'Buscando...' : 'Buscar'}
                   </Button>
                 </div>
                 {ncmSuggestions.length > 0 && (
-                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg relative z-[10002]">
                     <p className="text-sm font-medium text-blue-800 mb-2">
                       Sugestões de NCM baseadas no nome:
                     </p>
@@ -734,7 +759,7 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
                     <SelectValue placeholder="Selecione o status" />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent>
+                <SelectContent className="z-[10001]">
                   <SelectItem value="ativo">Ativo</SelectItem>
                   <SelectItem value="inativo">Inativo</SelectItem>
                   <SelectItem value="manutencao">Manutenção</SelectItem>

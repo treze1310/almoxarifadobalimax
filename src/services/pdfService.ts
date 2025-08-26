@@ -233,7 +233,13 @@ export const pdfService = {
       }
 
       // 🖼️ Gerar canvas
-      console.log('🖼️ Converting to canvas...')
+      console.log('🖼️ Converting to canvas...', {
+        elementWidth: printElement.scrollWidth,
+        elementHeight: printElement.scrollHeight,
+        offsetWidth: printElement.offsetWidth,
+        offsetHeight: printElement.offsetHeight
+      })
+
       const canvas = await html2canvas(printElement, {
         scale: 2,
         useCORS: true,
@@ -242,8 +248,14 @@ export const pdfService = {
         logging: false,
         removeContainer: false,
         foreignObjectRendering: true,
-        width: printElement.scrollWidth,
-        height: printElement.scrollHeight
+        width: Math.max(printElement.scrollWidth, 794), // Largura mínima A4
+        height: Math.max(printElement.scrollHeight, 1123) // Altura mínima A4
+      })
+
+      console.log('🎨 Canvas criado:', {
+        canvasWidth: canvas.width,
+        canvasHeight: canvas.height,
+        hasContent: canvas.width > 0 && canvas.height > 0
       })
 
       // Verificar se foi abortado
@@ -254,6 +266,18 @@ export const pdfService = {
       // 📄 Gerar PDF
       console.log('📄 Generating PDF...')
       const imgData = canvas.toDataURL('image/png', 0.95)
+      
+      // Verificar se o imgData não está vazio
+      if (!imgData || imgData === 'data:,') {
+        throw new Error('Canvas vazio - não foi possível gerar a imagem do relatório')
+      }
+
+      console.log('🎯 Dados da imagem:', {
+        imgDataLength: imgData.length,
+        isValidData: imgData.startsWith('data:image/png;base64,'),
+        base64Length: imgData.split(',')[1]?.length || 0
+      })
+
       const pdf = new jsPDF('p', 'mm', 'a4')
       
       const imgWidth = 190
@@ -262,17 +286,28 @@ export const pdfService = {
       let heightLeft = imgHeight
       let position = 10
 
+      console.log('📐 Dimensões do PDF:', {
+        imgWidth,
+        imgHeight,
+        pageHeight,
+        totalPages: Math.ceil(imgHeight / pageHeight)
+      })
+
       // Primeira página
       pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight)
       heightLeft -= pageHeight
 
       // Páginas adicionais se necessário
+      let pageCount = 1
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight + 10
         pdf.addPage()
         pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight)
         heightLeft -= pageHeight
+        pageCount++
       }
+
+      console.log('📄 PDF criado com', pageCount, 'página(s)')
 
       // 💾 Salvar arquivo
       console.log('💾 Saving PDF...')

@@ -49,35 +49,47 @@ const LocalizacaoPage = () => {
   const [editingLocalizacao, setEditingLocalizacao] = useState<Localizacao | null>(null)
   const [deletingLocalizacao, setDeletingLocalizacao] = useState<Localizacao | null>(null)
 
-  const filteredLocalizacoes = localizacoes.filter(localizacao =>
-    localizacao.codigo.toLowerCase().includes(search.toLowerCase()) ||
-    localizacao.nome.toLowerCase().includes(search.toLowerCase()) ||
+  const filteredLocalizacoes = localizacoes?.filter(localizacao =>
+    localizacao.codigo?.toLowerCase().includes(search.toLowerCase()) ||
+    localizacao.nome?.toLowerCase().includes(search.toLowerCase()) ||
     (localizacao.descricao && localizacao.descricao.toLowerCase().includes(search.toLowerCase())) ||
     (localizacao.predio && localizacao.predio.toLowerCase().includes(search.toLowerCase())) ||
     (localizacao.andar && localizacao.andar.toLowerCase().includes(search.toLowerCase())) ||
     (localizacao.sala && localizacao.sala.toLowerCase().includes(search.toLowerCase()))
-  )
+  ) || []
 
   const handleCreate = async (data: any) => {
-    const result = await create(data)
-    if (result.error === null) {
-      setIsCreateDialogOpen(false)
+    try {
+      const result = await create(data)
+      if (result && result.error === null) {
+        setIsCreateDialogOpen(false)
+      }
+    } catch (error) {
+      console.error('❌ Erro ao criar localização:', error)
     }
   }
 
   const handleUpdate = async (data: any) => {
     if (!editingLocalizacao) return
-    const result = await update(editingLocalizacao.id, data)
-    if (result.error === null) {
-      setEditingLocalizacao(null)
+    try {
+      const result = await update(editingLocalizacao.id, data)
+      if (result && result.error === null) {
+        setEditingLocalizacao(null)
+      }
+    } catch (error) {
+      console.error('❌ Erro ao editar localização:', error)
     }
   }
 
   const handleDelete = async () => {
     if (!deletingLocalizacao) return
-    const result = await remove(deletingLocalizacao.id)
-    if (result.error === null) {
-      setDeletingLocalizacao(null)
+    try {
+      const result = await remove(deletingLocalizacao.id)
+      if (result && result.error === null) {
+        setDeletingLocalizacao(null)
+      }
+    } catch (error) {
+      console.error('❌ Erro ao excluir localização:', error)
     }
   }
 
