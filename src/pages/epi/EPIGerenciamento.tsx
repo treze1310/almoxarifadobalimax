@@ -138,6 +138,11 @@ export default function EPIGerenciamento() {
       })
 
       // Convert to PDF
+      const jsPDFModule = await import('jspdf')
+      const html2canvasModule = await import('html2canvas')
+      const jsPDF = jsPDFModule.default
+      const html2canvas = html2canvasModule.default
+
       const canvas = await html2canvas(tempDiv, {
         scale: 2,
         useCORS: true,

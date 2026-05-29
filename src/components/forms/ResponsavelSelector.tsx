@@ -64,7 +64,7 @@ const ResponsavelSelector = ({
   useEffect(() => {
     const fetchColaboradores = async () => {
       console.log('Iniciando carregamento de colaboradores...')
-      console.log('Usuário autenticado:', usuario?.email)
+      console.log('Usuário autenticado:', (usuario as any)?.email)
       setLoading(true)
       try {
         const { data, error } = await supabase
@@ -76,7 +76,7 @@ const ResponsavelSelector = ({
         console.log('Resposta do Supabase:', { data, error })
         if (error) throw error
         console.log('Colaboradores carregados:', data?.length || 0, data)
-        setColaboradores(data || [])
+        setColaboradores((data || []) as any)
       } catch (error) {
         console.error('Erro ao carregar colaboradores:', error)
       } finally {

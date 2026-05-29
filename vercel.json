@@ -5,8 +5,12 @@
   "installCommand": "npm install",
   "rewrites": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "source": "/sistema",
+      "destination": "/sistema/index.html"
+    },
+    {
+      "source": "/sistema/(.*)",
+      "destination": "/sistema/index.html"
     }
   ]
 }

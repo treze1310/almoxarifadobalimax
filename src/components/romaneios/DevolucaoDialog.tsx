@@ -116,7 +116,7 @@ const DevolucaoDialog = ({ romaneio, trigger, onRomaneioUpdated }: DevolucaoDial
   const handlePrint = async () => {
     try {
       const company = await companyService.getActiveCompany()
-      const printContent = generateRomaneoPDFContent(romaneio, company)
+      const printContent = generateRomaneoPDFContent(romaneio as any, company)
       
       const printWindow = window.open('', '_blank')
       if (printWindow) {
@@ -143,13 +143,13 @@ const DevolucaoDialog = ({ romaneio, trigger, onRomaneioUpdated }: DevolucaoDial
       const jsPDFModule = await import('jspdf')
       const html2canvasModule = await import('html2canvas')
       
-      const jsPDF = jsPDFModule.default || jsPDFModule
-      const html2canvas = html2canvasModule.default || html2canvasModule
+      const jsPDF = jsPDFModule.default
+      const html2canvas = html2canvasModule.default
       
       const company = await companyService.getActiveCompany()
       printElement = document.createElement('div')
       printElement.id = `pdf-temp-${Date.now()}` // ID único
-      printElement.innerHTML = generateRomaneoPDFContent(romaneio, company)
+      printElement.innerHTML = generateRomaneoPDFContent(romaneio as any, company)
       printElement.style.position = 'absolute'
       printElement.style.left = '-9999px'
       printElement.style.top = '0'

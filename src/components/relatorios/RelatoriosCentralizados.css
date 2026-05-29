@@ -1,0 +1,194 @@
+/* 
+  CSS para centralização inteligente dos relatórios
+  Funciona com zoom e diferentes tamanhos de viewport
+*/
+
+.relatorios-container {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.relatorios-content {
+  margin: 0 auto;
+  width: 100%;
+  max-width: 1280px; /* 7xl do Tailwind */
+  padding: 0 1rem; /* px-4 */
+}
+
+/* Responsividade para diferentes breakpoints */
+@media (min-width: 640px) {
+  .relatorios-content {
+    padding: 0 1.5rem; /* sm:px-6 */
+  }
+}
+
+@media (min-width: 1024px) {
+  .relatorios-content {
+    padding: 0 2rem; /* lg:px-8 */
+  }
+}
+
+/* Garante centralização mesmo com zoom */
+@media screen and (min-resolution: 96dpi) {
+  .relatorios-container {
+    transform-origin: center center;
+  }
+}
+
+/* Cards de relatórios centralizados */
+.relatorios-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .relatorios-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .relatorios-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Dialog centralizado com zoom */
+.relatorio-dialog {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 9999 !important;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Quando há zoom, força reposicionamento */
+@media screen and (min-resolution: 144dpi), 
+       screen and (max-resolution: 95dpi) {
+  .relatorio-dialog {
+    position: fixed !important;
+    top: 50vh !important;
+    left: 50vw !important;
+    transform: translate(-50%, -50%) !important;
+  }
+}
+
+/* Tabelas responsivas */
+.relatorio-table-container {
+  overflow-x: auto;
+  max-width: 100%;
+  border-radius: 0.375rem;
+  border: 1px solid #e5e7eb;
+}
+
+.relatorio-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+/* Cards de KPIs */
+.relatorio-kpis-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .relatorio-kpis-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .relatorio-kpis-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Loading spinner centralizado */
+.relatorio-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 16rem;
+  width: 100%;
+}
+
+/* Botões de ação */
+.relatorio-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+  .relatorio-actions {
+    justify-content: center;
+    width: 100%;
+  }
+  
+  .relatorio-actions button {
+    flex: 1;
+    min-width: 120px;
+  }
+}
+
+/* Print styles para centralização */
+@media print {
+  .relatorios-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+  
+  .relatorios-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+}
+
+/* Ajustes para modo escuro */
+@media (prefers-color-scheme: dark) {
+  .relatorio-table-container {
+    border-color: #374151;
+  }
+}
+
+/* Animações suaves */
+.relatorio-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.relatorio-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Garantir centralização em viewports muito pequenos */
+@media (max-width: 480px) {
+  .relatorios-content {
+    padding: 0 0.75rem;
+  }
+  
+  .relatorios-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}
+
+/* Garantir centralização em viewports muito grandes */
+@media (min-width: 1536px) {
+  .relatorios-content {
+    max-width: 1536px; /* 2xl do Tailwind */
+  }
+}

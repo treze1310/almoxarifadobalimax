@@ -147,10 +147,15 @@ const LoginPage = () => {
           </CardFooter>
         </form>
         
-        <div className="p-6 pt-0">
+        <div className="p-6 pt-0 space-y-3">
           <div className="text-sm text-center text-muted-foreground">
             <p>🔒 Acesso restrito a usuários cadastrados</p>
             <p className="mt-1">Entre em contato com o administrador para criar sua conta</p>
+          </div>
+          <div className="text-center">
+            <a href="/" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+              ← Voltar ao site
+            </a>
           </div>
         </div>
       </Card>

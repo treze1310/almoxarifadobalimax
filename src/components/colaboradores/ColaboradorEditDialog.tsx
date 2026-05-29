@@ -123,8 +123,8 @@ export function ColaboradorEditDialog({
 
       const episFormatados: EPIVinculadoRomaneio[] = []
       
-      data?.forEach(romaneio => {
-        romaneio.romaneios_itens?.forEach(item => {
+      data?.forEach((romaneio: any) => {
+        romaneio.romaneios_itens?.forEach((item: any) => {
           if (item.materiais_equipamentos?.is_epi) {
             episFormatados.push({
               romaneio_id: romaneio.id,

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,6 +31,7 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
+import { useCenteredDialog } from '@/hooks/useCenteredDialog'
 import { useReports } from '@/hooks/useReports'
 import { ReportRequest, REPORT_CONFIGS } from '@/types/reports'
 import RelatorioInterativo from '@/components/relatorios/RelatorioInterativo'
@@ -44,6 +45,36 @@ const RelatoriosPage = () => {
     id: string
     titulo: string
   } | null>(null)
+
+  // Hook para centralização inteligente do dialog de relatórios (funciona com zoom)
+  const dialogPosition = useCenteredDialog(!!selectedReport)
+
+  // Forçar reposicionamento dos diálogos para lidar com zoom e scroll
+  useEffect(() => {
+    if (selectedReport) {
+      // Pequeno delay para permitir que o DOM se atualize
+      setTimeout(() => {
+        const dialogElements = document.querySelectorAll('[role="dialog"]')
+        dialogElements.forEach((dialog) => {
+          if (dialog instanceof HTMLElement) {
+            const viewportHeight = window.innerHeight
+            const viewportWidth = window.innerWidth
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
+            
+            const centerY = scrollTop + (viewportHeight / 2)
+            const centerX = scrollLeft + (viewportWidth / 2)
+            
+            dialog.style.position = 'fixed'
+            dialog.style.top = `${centerY}px`
+            dialog.style.left = `${centerX}px`
+            dialog.style.transform = 'translate(-50%, -50%)'
+            dialog.style.zIndex = '9999'
+          }
+        })
+      }, 100)
+    }
+  }, [selectedReport])
   
   const { isGenerating, generateReport, validateFilters, filterOptions } = useReports({
     onSuccess: (response) => {
@@ -475,35 +506,43 @@ const RelatoriosPage = () => {
   // Se há um relatório interativo ativo, mostrar apenas ele
   if (activeInteractiveReport) {
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setActiveInteractiveReport(null)}
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Voltar
-            </Button>
-            <h1 className="text-2xl font-bold">Relatórios</h1>
+      <div className="min-h-screen w-full flex flex-col">
+        {/* Container centralizado com largura máxima */}
+        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="space-y-6 py-6">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setActiveInteractiveReport(null)}
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Voltar
+                </Button>
+                <h1 className="text-2xl font-bold">Relatórios</h1>
+              </div>
+            </div>
+
+            <RelatorioInterativo
+              reportId={activeInteractiveReport.id}
+              titulo={activeInteractiveReport.titulo}
+              onClose={() => setActiveInteractiveReport(null)}
+            />
           </div>
         </div>
-
-        <RelatorioInterativo
-          reportId={activeInteractiveReport.id}
-          titulo={activeInteractiveReport.titulo}
-          onClose={() => setActiveInteractiveReport(null)}
-        />
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Relatórios</h1>
-        <div className="flex items-center gap-2">
+    <div className="min-h-screen w-full flex flex-col">
+      {/* Container centralizado com largura máxima */}
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="space-y-6 py-6">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold">Relatórios</h1>
+            <div className="flex items-center gap-2">
           <Button 
             variant="outline" 
             size="sm"
@@ -766,6 +805,8 @@ const RelatoriosPage = () => {
           </div>
         )
       })}
+        </div>
+      </div>
     </div>
   )
 }

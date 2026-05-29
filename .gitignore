@@ -23,6 +23,12 @@ dist-ssr
 build/
 *.local
 
+# Secrets / tokens (NEVER commit)
+.pat
+*.pat
+*.token
+.mcp.json
+
 # Environment variables
 .env
 .env.local
@@ -69,3 +75,24 @@ yarn.lock
 
 # Vercel
 .vercel
+
+# Database dumps / backups (NEVER commit)
+banco de dados/
+*.backup
+*.backup.gz
+*.storage
+*.storage.zip
+
+# Bun (project standardizes on pnpm)
+bun.lockb
+
+# Forensic / discovery audit artifacts
+FORENSIC_AUDIT_REPORT.md
+discovery_report.md
+code_discovery.md
+data_reality_check.md
+endpoints_discovery.md
+integrity_check.md
+architecture_discovery.md
+directories.txt
+tatus

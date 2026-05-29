@@ -186,8 +186,8 @@ export const pdfService = {
         throw new Error('PDF generation was aborted')
       }
 
-      const jsPDF = jsPDFModule.default || jsPDFModule
-      const html2canvas = html2canvasModule.default || html2canvasModule
+      const jsPDF = jsPDFModule.default
+      const html2canvas = html2canvasModule.default
 
       // 🎨 Criar elemento temporário
       console.log('🎨 Creating temporary element...')

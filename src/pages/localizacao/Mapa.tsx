@@ -23,7 +23,7 @@ interface Position {
   y: number
 }
 
-interface LocalizacaoLocal extends Localizacao {
+interface LocalizacaoLocal extends Omit<Localizacao, 'width' | 'height'> {
   width?: number
   height?: number
   tempPosition?: { x: number; y: number }
@@ -568,7 +568,7 @@ const MapaPage = () => {
                     <TooltipTrigger asChild>
                       <div
                         className={`absolute transform -translate-x-1/2 -translate-y-1/2 p-2 rounded-lg border-2 
-                          ${getLocationColor(localizacao)} 
+                          ${getLocationColor(localizacao as any)} 
                           ${editMode && !isResizing ? 'cursor-move hover:scale-105' : 'cursor-pointer'}
                           ${selectedLocation?.id === localizacao.id ? 'ring-2 ring-blue-500' : ''}
                           ${isDragging && draggedLocation?.id === localizacao.id ? 'opacity-50' : 'opacity-90'}
@@ -657,7 +657,7 @@ const MapaPage = () => {
                       .map((localizacao) => (
                         <div
                           key={localizacao.id}
-                          className={`p-2 rounded text-xs border ${getLocationColor(localizacao)} 
+                          className={`p-2 rounded text-xs border ${getLocationColor(localizacao as any)} 
                             ${editMode ? 'cursor-move' : 'cursor-pointer'} hover:scale-105 transition-transform`}
                           draggable={editMode}
                           onDragStart={(e) => handleDragStart(e, localizacao)}

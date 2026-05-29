@@ -116,7 +116,7 @@ export const MaterialEquipamentoDialog = ({
         </DialogHeader>
         <div className="p-1 pt-4">
           <MaterialEquipamentoForm
-            initialData={material}
+            initialData={material as any}
             onSubmit={onSubmit || (async () => {})}
             onCancel={() => onOpenChange(false)}
           />
@@ -140,7 +140,7 @@ export const MaterialEquipamentoDialog = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir o item "{material?.nome}"? 
+              Tem certeza que deseja excluir o item "{(material as any)?.nome}"?
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>

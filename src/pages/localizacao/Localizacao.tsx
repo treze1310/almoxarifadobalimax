@@ -36,6 +36,8 @@ import { MoreHorizontal, PlusCircle, Map, Edit, Trash2, Tag, Search } from 'luci
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { useSupabaseTable } from '@/hooks/useSupabase'
+import { useCenteredDialog } from '@/hooks/useCenteredDialog'
+import { supabase } from '@/lib/supabase'
 import { LocalizacaoForm } from '@/components/localizacao/LocalizacaoForm'
 import type { Tables } from '@/types/database'
 
@@ -48,17 +50,71 @@ const LocalizacaoPage = () => {
   const [deletingLocalizacao, setDeletingLocalizacao] = useState<Localizacao | null>(null)
   const [itensCadastrados, setItensCadastrados] = useState<Record<string, number>>({})
 
-  // Buscar contagem de itens por localização
+  // Hook para centralização inteligente do dialog de edição (funciona com zoom)
+  const editDialogPosition = useCenteredDialog(!!editingLocalizacao)
+
+  // Forçar reposicionamento do diálogo para lidar com zoom e scroll
+  useEffect(() => {
+    if (editingLocalizacao) {
+      // Pequeno delay para permitir que o DOM se atualize
+      setTimeout(() => {
+        const editDialog = document.querySelector('[aria-describedby]')
+        if (editDialog && editDialog instanceof HTMLElement) {
+          const viewportHeight = window.innerHeight
+          const viewportWidth = window.innerWidth
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+          const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
+          
+          const centerY = scrollTop + (viewportHeight / 2)
+          const centerX = scrollLeft + (viewportWidth / 2)
+          
+          editDialog.style.position = 'fixed'
+          editDialog.style.top = `${centerY}px`
+          editDialog.style.left = `${centerX}px`
+          editDialog.style.transform = 'translate(-50%, -50%)'
+          editDialog.style.zIndex = '9999'
+        }
+      }, 50)
+    }
+  }, [editingLocalizacao])
+
+  // Buscar contagem real de materiais e equipamentos por localização
   useEffect(() => {
     const fetchItemCounts = async () => {
       if (localizacoes.length > 0) {
-        // Aqui você pode fazer uma query para contar quantos materiais estão em cada localização
-        // Por enquanto, vamos simular com dados fictícios
-        const counts: Record<string, number> = {}
-        localizacoes.forEach(loc => {
-          counts[loc.id] = Math.floor(Math.random() * 50) // Simulação
-        })
-        setItensCadastrados(counts)
+        try {
+          // Buscar contagem usando função SQL otimizada
+          const { data: contagens, error } = await supabase
+            .rpc('get_materiais_count_by_localizacao')
+          
+          if (error) {
+            throw error
+          }
+
+          // Inicializar todas as localizações com 0
+          const counts: Record<string, number> = {}
+          localizacoes.forEach(loc => {
+            counts[loc.id] = 0
+          })
+          
+          // Aplicar contagens reais retornadas pela função
+          contagens?.forEach((item: { localizacao_id: string; count: number }) => {
+            if (item.localizacao_id && counts.hasOwnProperty(item.localizacao_id)) {
+              counts[item.localizacao_id] = Number(item.count)
+            }
+          })
+          
+          setItensCadastrados(counts)
+        } catch (error) {
+          console.error('Erro ao buscar contagem de itens:', error)
+          
+          // Fallback: inicializar com zeros em caso de erro
+          const fallbackCounts: Record<string, number> = {}
+          localizacoes.forEach(loc => {
+            fallbackCounts[loc.id] = 0
+          })
+          setItensCadastrados(fallbackCounts)
+        }
       }
     }
     
@@ -268,7 +324,14 @@ const LocalizacaoPage = () => {
 
       {/* Edit Dialog */}
       <Dialog open={!!editingLocalizacao} onOpenChange={() => setEditingLocalizacao(null)}>
-        <DialogContent className="sm:max-w-[600px] z-[9999]">
+        <DialogContent 
+          className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto fixed"
+          style={{
+            top: editDialogPosition.top,
+            left: editDialogPosition.left,
+            transform: editDialogPosition.transform
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Editar Localização</DialogTitle>
             <DialogDescription>

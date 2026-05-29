@@ -317,7 +317,7 @@ export function ColaboradorForm({ initialData, onSubmit, onCancel }: Colaborador
                   <SelectContent>
                     {filteredCentrosCusto.map((centro) => (
                       <SelectItem key={centro.id} value={centro.id}>
-                        {centro.codigo} - {centro.nome}
+                        {centro.codigo} - {(centro as any).nome}
                       </SelectItem>
                     ))}
                   </SelectContent>

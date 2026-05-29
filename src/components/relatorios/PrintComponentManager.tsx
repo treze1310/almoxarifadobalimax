@@ -111,7 +111,7 @@ const PrintComponentManager = ({
       </div>
 
       {/* Estilos para impressão */}
-      <style jsx>{printStyles || defaultPrintStyles}</style>
+      <style>{printStyles || defaultPrintStyles}</style>
     </>
   )
 }

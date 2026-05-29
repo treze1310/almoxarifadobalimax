@@ -148,7 +148,7 @@ export function MarcaCombobox({
               <div className="flex items-center gap-2">
                 <span className="truncate">{selectedMarca.nome}</span>
                 <Badge variant="secondary" className="text-xs">
-                  {selectedMarca.codigo || 'S/C'}
+                  {(selectedMarca as any).codigo || 'S/C'}
                 </Badge>
               </div>
             ) : (
@@ -205,9 +205,9 @@ export function MarcaCombobox({
                       />
                       <div className="flex items-center gap-2 flex-1">
                         <span className="truncate">{marca.nome}</span>
-                        {marca.codigo && (
+                        {(marca as any).codigo && (
                           <Badge variant="outline" className="text-xs">
-                            {marca.codigo}
+                            {(marca as any).codigo}
                           </Badge>
                         )}
                       </div>

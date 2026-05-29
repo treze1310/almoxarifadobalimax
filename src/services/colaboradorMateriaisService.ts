@@ -64,7 +64,7 @@ export const colaboradorMateriaisService = {
 
       const materiaisFormatados: MaterialEquipamentoVinculado[] = []
       
-      data?.forEach(romaneio => {
+      data?.forEach((romaneio: any) => {
         console.log('📦 Processando romaneio:', romaneio.numero, 'com', romaneio.romaneios_itens?.length, 'itens')
         
         romaneio.romaneios_itens?.forEach(item => {

@@ -220,7 +220,7 @@ export function useDashboard() {
         `)
         .eq('tipo', 'retirada')
 
-      const consumoPorCentro = centrosCustoData?.reduce((acc, romaneio) => {
+      const consumoPorCentro = centrosCustoData?.reduce((acc, romaneio: any) => {
         const centro = romaneio.centro_custo_origem
         if (centro) {
           const valorTotal = romaneio.romaneios_itens?.reduce((sum, item) => 
@@ -247,7 +247,7 @@ export function useDashboard() {
         `)
         .not('material_equipamento_id', 'is', null)
 
-      const produtoMovimentacao = topProdutosData?.reduce((acc, item) => {
+      const produtoMovimentacao = topProdutosData?.reduce((acc, item: any) => {
         const nome = item.materiais_equipamentos?.nome
         if (nome) {
           acc[nome] = (acc[nome] || 0) + (item.quantidade || 0)

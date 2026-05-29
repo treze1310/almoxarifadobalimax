@@ -11,6 +11,17 @@ interface UsuarioFormData {
   senha?: string
 }
 
+async function query<T = any>(fn: () => PromiseLike<{ data: T; error: any }>): Promise<T> {
+  const { data, error } = await fn()
+  if (error) throw error
+  return data
+}
+
+async function mutate(fn: () => PromiseLike<{ error: any }>): Promise<void> {
+  const { error } = await fn()
+  if (error) throw error
+}
+
 export function useUsuarios() {
   const [usuarios, setUsuarios] = useState<User[]>([])
   const [loading, setLoading] = useState(true)

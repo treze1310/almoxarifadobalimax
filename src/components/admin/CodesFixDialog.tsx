@@ -47,8 +47,13 @@ export const CodesFixDialog = ({ open, onOpenChange }: CodesFixDialogProps) => {
       setProgress(30)
       setStatus('fixing')
       
-      const fixResult = await CodeGenerationService.fixExistingCodes()
-      
+      const raw = await CodeGenerationService.fixNonSequentialCodes()
+      const fixResult: FixResult = {
+        success: raw.errors.length === 0,
+        updated: raw.fixed,
+        errors: raw.errors,
+      }
+
       setProgress(100)
       setResult(fixResult)
       setStatus(fixResult.success ? 'completed' : 'error')

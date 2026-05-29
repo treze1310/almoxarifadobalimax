@@ -177,7 +177,7 @@ const DevolucaoSeletivaDialog = ({ romaneio, trigger, onDevolucaoRealizada }: De
         })
       }
 
-      const result = await createRomaneio(devolucaoData)
+      const result = await createRomaneio(devolucaoData as any)
       
       if (result.error === null) {
         // Marcar itens como devolvidos com data de devolução

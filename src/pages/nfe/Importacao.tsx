@@ -2,7 +2,19 @@ import { useState, useMemo, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { UploadCloud, FileText, History } from 'lucide-react'
-import { NFe, NFeItem, UploadedNFeFile } from '@/types'
+import {
+  NFe,
+  NFeItem,
+  UploadedNFeFile,
+  NFeIdentification,
+  NFeEmitter,
+  NFeRecipient,
+  NFeDelivery,
+  NFeTotal,
+  NFeTransport,
+  NFePayment,
+  NFeAdditionalInfo,
+} from '@/types'
 import { NfPreviewTable } from '@/components/nfe/NfPreviewTable'
 import { NfImportDialog } from '@/components/nfe/NfImportDialog'
 import { NfImportResult } from '@/components/nfe/NfImportResult'
@@ -548,7 +560,7 @@ const ImportacaoNFePage = () => {
   if (stage === 'result') {
     return (
       <NfImportResult
-        result={importResult}
+        result={importResult as any}
         onStartNewImport={handleStartNewImport}
       />
     )

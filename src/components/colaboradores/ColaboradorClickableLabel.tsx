@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { User, ExternalLink } from 'lucide-react'
-import { ColaboradorDetailsDialog } from './ColaboradorDetailsDialog'
+import ColaboradorDetailsDialog from './ColaboradorDetailsDialog'
 
 interface ColaboradorClickableLabelProps {
   colaboradorId: string

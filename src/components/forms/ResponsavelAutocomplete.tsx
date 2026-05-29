@@ -50,7 +50,7 @@ const ResponsavelAutocomplete = ({
         if (error) {
           console.error('Erro ao carregar colaboradores:', error)
         } else {
-          setColaboradores(data || [])
+          setColaboradores((data || []) as any)
         }
       } catch (err) {
         console.error('Erro na busca:', err)

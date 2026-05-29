@@ -87,6 +87,7 @@ const getStatusBadgeVariant = (status: string) => {
 const RomaneioDialog = ({ romaneio, trigger, onRomaneioUpdated }: RomaneioDialogProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
   const { deleteRomaneio } = useRomaneios()
   const { toast } = useToast()
 
@@ -129,7 +130,7 @@ const RomaneioDialog = ({ romaneio, trigger, onRomaneioUpdated }: RomaneioDialog
   const handlePrint = async () => {
     try {
       const company = await companyService.getActiveCompany()
-      const printContent = generateRomaneoPDFContent(romaneio, company)
+      const printContent = generateRomaneoPDFContent(romaneio as any, company)
       
       const printWindow = window.open('', '_blank')
       if (printWindow) {
@@ -141,8 +142,6 @@ const RomaneioDialog = ({ romaneio, trigger, onRomaneioUpdated }: RomaneioDialog
       console.error('Erro ao imprimir:', error)
     }
   }
-
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
 
   const handleDownloadPDF = async (event?: React.MouseEvent) => {
     // Prevenir propagação de eventos
@@ -171,7 +170,7 @@ const RomaneioDialog = ({ romaneio, trigger, onRomaneioUpdated }: RomaneioDialog
       // 🚀 Gerar PDF usando o serviço otimizado
       const success = await pdfService.generatePDF({
         filename: `romaneio-${romaneio.numero}.pdf`,
-        htmlContent: generateRomaneoPDFContent(romaneio, company),
+        htmlContent: generateRomaneoPDFContent(romaneio as any, company),
         onStart: () => {
           setIsGeneratingPDF(true)
           console.log('🚀 Starting PDF generation for romaneio:', romaneio.numero)
@@ -469,8 +468,8 @@ const RomaneioDialog = ({ romaneio, trigger, onRomaneioUpdated }: RomaneioDialog
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2">
-                  <DevolucaoSeletivaDialog 
-                    romaneio={romaneio}
+                  <DevolucaoSeletivaDialog
+                    romaneio={romaneio as any}
                     onDevolucaoRealizada={onRomaneioUpdated}
                   />
                 </div>

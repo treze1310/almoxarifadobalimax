@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/use-toast'
 
-import type { Tables, TablesInsert, TablesUpdate } from '@/types/database'
+import type { Database, Tables, TablesInsert, TablesUpdate } from '@/types/database'
 
-export function useSupabaseTable<T extends keyof Tables>(tableName: T) {
-  const [data, setData] = useState<Tables[T][]>([])
+export function useSupabaseTable<T extends keyof Database['public']['Tables']>(tableName: T) {
+  const [data, setData] = useState<Tables<T>[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
@@ -54,7 +54,7 @@ export function useSupabaseTable<T extends keyof Tables>(tableName: T) {
         throw error
       }
 
-      setData(result || [])
+      setData((result as any) || [])
       setError(null)
     } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido')
@@ -68,7 +68,7 @@ export function useSupabaseTable<T extends keyof Tables>(tableName: T) {
     }
   }
 
-  const create = async (newData: TablesInsert[T]) => {
+  const create = async (newData: TablesInsert<T>) => {
     try {
       setLoading(true)
       
@@ -102,7 +102,7 @@ export function useSupabaseTable<T extends keyof Tables>(tableName: T) {
     }
   }
 
-  const update = async (id: string, updateData: TablesUpdate[T]) => {
+  const update = async (id: string, updateData: TablesUpdate<T>) => {
     try {
       setLoading(true)
       

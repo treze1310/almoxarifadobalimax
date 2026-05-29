@@ -94,7 +94,7 @@ class DevolucaoService {
       let quantidadeOriginalTotal = 0
       let quantidadeDevolvidaTotal = 0
 
-      for (const item of romaneioOriginal.romaneios_itens || []) {
+      for (const item of (romaneioOriginal.romaneios_itens || []) as any[]) {
         const materialId = item.material_equipamento_id
         const quantidadeOriginal = item.quantidade
         const quantidadeDevolvida = devolucoesMap.get(materialId) || 0

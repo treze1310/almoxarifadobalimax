@@ -457,7 +457,7 @@ class ReportService {
       titulo: 'RELATÓRIO DE MOVIMENTAÇÃO',
       periodo: `${this.formatDate(filtros.dataInicio!)} até ${this.formatDate(filtros.dataFim!)}`,
       filtrosAplicados: filtros,
-      columns,
+      columns: columns as any,
       rows,
       totals: {
         totalEntradas,
@@ -681,7 +681,7 @@ class ReportService {
       query = query.eq('materiais_equipamentos.categoria', filtros.categoria)
     }
 
-    const { data, error } = await query
+    const { data, error } = (await query) as any
 
     if (error) throw error
     if (!data || data.length === 0) {
@@ -689,7 +689,7 @@ class ReportService {
     }
 
     // Agrupar consumo por centro de custo e categoria
-    const consumoPorCentro = data.reduce((acc, mov) => {
+    const consumoPorCentro = data.reduce((acc: any, mov: any) => {
       const centroCusto = mov.centros_custo ? 
         `${mov.centros_custo.codigo} - ${mov.centros_custo.descricao}` : 
         'Sem Centro de Custo'
@@ -721,7 +721,7 @@ class ReportService {
         total: consumoPorCentro[centro].total
       }
       
-      categorias.forEach(categoria => {
+      categorias.forEach((categoria: any) => {
         row[categoria] = consumoPorCentro[centro].categorias[categoria] || 0
       })
       
@@ -754,7 +754,7 @@ class ReportService {
       titulo: 'RELATÓRIO DE CONSUMO POR CENTRO DE CUSTO',
       periodo: `${this.formatDate(filtros.dataInicio!)} até ${this.formatDate(filtros.dataFim!)}`,
       filtrosAplicados: filtros,
-      columns,
+      columns: columns as any,
       rows,
       totals: {
         consumoTotal,
@@ -1872,7 +1872,7 @@ class ReportService {
     return {
       reportId: 'inventario-rotativo',
       titulo: 'RELATÓRIO DE INVENTÁRIO ROTATIVO',
-      periodo: `Análise em ${this.formatDate(hoje.toISOString())} - Ciclo: ${ciclo}`,
+      periodo: `Análise em ${this.formatDate(hoje.toISOString())} - Ciclo: ${filtros.ciclo || 'mensal'}`,
       filtrosAplicados: filtros,
       columns: [
         { key: 'codigo', label: 'Código', type: 'text' },
@@ -1917,7 +1917,7 @@ class ReportService {
       summary: {
         totalRegistros: materiaisInventario.length,
         valorTotal: valorTotalDivergencias,
-        observacoes: `Análise de inventário rotativo com ciclo ${ciclo}. Acuracidade geral: ${acuracidadeGeral.toFixed(1)}%`,
+        observacoes: `Análise de inventário rotativo com ciclo ${filtros.ciclo || 'mensal'}. Acuracidade geral: ${acuracidadeGeral.toFixed(1)}%`,
         geradoPor: 'Sistema',
         geradoEm: new Date().toISOString(),
         numeroRelatorio

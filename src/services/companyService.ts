@@ -1,11 +1,9 @@
 import { supabase } from '@/lib/supabase'
 import type { Tables } from '@/types/database'
 
-export interface CompanyWithLogo extends Tables<'empresas'> {
-  logo_url?: string
-}
+export type CompanyWithLogo = Tables<'empresas'>
 
-type QueryFunction = <T>(queryFn: () => Promise<{ data: T | null; error: any }>) => Promise<T>
+type QueryFunction = <T>(queryFn: () => PromiseLike<{ data: T | null; error: any }>) => Promise<T>
 
 // 🔥 Cache para evitar múltiplas requisições simultâneas
 class CompanyCache {
@@ -85,8 +83,8 @@ export const companyService = {
               .select('*')
               .eq('ativo', true)
               .limit(1)
-              .single()
               .abortSignal(controller.signal)
+              .single()
           )
           if (data) {
             companyCache.set(cacheKey, data)
@@ -100,8 +98,8 @@ export const companyService = {
           .select('*')
           .eq('ativo', true)
           .limit(1)
-          .single()
           .abortSignal(controller.signal)
+          .single()
 
         if (error || !data) {
           console.warn('⚠️ No active company found:', error?.message)

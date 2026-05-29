@@ -165,8 +165,8 @@ const SolicitacaoPrintPage = () => {
       const jsPDFModule = await import('jspdf')
       const html2canvasModule = await import('html2canvas')
       
-      const jsPDF = jsPDFModule.default || jsPDFModule
-      const html2canvas = html2canvasModule.default || html2canvasModule
+      const jsPDF = jsPDFModule.default
+      const html2canvas = html2canvasModule.default
       // Create a completely isolated container for PDF generation
       const pdfContainer = document.createElement('div')
       pdfContainer.style.position = 'absolute'
@@ -287,12 +287,12 @@ const SolicitacaoPrintPage = () => {
         className="print-content"
         style={{ position: 'relative', zIndex: 1 }}
         dangerouslySetInnerHTML={{
-          __html: generateSolicitacaoPDFContent(requestData, company, centroCustoOrigem, centroCustoDestino, materiaisInfo)
+          __html: generateSolicitacaoPDFContent(requestData, company, centroCustoOrigem, centroCustoDestino, materiaisInfo, colaboradorInfo)
         }}
       />
 
       {/* Estilos para impressão */}
-      <style jsx>{`
+      <style>{`
         @media screen {
           .print-content {
             display: block;

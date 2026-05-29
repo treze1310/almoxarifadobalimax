@@ -1,0 +1,1929 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Balimax Admin - Painel de Gerenciamento</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'brand-blue': '#1A3A8F',
+            'brand-orange': '#FF6600',
+            'brand-gray': '#111827',
+            'sidebar': '#0d1b2a',
+          },
+          fontFamily: {
+            'display': ['Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Poppins', sans-serif; margin: 0; background: #f0f2f5; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+    /* SIDEBAR */
+    #sidebar { width: 260px; background: #0d1b2a; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100; display: flex; flex-direction: column; transition: transform .3s; overflow-y: auto; }
+    #main-wrap { margin-left: 260px; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+    .nav-item { display: flex; align-items: center; gap: .75rem; padding: .7rem 1.25rem; cursor: pointer; color: rgba(255,255,255,.6); font-size: .8125rem; font-weight: 500; border-left: 3px solid transparent; transition: all .15s; }
+    .nav-item:hover { color: #fff; background: rgba(255,255,255,.05); }
+    .nav-item.active { color: #FF6600; background: rgba(255,102,0,.08); border-left-color: #FF6600; }
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .nav-sep { padding: .5rem 1.25rem; font-size: .625rem; text-transform: uppercase; letter-spacing: .12em; color: rgba(255,255,255,.25); font-weight: 700; margin-top: .5rem; }
+
+    /* TOPBAR */
+    #topbar {
+      background: linear-gradient(90deg, #0d1b2a 0%, #1A3A8F 100%);
+      height: 64px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    #topbar-title { color: #fff; font-size: .8125rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .tb-sep { color: rgba(255,255,255,.25); margin: 0 .4rem; font-size: .9rem; }
+    .tb-btn {
+      display: inline-flex; align-items: center; gap: .4rem;
+      padding: .35rem .8rem; border-radius: 8px; font-size: .75rem;
+      font-weight: 600; cursor: pointer; border: none;
+      font-family: 'Poppins',sans-serif; transition: all .15s;
+      color: rgba(255,255,255,.65); background: transparent;
+    }
+    .tb-btn:hover { color: #fff; background: rgba(255,255,255,.1); }
+    .tb-btn svg { width: 15px; height: 15px; }
+    .tb-btn-view {
+      border: 1px solid rgba(255,255,255,.2);
+      color: rgba(255,255,255,.8);
+    }
+    .tb-btn-view:hover { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.5); color: #fff; }
+    .tb-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: #FF6600;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: .6875rem; font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    /* CONTENT */
+    #content { padding: 1.5rem; flex: 1; }
+    .sec { display: none; }
+    .sec.active { display: block; }
+
+    /* CARDS */
+    .card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 1.5rem; margin-bottom: 1.25rem; }
+    .card-title { font-size: .9375rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem; padding-bottom: .75rem; border-bottom: 2px solid #f1f5f9; display: flex; align-items: center; gap: .5rem; }
+    .card-title svg { width: 18px; height: 18px; color: #FF6600; }
+
+    /* FORMS */
+    .fg { margin-bottom: 1rem; }
+    .fl { display: block; font-size: .75rem; font-weight: 600; color: #374151; margin-bottom: .3rem; }
+    .fl .req { color: #ef4444; }
+    .fi, .ft, .fs { width: 100%; padding: .55rem .8rem; border: 1.5px solid #d1d5db; border-radius: 8px; font-family: 'Poppins',sans-serif; font-size: .8125rem; color: #1e293b; background: #fff; transition: border .15s, box-shadow .15s; outline: none; }
+    .fi:focus, .ft:focus, .fs:focus { border-color: #1A3A8F; box-shadow: 0 0 0 3px rgba(26,58,143,.08); }
+    .ft { resize: vertical; min-height: 90px; line-height: 1.6; }
+
+    /* BUTTONS */
+    .btn { display: inline-flex; align-items: center; gap: .35rem; padding: .45rem .9rem; border-radius: 8px; font-size: .75rem; font-weight: 600; cursor: pointer; border: none; font-family: 'Poppins',sans-serif; transition: all .15s; }
+    .btn svg { width: 15px; height: 15px; }
+    .btn-p { background: #1A3A8F; color: #fff; } .btn-p:hover { background: #142e73; }
+    .btn-o { background: #FF6600; color: #fff; } .btn-o:hover { background: #e55a00; }
+    .btn-s { background: #10b981; color: #fff; } .btn-s:hover { background: #059669; }
+    .btn-d { background: #ef4444; color: #fff; } .btn-d:hover { background: #dc2626; }
+    .btn-g { background: #f1f5f9; color: #475569; } .btn-g:hover { background: #e2e8f0; }
+    .btn-sm { padding: .3rem .65rem; font-size: .6875rem; }
+
+    /* IMAGE UPLOAD */
+    .img-up { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 1.5rem; text-align: center; cursor: pointer; background: #f8fafc; transition: all .15s; position: relative; }
+    .img-up:hover { border-color: #1A3A8F; background: #eff6ff; }
+    .img-up input { display: none; }
+    .img-prev { max-width: 100%; max-height: 160px; object-fit: contain; border-radius: 8px; margin-top: .5rem; }
+
+    /* LIST ROW */
+    .lr { display: flex; align-items: center; gap: .5rem; padding: .65rem .8rem; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: .5rem; flex-wrap: wrap; }
+    .lr:last-child { margin-bottom: 0; }
+    .lr .fi, .lr input { min-width: 0; }
+    .lr .lr-num { font-size: .75rem; font-weight: 700; color: #94a3b8; flex-shrink: 0; width: 18px; text-align: center; }
+    .lr .lr-actions { display: flex; gap: .3rem; flex-shrink: 0; margin-left: auto; }
+
+    /* GRID */
+    .cg { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px,1fr)); gap: 1rem; }
+
+    /* ITEM CARD */
+    .ic { background: #fff; border: 1.5px solid #e5e7eb; border-radius: 10px; overflow: hidden; transition: all .15s; }
+    .ic:hover { border-color: #1A3A8F; box-shadow: 0 4px 12px rgba(0,0,0,.06); }
+    .ic-body { padding: 1rem; }
+    .ic-foot { padding: .6rem 1rem; background: #f8fafc; border-top: 1px solid #e5e7eb; display: flex; gap: .4rem; justify-content: flex-end; }
+
+    /* ADD CARD */
+    .ac { border: 2px dashed #cbd5e1; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .6rem; padding: 1.5rem; cursor: pointer; color: #94a3b8; min-height: 140px; transition: all .15s; }
+    .ac:hover { border-color: #FF6600; color: #FF6600; background: rgba(255,102,0,.02); }
+
+    /* SOCIAL ROW */
+    .sr { display: flex; align-items: center; gap: .75rem; padding: .8rem 1rem; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: .6rem; }
+    .si { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .badge-on { background: #dcfce7; color: #166534; font-size: .625rem; font-weight: 700; padding: .2rem .5rem; border-radius: 20px; }
+    .badge-off { background: #f1f5f9; color: #94a3b8; font-size: .625rem; font-weight: 700; padding: .2rem .5rem; border-radius: 20px; }
+
+    /* STAT ROW */
+    .stat-row { display: grid; grid-template-columns: minmax(80px,100px) minmax(60px,80px) 1fr 1fr; gap: .6rem; align-items: start; padding: .8rem; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: .5rem; }
+
+    /* MODAL */
+    #modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; align-items: center; justify-content: center; }
+    #modal-bg.open { display: flex; }
+    #modal-box { background: #fff; border-radius: 14px; width: 92%; max-width: 560px; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+    .mh { padding: 1rem 1.25rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #fff; z-index: 1; border-radius: 14px 14px 0 0; }
+    .mb { padding: 1.25rem; }
+    .mf { padding: 1rem 1.25rem; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: .5rem; }
+
+    /* TOAST */
+    #toast { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 999; transform: translateY(80px); opacity: 0; transition: all .35s; pointer-events: none; }
+    #toast.show { transform: translateY(0); opacity: 1; }
+
+    /* PREVIEW */
+    .prev-box { background: #0d1b2a; border-radius: 10px; padding: 1.5rem; color: #fff; margin-top: 1rem; }
+
+    /* RESPONSIVE */
+    @media (max-width: 1100px) {
+      .stat-row { grid-template-columns: 1fr 1fr 2fr 2fr; }
+    }
+    @media (max-width: 900px) {
+      .stat-row { grid-template-columns: 1fr 1fr; }
+      .cg { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+    }
+    @media (max-width: 767px) {
+      #sidebar { transform: translateX(-100%); }
+      #sidebar.open { transform: translateX(0); }
+      #main-wrap { margin-left: 0; }
+      #content { padding: 1rem; }
+      .stat-row { grid-template-columns: 1fr 1fr; }
+      .cg { grid-template-columns: 1fr; }
+      #sidebar-overlay.open { display: block; }
+      .lr { flex-wrap: wrap; }
+      .sh { padding: 1rem 1.25rem; border-radius: 10px; }
+      .sh h2 { font-size: 1.05rem; }
+    }
+    #sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 99; }
+
+    /* Content layout */
+    .sec { width: 100%; }
+    #content { min-width: 0; overflow-x: hidden; }
+    .card { max-width: 960px; }
+
+    /* Section header — igual ao hero público */
+    .sh {
+      margin-bottom: 1.5rem;
+      padding: 1.4rem 1.75rem;
+      background: linear-gradient(135deg, #0d1b2a 0%, #1A3A8F 100%);
+      border-radius: 14px;
+      border: none;
+      border-left: 4px solid #FF6600;
+      position: relative;
+      overflow: hidden;
+    }
+    .sh::after {
+      content: '';
+      position: absolute;
+      right: -40px; top: -40px;
+      width: 160px; height: 160px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.03);
+      pointer-events: none;
+    }
+    .sh h2 { font-size: 1.25rem; font-weight: 700; color: #fff; margin: 0; letter-spacing: -.01em; }
+    .sh p  { color: rgba(255,255,255,.55); font-size: .8rem; margin: .3rem 0 0; }
+  </style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="screen-login" class="min-h-screen flex items-center justify-center" style="background: linear-gradient(135deg, #0d1b2a 0%, #1A3A8F 100%);">
+  <div class="w-full max-w-md px-4">
+    <div class="text-center mb-8">
+      <div class="inline-block bg-white/10 backdrop-blur rounded-2xl p-4 mb-4">
+        <img src="LOGO_BRANCO.png" alt="Balimax" class="h-14 w-auto" onerror="this.style.display='none'">
+      </div>
+      <h1 class="text-white font-display text-2xl font-bold">Painel Administrativo</h1>
+      <p class="text-blue-300 text-sm mt-1">Gerencie o conteudo do site Balimax Engenharia</p>
+    </div>
+    <div class="bg-white rounded-2xl shadow-2xl p-8">
+      <div class="fg">
+        <label class="fl">E-mail <span class="req">*</span></label>
+        <input id="login-user" type="email" class="fi" placeholder="seu@email.com" autocomplete="username">
+      </div>
+      <div class="fg">
+        <label class="fl">Senha <span class="req">*</span></label>
+        <input id="login-pass" type="password" class="fi" placeholder="Digite sua senha">
+      </div>
+      <div id="login-err" class="hidden text-red-600 text-xs font-semibold bg-red-50 border border-red-200 rounded-lg p-3 mb-4">E-mail ou senha incorretos.</div>
+      <button onclick="doLogin()" class="btn btn-o w-full justify-center py-3 text-sm mt-2">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+        Entrar no Painel
+      </button>
+      <p class="text-center text-xs text-gray-400 mt-4">Acesso restrito a administradores</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ADMIN ============ -->
+<div id="screen-admin" style="display:none">
+  <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="p-5 border-b border-white/5">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-brand-orange flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+        </div>
+        <div>
+          <p class="text-white font-bold text-sm">Balimax Admin</p>
+          <p class="text-blue-400 text-xs">Gerenciamento</p>
+        </div>
+      </div>
+    </div>
+    <nav class="flex-1 py-3">
+      <div class="nav-sep">Visao Geral</div>
+      <div class="nav-item active" data-sec="dashboard" onclick="showSec('dashboard')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-sep">Principal</div>
+      <div class="nav-item" data-sec="home" onclick="showSec('home')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
+        Home / Hero
+      </div>
+      <div class="nav-item" data-sec="cabecalho" onclick="showSec('cabecalho')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        Cabecalho e Menu
+      </div>
+      <div class="nav-sep">Paginas</div>
+      <div class="nav-item" data-sec="quemsomos" onclick="showSec('quemsomos')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Quem Somos
+      </div>
+      <div class="nav-item" data-sec="atividades" onclick="showSec('atividades')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+        Atividades / Servicos
+      </div>
+      <div class="nav-item" data-sec="portfolio" onclick="showSec('portfolio')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Portfolio / Projetos
+      </div>
+      <div class="nav-item" data-sec="contato" onclick="showSec('contato')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+        Contato
+      </div>
+      <div class="nav-sep">Geral</div>
+      <div class="nav-item" data-sec="rodape" onclick="showSec('rodape')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M2 15h20"/></svg>
+        Rodape / Footer
+      </div>
+      <div class="nav-item" data-sec="redes" onclick="showSec('redes')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Redes Sociais
+      </div>
+      <div class="nav-item" data-sec="parceiros" onclick="showSec('parceiros')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        Parceiros / Clientes
+      </div>
+      <div class="nav-item" data-sec="seo" onclick="showSec('seo')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M11 8v6M8 11h6"/></svg>
+        SEO / Meta Tags
+      </div>
+      <div class="nav-item" data-sec="config" onclick="showSec('config')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+        Configuracoes
+      </div>
+    </nav>
+    <div class="p-4 border-t border-white/5">
+      <div class="flex gap-2 mb-2">
+        <button onclick="exportJSON()" class="btn btn-g flex-1 justify-center text-xs" title="Exportar backup JSON">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          Exportar
+        </button>
+        <label class="btn btn-g flex-1 justify-center text-xs cursor-pointer" title="Importar backup JSON">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 17V7m0 10l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          Importar
+          <input type="file" accept=".json" style="display:none" onchange="importJSON(this)">
+        </label>
+      </div>
+      <button onclick="resetData()" class="btn btn-g w-full justify-center text-xs">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        Resetar para Padrao
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div id="main-wrap">
+    <!-- TOPBAR -->
+    <header id="topbar">
+      <div class="flex items-center gap-3 flex-1 min-w-0 overflow-hidden">
+        <!-- Hamburger mobile -->
+        <button onclick="toggleSidebar()" class="md:hidden tb-btn flex-shrink-0" style="padding:.4rem" aria-label="Menu">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <!-- Logo -->
+        <a href="index.html" target="_blank" class="flex items-center flex-shrink-0" title="Abrir site">
+          <img src="LOGO_BRANCO.png" alt="Balimax" class="h-8 w-auto drop-shadow-sm" onerror="this.style.display='none'">
+        </a>
+        <span class="tb-sep hidden sm:inline">/</span>
+        <h2 id="topbar-title" class="hidden sm:block">Dashboard</h2>
+      </div>
+      <div class="flex items-center gap-2">
+        <!-- Ver Site -->
+        <a href="index.html" target="_blank" class="tb-btn tb-btn-view hidden sm:inline-flex" title="Visualizar site">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          Ver Site
+        </a>
+        <!-- Avatar -->
+        <div class="tb-avatar">A</div>
+        <!-- Sair -->
+        <button onclick="doLogout()" class="tb-btn" title="Sair do painel">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          <span class="hidden sm:inline">Sair</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- CONTENT -->
+    <main id="content">
+      <!-- Sections rendered by JS -->
+      <div id="s-dashboard" class="sec active"></div>
+      <div id="s-home" class="sec"></div>
+      <div id="s-cabecalho" class="sec"></div>
+      <div id="s-quemsomos" class="sec"></div>
+      <div id="s-atividades" class="sec"></div>
+      <div id="s-portfolio" class="sec"></div>
+      <div id="s-contato" class="sec"></div>
+      <div id="s-rodape" class="sec"></div>
+      <div id="s-redes" class="sec"></div>
+      <div id="s-parceiros" class="sec"></div>
+      <div id="s-seo" class="sec"></div>
+      <div id="s-config" class="sec"></div>
+    </main>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div id="modal-box">
+    <div class="mh">
+      <h3 id="modal-title" class="font-bold text-sm"></h3>
+      <button onclick="closeModal()" class="text-gray-400 hover:text-gray-700"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg></button>
+    </div>
+    <div id="modal-body" class="mb"></div>
+    <div class="mf">
+      <button onclick="closeModal()" class="btn btn-g">Cancelar</button>
+      <button id="modal-save" class="btn btn-s">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast">
+  <div class="flex items-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-2xl">
+    <svg class="w-5 h-5 text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    <span id="toast-msg" class="text-sm font-medium">Salvo com sucesso!</span>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+// ===================== SUPABASE =====================
+const SB_URL = 'https://dqxrpsjalsmoyconcurz.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxeHJwc2phbHNtb3ljb25jdXJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1NTQ0NTksImV4cCI6MjA4ODEzMDQ1OX0.aSJk7XwQgWecX76sR9lx6j97DU3fnTtWcfHoCgQhqpI';
+let _sb = null;
+function getSB() {
+  if (!_sb) _sb = supabase.createClient(SB_URL, SB_KEY);
+  return _sb;
+}
+
+// ===================== DATA =====================
+let D = {}; // site data
+let curSec = 'dashboard';
+let _silentSave = false; // suppress toast on auto-save
+
+const DEF = {
+  cabecalho: {
+    logo: 'LOGO_BRANCO.png', logoData: null,
+    menuItems: [
+      {id:1, label:'Home', url:'index.html'},
+      {id:2, label:'Quem Somos', url:'quem-somos.html'},
+      {id:3, label:'Atividades', url:'atividades.html'},
+      {id:4, label:'Portfolio', url:'portfolio.html'}
+    ],
+    ctaLabel: 'Fale Conosco', ctaUrl: 'contato.html'
+  },
+  home: {
+    badge: 'Especialistas em Barcarena-PA',
+    heroTitle: 'Mais de <span class="text-brand-orange">20 anos</span> de excelencia em engenharia industrial',
+    heroSub: 'Especialistas em Ensaios Nao Destrutivos, Engenharia de Soldagem, Tratamento Termico e Inspecao Industrial. Atendendo Barcarena-PA e toda a regiao Norte desde 2006.',
+    cta1Label: 'Contato Direto', cta1Url: 'contato.html',
+    cta2Label: 'Saiba Mais', cta2Url: 'quem-somos.html',
+    videoUrl: 'https://www.omegaservice.com.br/wp-content/uploads/2025/05/SITE_OMEGA.mp4',
+    stats: [
+      {id:1, val:20, suf:'+', label:'Anos de Experiencia', sub:'Fundada em 2006'},
+      {id:2, val:500, suf:'+', label:'Projetos Realizados', sub:'Em toda a regiao Norte'},
+      {id:3, val:6, suf:'', label:'Metodos END', sub:'LP, PM, US, CD, LT, EVS'},
+      {id:4, val:100, suf:'+', label:'Clientes Atendidos', sub:'Hydro, Alunorte e outros'}
+    ],
+    histTitle: 'Fundada na experiencia e focada na excelencia.',
+    histText: 'A Balimax Engenharia nasceu com o objetivo de suprir as necessidades da regiao de Barcarena em relacao a END (Ensaios Nao Destrutivos). Com o tempo, expandimos nossa expertise para abranger engenharia de soldagem, controle de qualidade e servicos industriais completos.',
+    histImg: 'orlando.png', histImgData: null,
+    histCtaLabel: 'Leia mais sobre nossa trajetoria',
+    histCtaUrl: 'quem-somos.html'
+  },
+  quemsomos: {
+    heroKicker: 'Nossa Empresa',
+    heroTitle: 'Quem Somos', heroSub: 'Conheca a historia, os valores e a equipe por tras da Balimax Engenharia.',
+    mainImg: 'quem-somos-equipe.png', mainImgData: null,
+    histKicker: 'Nossa Historia',
+    secTitle: 'Fundada na experiencia e focada na excelencia.',
+    texto1: 'A Balimax Engenharia nasceu com o objetivo de suprir as necessidades da regiao de Barcarena-PA em relacao a END (Ensaios Nao Destrutivos). Desde a nossa fundacao, atuamos com rigor tecnico e compromisso com a seguranca dos equipamentos industriais.',
+    texto2: 'Com o tempo, expandimos nossa expertise para abranger engenharia de soldagem, controle de qualidade e servicos industriais completos. Hoje somos referencia regional em inspecao e analise de integridade de equipamentos.',
+    missao: 'Fornecer solucoes tecnicas de alta qualidade em ensaios nao destrutivos, engenharia de soldagem e controle de qualidade, garantindo a seguranca e a integridade dos equipamentos industriais.',
+    visao: 'Ser reconhecida como a empresa de referencia em inspecao industrial e engenharia de soldagem no Para, expandindo nossa atuacao para toda a regiao Norte do Brasil.',
+    valores: 'Qualidade e rigor tecnico, Seguranca em primeiro lugar, Etica e transparencia, Inovacao continua, Comprometimento com o cliente',
+    nossaEssenciaTitle: 'Nossa Essencia',
+    mvvTitle: 'Missao, Visao e Valores',
+    stats: [
+      {id:1, val:20, suf:'+', label:'Anos no mercado'},
+      {id:2, val:500, suf:'+', label:'Projetos realizados'}
+    ],
+    ctaFinalTitle: 'Pronto para trabalhar conosco?',
+    ctaFinalText: 'Entre em contato com nossa equipe e descubra como podemos ajudar na seguranca e integridade dos seus equipamentos.',
+    ctaBtn1Label: 'Entrar em Contato', ctaBtn1Url: 'contato.html',
+    ctaBtn2Label: 'Ver Atividades',    ctaBtn2Url: 'atividades.html',
+    corpoTecnicoKicker: 'Qualificacao',
+    corpoTecnicoTitle: 'Corpo Tecnico Qualificado',
+    corpoTecnicoSub: 'Nossa equipe e formada por profissionais certificados e com ampla experiencia no setor industrial.',
+    corpoTecnico: [
+      {id:1, icon:'graduate', titulo:'Inspetores SNQC/ABENDI', desc:'Profissionais certificados pelo Sistema Nacional de Qualificacao e Certificacao em END conforme normas ABNT.'},
+      {id:2, icon:'tool',     titulo:'Engenheiros de Soldagem', desc:'Especialistas certificados com qualificacao IWE (International Welding Engineer) para elaboracao de procedimentos e laudos tecnicos.'},
+      {id:3, icon:'shield',   titulo:'Normas ASME e NR-13',    desc:'Expertise em inspecao de vasos de pressao e equipamentos de acordo com as normas ASME, NR-13 e demais regulamentacoes vigentes.'},
+      {id:4, icon:'search',   titulo:'Ensaios Nao Destrutivos', desc:'Profissionais habilitados nos metodos LP, PM, US, CD, LT e EVS, garantindo inspecoes com precisao e confiabilidade.'},
+      {id:5, icon:'zap',      titulo:'Tecnologia Moderna',      desc:'Investimento constante em equipamentos de ultima geracao para garantir resultados precisos e confiaveis nas inspecoes.'},
+      {id:6, icon:'users',    titulo:'Equipe Especializada',    desc:'Corpo tecnico experiente em acompanhamento de obras, analise de integridade e elaboracao de laudos e relatorios tecnicos.'}
+    ]
+  },
+  atividades: {
+    pageTitle: 'Nossas Atividades',
+    pageIntro: 'Solucoes completas com tecnologia de ponta para garantir a seguranca e integridade do seu parque industrial.',
+    secTitle: 'Nossas Principais Atividades',
+    secSub: 'Solucoes completas com tecnologia de ponta para garantir a seguranca e integridade do seu parque industrial.',
+    blocos: [
+      {id:1, titulo:'Integridade de Equipamentos', subtitulo:'Analise e Diagnostico', desc:'Realizamos analise detalhada e elaboracao de relatorios tecnicos para garantir a seguranca operacional dos seus equipamentos industriais, seguindo as normas ASME, NR-13 e demais regulamentacoes vigentes.', imgData:null, itens:[
+        {id:1, titulo:'Inspecao de Vasos de Pressao', desc:'Avaliacao conforme NR-13 e ASME'},
+        {id:2, titulo:'Inspecao de Tubulacoes', desc:'Avaliacao de espessura e corrosao'},
+        {id:3, titulo:'Analise de Vida Remanescente', desc:'Estimativa de vida util residual'},
+        {id:4, titulo:'Analise de Falhas', desc:'Investigacao e diagnostico de falhas'}
+      ]},
+      {id:2, titulo:'Engenharia de Soldagem', subtitulo:'Qualificacao e Procedimentos', desc:'Contamos com engenheiros de soldagem certificados (IWE) para elaboracao de procedimentos de soldagem, qualificacao de soldadores e inspecao tecnica de juntas soldadas.', imgData:null, itens:[
+        {id:1, titulo:'EPS — Especificacao de Procedimento', desc:'Elaboracao e qualificacao de EPS'},
+        {id:2, titulo:'RQP / PQR', desc:'Registro de Qualificacao de Procedimento'},
+        {id:3, titulo:'Qualificacao de Soldadores', desc:'Testes e certificacao conforme AWS / ASME'},
+        {id:4, titulo:'Inspecao de Juntas Soldadas', desc:'Controle e acompanhamento de execucao'}
+      ]},
+      {id:3, titulo:'Controle da Qualidade', subtitulo:'Ensaios Nao Destrutivos', desc:'Executamos Ensaios Nao Destrutivos com equipamentos modernos e profissionais certificados pelo SNQC/ABENDI, garantindo resultados precisos e confiaveis.', imgData:null, itens:[
+        {id:1, titulo:'LP — Liquido Penetrante', desc:'Deteccao de descontinuidades superficiais'},
+        {id:2, titulo:'PM — Particula Magnetica', desc:'Inspecao de materiais ferromagneticos'},
+        {id:3, titulo:'US — Ultrassom', desc:'Medicao de espessura e deteccao de corrosao'},
+        {id:4, titulo:'CD — Correntes de Foucault', desc:'Inspecao de tubos e componentes'},
+        {id:5, titulo:'LT — Leak Test', desc:'Teste de estanqueidade'},
+        {id:6, titulo:'EVS — Exame Visual', desc:'Inspecao visual sistematica'}
+      ]},
+      {id:4, titulo:'Servicos Industriais', subtitulo:'Suporte Completo', desc:'Oferecemos servicos industriais completos, incluindo tratamento termico, fabricacao de componentes, montagem industrial e manutencao em geral.', imgData:null, itens:[
+        {id:1, titulo:'Tratamento Termico', desc:'Alivio de tensoes pos-solda (ATPS)'},
+        {id:2, titulo:'Fabricacao de Componentes', desc:'Fabricacao de pecas e estruturas metalicas'},
+        {id:3, titulo:'Montagem Industrial', desc:'Montagem e instalacao de equipamentos'},
+        {id:4, titulo:'Manutencao em Geral', desc:'Manutencao preventiva e corretiva'}
+      ]}
+    ],
+    servicos: [
+      {id:1, icon:'shield', titulo:'Integridade de Equipamentos', desc:'Analise detalhada e relatorios tecnicos para garantir a seguranca operacional.'},
+      {id:2, icon:'zap', titulo:'Engenharia de Soldagem', desc:'Elaboracao de procedimentos, qualificacao e acompanhamento de especialistas.'},
+      {id:3, icon:'search', titulo:'Controle da Qualidade', desc:'Ensaios Nao Destrutivos (LP, PM, US, CD, LT, EVS) com precisao absoluta.'},
+      {id:4, icon:'tool', titulo:'Servicos Industriais', desc:'Tratamento termico, fabricacao, montagem e manutencao em geral.'},
+      {id:5, icon:'book', titulo:'Treinamentos em Soldagem', desc:'Capacitacao tecnica nos processos SMAW, MIG/MAG, TIG e FCAW.'}
+    ]
+  },
+  portfolio: {
+    secTitle: 'Nosso Portfolio',
+    secSubtitle: '20 anos de projetos realizados com excelencia tecnica. Conheca alguns dos nossos cases e obras mais recentes.',
+    moreProjectsTitle: 'Quer ver mais projetos?',
+    moreProjectsText: 'Temos um vasto portfolio de obras e servicos realizados em toda a regiao Norte. Entre em contato para conhecer mais detalhes dos nossos projetos.',
+    liveWorksTitle: 'Veja obras em tempo real',
+    liveWorksText: 'Acompanhe nossas obras e servicos em andamento pelas nossas redes sociais. Publicamos atualizacoes regulares dos projetos em execucao.',
+    callPhotosTitle: 'Suas fotos aqui',
+    callPhotosText: 'Adicione fotos reais dos seus projetos para potencializar sua presenca online.',
+    callPhotosCtaLabel: 'Fale conosco →',
+    callPhotosCtaUrl: 'contato.html',
+    galeria: [],
+    categorias: ['Todos','Ensaios END','Soldagem','Tratamento Termico','Inspecao'],
+    projetos: [
+      {id:1, titulo:'Inspecao de Vasos de Pressao', cat:'Ensaios END', local:'Barcarena - PA', desc:'Ensaio por ultrassom (US) em vasos de pressao para medicao de espessura e deteccao de corrosao.', norma:'ASME / NR-13', img:'', imgData:null},
+      {id:2, titulo:'ATPS em Tubulacoes Industriais', cat:'Tratamento Termico', local:'Regiao Norte - PA', desc:'Alivio de Tensoes Pos-Solda em tubulacoes de processo de planta petroquimica.', norma:'AWS / ASME', img:'', imgData:null},
+      {id:3, titulo:'Analise de Integridade de Equipamentos', cat:'Inspecao', local:'Barcarena - PA', desc:'Inspecao periodica de equipamentos sob pressao conforme NR-13.', norma:'NR-13', img:'', imgData:null},
+      {id:4, titulo:'Qualificacao de EPS/RQP', cat:'Soldagem', local:'Barcarena - PA', desc:'Elaboracao e qualificacao de Especificacoes de Procedimentos de Soldagem.', norma:'ASME IX / AWS', img:'', imgData:null},
+      {id:5, titulo:'END em Juntas Soldadas', cat:'Ensaios END', local:'Regiao Norte', desc:'Inspecao por LP e PM em juntas soldadas de estruturas metalicas.', norma:'SNQC/ABENDI', img:'', imgData:null},
+      {id:6, titulo:'Fabricacao de Estruturas Metalicas', cat:'Soldagem', local:'Barcarena - PA', desc:'Fabricacao e montagem de estruturas metalicas com controle de qualidade integral.', norma:'AWS D1.1', img:'', imgData:null}
+    ]
+  },
+  contato: {
+    heroTitle: 'Contato', introText: 'Entre em contato com nossa equipe. Estamos prontos para atende-lo.',
+    pageKicker: 'Fale conosco',
+    breadcrumbHome: 'Home',
+    breadcrumbCurrent: 'Contato',
+    whatsappButtonLabel: 'Falar no WhatsApp',
+    socialTitle: 'Siga-nos nas redes',
+    locationTitle: 'Onde nos encontrar',
+    reasonsTitle: 'Por que nos escolher?',
+    reasons: [
+      {id:1, titulo:'Equipe certificada e especializada', desc:'Profissionais com certificacoes SNQC/ABENDI e vasta experiencia no setor industrial.'},
+      {id:2, titulo:'Tecnologia de ponta', desc:'Equipamentos modernos para inspecoes precisas e confiaveis.'},
+      {id:3, titulo:'Mais de 20 anos de experiencia', desc:'Historico comprovado atendendo as maiores plantas industriais da regiao.'},
+      {id:4, titulo:'Atendimento personalizado', desc:'Solucoes sob medida para as necessidades especificas de cada cliente.'},
+      {id:5, titulo:'Atendimento rapido pelo WhatsApp', desc:'Para respostas mais ageis, entre em contato diretamente pelo WhatsApp.'}
+    ],
+    telefones: [{id:1, num:'+55 91 3754-3597', tipo:'Fixo'},{id:2, num:'+55 91 9979-7250', tipo:'Celular (Orlando)'}],
+    email: 'balimax@balimax.com.br',
+    endereco: 'Av. Felix Clemente Malcher, 128, Barcarena - PA, CEP: 68447-000',
+    whatsappMsg: 'Ola, gostaria de solicitar um orcamento para servicos da Balimax Engenharia.',
+    whatsappNum: '559199797250'
+  },
+  rodape: {
+    descricao: 'Empresa especializada em ensaios nao destrutivos, controle de qualidade e engenharia de soldagem.',
+    cnpj: '08.296.443/0001-83',
+    copyright: 'Balimax Engenharia &copy; 2026. Todos os direitos reservados.',
+    links: [
+      {id:1, label:'Home', url:'index.html'},
+      {id:2, label:'Quem Somos', url:'quem-somos.html'},
+      {id:3, label:'Atividades', url:'atividades.html'},
+      {id:4, label:'Portfolio', url:'portfolio.html'},
+      {id:5, label:'Contato', url:'contato.html'}
+    ]
+  },
+  redes: {
+    instagram: 'https://instagram.com/balimax.engenharia',
+    facebook: '',
+    whatsapp: 'https://wa.me/559199797250',
+    linkedin: '',
+    youtube: ''
+  },
+  parceiros: [
+    {id:1, nome:'HYDRO', logo:'', logoData:null, link:'#', ativo:true},
+    {id:2, nome:'ALUNORTE', logo:'', logoData:null, link:'#', ativo:true},
+    {id:3, nome:'INDUSTRIAS PARCEIRAS', logo:'', logoData:null, link:'#', ativo:true},
+    {id:4, nome:'PLANTAS INDUSTRIAIS', logo:'', logoData:null, link:'#', ativo:true},
+    {id:5, nome:'CLIENTES DA REGIAO', logo:'', logoData:null, link:'#', ativo:true}
+  ],
+  seo: {
+    home:       { title:'Balimax Engenharia - Ensaios Nao Destrutivos e Inspecao Industrial em Barcarena-PA', desc:'Balimax Engenharia: 20 anos de excelencia em ensaios nao destrutivos (LP, PM, US, CD, LT, EVS), engenharia de soldagem, tratamento termico e inspecao industrial em Barcarena-PA. Atendemos Hydro, Alunorte e toda a regiao.', keywords:'ensaios nao destrutivos Barcarena, tratamento termico Barcarena, inspecao industrial PA, engenharia de soldagem Para, END Barcarena, Balimax Engenharia' },
+    quemsomos:  { title:'Quem Somos - Balimax Engenharia', desc:'Conheca a historia, os valores e a equipe por tras da Balimax Engenharia. Mais de 20 anos de excelencia em engenharia industrial em Barcarena-PA, atendendo toda a regiao Norte.' },
+    atividades: { title:'Atividades e Servicos - Balimax Engenharia', desc:'Ensaios Nao Destrutivos, Engenharia de Soldagem, Tratamento Termico, Inspecao Industrial e treinamentos. Solucoes completas para a industria em Barcarena-PA.' },
+    portfolio:  { title:'Portfolio - Balimax Engenharia', desc:'Confira nossos projetos realizados em ensaios END, soldagem, tratamento termico e inspecao industrial. Projetos em toda a regiao Norte do Brasil.' },
+    contato:    { title:'Contato - Balimax Engenharia', desc:'Entre em contato com a Balimax Engenharia. Telefone, WhatsApp, e-mail e endereco completo em Barcarena-PA.' }
+  },
+  config: {
+    siteUrl: 'https://balimax.com.br',
+    googleAnalytics: '',
+    pixelFacebook: '',
+    adminUser: 'admin'
+  }
+};
+
+// ===================== AUTH =====================
+async function doLogin() {
+  const email = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  const { error } = await getSB().auth.signInWithPassword({ email, password: p });
+  if (error) {
+    console.error('Login error:', error.message);
+    document.getElementById('login-err').classList.remove('hidden');
+    return;
+  }
+  sessionStorage.setItem('balimax_auth', '1');
+  document.getElementById('login-err').classList.add('hidden');
+  document.getElementById('screen-login').style.display = 'none';
+  document.getElementById('screen-admin').style.display = 'block';
+  await loadData();
+  renderAll();
+}
+async function doLogout() {
+  try { await getSB().auth.signOut(); } catch (e) { /* ignore */ }
+  sessionStorage.removeItem('balimax_auth');
+  location.reload();
+}
+async function checkAuth() {
+  const { data: { session } } = await getSB().auth.getSession();
+  if (session) {
+    sessionStorage.setItem('balimax_auth', '1');
+    document.getElementById('screen-login').style.display = 'none';
+    document.getElementById('screen-admin').style.display = 'block';
+    await loadData();
+    renderAll();
+  }
+}
+
+// ===================== DATA MGMT =====================
+async function loadData() {
+  try {
+    const sb = getSB();
+    const { data } = await sb
+      .from('site_config')
+      .select('value')
+      .eq('key', 'balimax_site_data')
+      .single();
+    if (data && data.value) {
+      D = data.value;
+      localStorage.setItem('balimax_site_data', JSON.stringify(D));
+      return;
+    }
+  } catch (e) {}
+  // Fallback para localStorage
+  const s = localStorage.getItem('balimax_site_data');
+  D = s ? JSON.parse(s) : JSON.parse(JSON.stringify(DEF));
+}
+function saveData() {
+  localStorage.setItem('balimax_site_data', JSON.stringify(D));
+  if (!_silentSave) toast('Alteracoes salvas com sucesso!');
+  // Salva no Supabase em background
+  (async () => {
+    try {
+      const sb = getSB();
+      await sb.from('site_config').upsert({
+        key: 'balimax_site_data',
+        value: D,
+        updated_at: new Date().toISOString()
+      });
+    } catch (e) { console.error('Supabase save error:', e); }
+  })();
+}
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(D, null, 2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'balimax-content-backup.json'; a.click();
+  toast('JSON exportado!');
+}
+function resetData() {
+  if (!confirm('Resetar todos os dados para os valores padrao? Isso nao pode ser desfeito.')) return;
+  D = JSON.parse(JSON.stringify(DEF));
+  saveData();
+  renderAll();
+}
+
+// Map section → save function (for auto-save)
+const _saveFnMap = {
+  home:       () => saveHome(),
+  cabecalho:  () => saveCabecalho(),
+  quemsomos:  () => saveQuemSomos(),
+  atividades: () => saveAtividades(),
+  portfolio:  () => savePortfolio(),
+  contato:    () => saveContato(),
+  rodape:     () => saveRodape(),
+  redes:      () => saveRedes(),
+  parceiros:  () => saveParceiros(),
+  seo:        () => saveSeo(),
+  config:     () => { saveConfigFields(); },
+};
+function saveConfigFields() {
+  if (!D.config) D.config = {};
+  const u=document.getElementById('cfg-url'), g=document.getElementById('cfg-ga'), px=document.getElementById('cfg-pixel');
+  if(u) D.config.siteUrl=u.value;
+  if(g) D.config.googleAnalytics=g.value;
+  if(px) D.config.pixelFacebook=px.value;
+  saveData();
+}
+
+// ===================== UI =====================
+function showSec(id) {
+  // Auto-save current section silently before leaving
+  if (curSec !== id && _saveFnMap[curSec]) {
+    _silentSave = true;
+    try { _saveFnMap[curSec](); } catch(e) {}
+    _silentSave = false;
+  }
+  curSec = id;
+  document.querySelectorAll('.sec').forEach(s => s.classList.remove('active'));
+  document.getElementById('s-' + id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.sec === id));
+  const titles = {dashboard:'Dashboard',home:'Home / Hero',cabecalho:'Cabecalho e Menu',quemsomos:'Quem Somos',atividades:'Atividades / Servicos',portfolio:'Portfolio / Projetos',contato:'Contato',rodape:'Rodape / Footer',redes:'Redes Sociais',parceiros:'Parceiros / Clientes',seo:'SEO / Meta Tags',config:'Configuracoes'};
+  document.getElementById('topbar-title').textContent = titles[id] || id;
+  // close sidebar on mobile
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+  renderSec(id);
+}
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+function toast(msg) {
+  document.getElementById('toast-msg').textContent = msg;
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+function openModal(title, bodyHtml, onSave) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHtml;
+  document.getElementById('modal-save').onclick = onSave;
+  document.getElementById('modal-bg').classList.add('open');
+}
+function closeModal() { document.getElementById('modal-bg').classList.remove('open'); }
+function nextId(arr) { return arr.length ? Math.max(...arr.map(x=>x.id)) + 1 : 1; }
+
+// Image helper
+function imgUploadHtml(id, label, currentSrc) {
+  const src = currentSrc || '';
+  return `<div class="fg">
+    <label class="fl">${label}</label>
+    <div class="img-up" onclick="document.getElementById('${id}').click()">
+      <input type="file" id="${id}" accept="image/*" onchange="previewImg('${id}','${id}-prev')">
+      ${src ? `<img id="${id}-prev" src="${src}" class="img-prev">` : `<div id="${id}-prev"><svg class="w-8 h-8 mx-auto text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><p class="text-xs text-gray-400">Clique para selecionar imagem</p></div>`}
+    </div>
+  </div>`;
+}
+function previewImg(inputId, prevId) {
+  const f = document.getElementById(inputId).files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    const el = document.getElementById(prevId);
+    if (el.tagName === 'IMG') { el.src = e.target.result; }
+    else { el.innerHTML = `<img src="${e.target.result}" class="img-prev">`; }
+  };
+  r.readAsDataURL(f);
+}
+function getImgData(inputId) {
+  const el = document.getElementById(inputId);
+  if (!el) return null;
+  const prev = document.getElementById(inputId + '-prev');
+  if (prev && prev.tagName === 'IMG') return prev.src;
+  if (prev) { const img = prev.querySelector('img'); if (img) return img.src; }
+  return null;
+}
+
+// Save button HTML
+function saveBtn(onclick) {
+  return `<div class="flex gap-2 mt-4"><button onclick="${onclick}" class="btn btn-s"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>Salvar alteracoes</button></div>`;
+}
+
+// ===================== RENDERERS =====================
+function renderAll() { renderSec(curSec); }
+
+function renderSec(id) {
+  const el = document.getElementById('s-' + id);
+  switch(id) {
+    case 'dashboard': renderDashboard(el); break;
+    case 'home': renderHome(el); break;
+    case 'cabecalho': renderCabecalho(el); break;
+    case 'quemsomos': renderQuemSomos(el); break;
+    case 'atividades': renderAtividades(el); break;
+    case 'portfolio': renderPortfolio(el); break;
+    case 'contato': renderContato(el); break;
+    case 'rodape': renderRodape(el); break;
+    case 'redes': renderRedes(el); break;
+    case 'parceiros': renderParceiros(el); break;
+    case 'seo': renderSeo(el); break;
+    case 'config': renderConfig(el); break;
+  }
+}
+
+// ---- HOME ----
+function renderHome(el) {
+  const h = D.home;
+  el.innerHTML = `
+    <div class="sh"><h2>Home / Hero</h2><p>Edite o conteudo principal da pagina inicial</p></div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>Hero Section</div>
+      <div class="fg"><label class="fl">Badge <span class="req">*</span></label><input class="fi" id="h-badge" value="${h.badge}"></div>
+      <div class="fg"><label class="fl">Titulo Principal (H1) <span class="req">*</span></label><textarea class="ft" id="h-title" rows="2">${h.heroTitle}</textarea><p class="text-xs text-gray-400 mt-1">Use &lt;span class="text-brand-orange"&gt;texto&lt;/span&gt; para destaque laranja</p></div>
+      <div class="fg"><label class="fl">Subtitulo / Descricao <span class="req">*</span></label><textarea class="ft" id="h-sub" rows="3">${h.heroSub}</textarea></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="fg"><label class="fl">Botao CTA 1 - Texto</label><input class="fi" id="h-cta1l" value="${h.cta1Label}"></div>
+        <div class="fg"><label class="fl">Botao CTA 1 - Link</label><input class="fi" id="h-cta1u" value="${h.cta1Url}"></div>
+        <div class="fg"><label class="fl">Botao CTA 2 - Texto</label><input class="fi" id="h-cta2l" value="${h.cta2Label}"></div>
+        <div class="fg"><label class="fl">Botao CTA 2 - Link</label><input class="fi" id="h-cta2u" value="${h.cta2Url}"></div>
+      </div>
+      <div class="fg"><label class="fl">URL do Video de Fundo</label><input class="fi" id="h-vid" value="${h.videoUrl}"></div>
+      <div class="prev-box">
+        <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Preview do Hero</p>
+        <p class="text-xs text-brand-orange mb-1">${h.badge}</p>
+        <p class="text-xl font-bold mb-2">${h.heroTitle}</p>
+        <p class="text-sm text-gray-300">${h.heroSub.substring(0,120)}...</p>
+      </div>
+    </div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>Contadores / Stats</div>
+      <p class="text-xs text-gray-500 mb-3">Edite os 4 contadores animados da homepage</p>
+      ${h.stats.map((s,i) => `
+        <div class="stat-row">
+          <div class="fg" style="margin:0"><label class="fl">Valor</label><input class="fi" id="st-v${i}" type="number" value="${s.val}"></div>
+          <div class="fg" style="margin:0"><label class="fl">Sufixo</label><input class="fi" id="st-s${i}" value="${s.suf}"></div>
+          <div class="fg" style="margin:0"><label class="fl">Label</label><input class="fi" id="st-l${i}" value="${s.label}"></div>
+          <div class="fg" style="margin:0"><label class="fl">Sublabel</label><input class="fi" id="st-sl${i}" value="${s.sub}"></div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>Secao Historia</div>
+      <div class="fg"><label class="fl">Titulo</label><input class="fi" id="h-ht" value="${h.histTitle}"></div>
+      <div class="fg"><label class="fl">Texto</label><textarea class="ft" id="h-htx" rows="4">${h.histText}</textarea></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="fg"><label class="fl">Texto do Botao</label><input class="fi" id="h-hctal" value="${h.histCtaLabel||'Leia mais sobre nossa trajetoria'}"></div>
+        <div class="fg"><label class="fl">Link do Botao</label><input class="fi" id="h-hctau" value="${h.histCtaUrl||'quem-somos.html'}"></div>
+      </div>
+      ${imgUploadHtml('h-himg', 'Imagem da Secao', h.histImgData || h.histImg)}
+    </div>
+    ${saveBtn('saveHome()')}
+  `;
+}
+function saveHome() {
+  const h = D.home;
+  h.badge = document.getElementById('h-badge').value;
+  h.heroTitle = document.getElementById('h-title').value;
+  h.heroSub = document.getElementById('h-sub').value;
+  h.cta1Label = document.getElementById('h-cta1l').value;
+  h.cta1Url = document.getElementById('h-cta1u').value;
+  h.cta2Label = document.getElementById('h-cta2l').value;
+  h.cta2Url = document.getElementById('h-cta2u').value;
+  h.videoUrl = document.getElementById('h-vid').value;
+  h.stats.forEach((s,i) => {
+    s.val = parseInt(document.getElementById('st-v'+i).value)||0;
+    s.suf = document.getElementById('st-s'+i).value;
+    s.label = document.getElementById('st-l'+i).value;
+    s.sub = document.getElementById('st-sl'+i).value;
+  });
+  h.histTitle = document.getElementById('h-ht').value;
+  h.histText = document.getElementById('h-htx').value;
+  h.histCtaLabel = document.getElementById('h-hctal').value;
+  h.histCtaUrl = document.getElementById('h-hctau').value;
+  const imgD = getImgData('h-himg');
+  if (imgD && imgD.startsWith('data:')) h.histImgData = imgD;
+  saveData();
+  renderHome(document.getElementById('s-home'));
+}
+
+// ---- CABECALHO ----
+function renderCabecalho(el) {
+  const c = D.cabecalho;
+  el.innerHTML = `
+    <div class="sh"><h2>Cabecalho e Menu</h2><p>Logo, itens do menu e botao CTA</p></div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>Logo do Site</div>
+      ${imgUploadHtml('cab-logo', 'Logo Principal (fundo transparente recomendado)', c.logoData || c.logo)}
+    </div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>Itens do Menu</div>
+      <div id="menu-list">
+        ${c.menuItems.map((m,i) => `
+          <div class="lr">
+            <span class="lr-num">${i+1}</span>
+            <input class="fi" id="mi-l${m.id}" value="${m.label}" style="width:130px;flex-shrink:1" placeholder="Label">
+            <input class="fi" id="mi-u${m.id}" value="${m.url}" style="flex:1;min-width:80px" placeholder="URL (ex: index.html)">
+            <div class="lr-actions">
+              <button onclick="moveMenu(${m.id},-1)" class="btn btn-g btn-sm" title="Subir"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="w-3 h-3"><path d="M5 15l7-7 7 7"/></svg></button>
+              <button onclick="moveMenu(${m.id},1)" class="btn btn-g btn-sm" title="Descer"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="w-3 h-3"><path d="M19 9l-7 7-7-7"/></svg></button>
+              <button onclick="delMenu(${m.id})" class="btn btn-d btn-sm" title="Excluir"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <button onclick="addMenu()" class="btn btn-o btn-sm mt-3"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Adicionar Item</button>
+    </div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>Botao CTA</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="fg"><label class="fl">Texto do Botao</label><input class="fi" id="cab-ctal" value="${c.ctaLabel}"></div>
+        <div class="fg"><label class="fl">Link do Botao</label><input class="fi" id="cab-ctau" value="${c.ctaUrl}"></div>
+      </div>
+    </div>
+    ${saveBtn('saveCabecalho()')}
+  `;
+}
+function saveCabecalho() {
+  const c = D.cabecalho;
+  c.menuItems.forEach(m => {
+    const lEl = document.getElementById('mi-l'+m.id);
+    const uEl = document.getElementById('mi-u'+m.id);
+    if (lEl) m.label = lEl.value;
+    if (uEl) m.url = uEl.value;
+  });
+  c.ctaLabel = document.getElementById('cab-ctal').value;
+  c.ctaUrl = document.getElementById('cab-ctau').value;
+  const imgD = getImgData('cab-logo');
+  if (imgD && imgD.startsWith('data:')) c.logoData = imgD;
+  saveData();
+  renderCabecalho(document.getElementById('s-cabecalho'));
+}
+function addMenu() {
+  D.cabecalho.menuItems.push({id: nextId(D.cabecalho.menuItems), label:'Novo Item', url:'#'});
+  renderCabecalho(document.getElementById('s-cabecalho'));
+}
+function delMenu(id) {
+  D.cabecalho.menuItems = D.cabecalho.menuItems.filter(m => m.id !== id);
+  renderCabecalho(document.getElementById('s-cabecalho'));
+}
+function moveMenu(id, dir) {
+  const arr = D.cabecalho.menuItems;
+  const i = arr.findIndex(m => m.id === id);
+  const ni = i + dir;
+  if (ni < 0 || ni >= arr.length) return;
+  [arr[i], arr[ni]] = [arr[ni], arr[i]];
+  renderCabecalho(document.getElementById('s-cabecalho'));
+}
+
+// ---- QUEM SOMOS ----
+function renderQuemSomos(el) {
+  const q = D.quemsomos;
+  el.innerHTML = `
+    <div class="sh"><h2>Quem Somos</h2><p>Historia, missao, visao e valores da empresa</p></div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>Hero da Pagina</div>
+      <div class="fg"><label class="fl">Badge / Kicker (ex: Nossa Empresa)</label><input class="fi" id="qs-hkick" value="${q.heroKicker||'Nossa Empresa'}"></div>
+      <div class="fg"><label class="fl">Titulo do Hero</label><input class="fi" id="qs-ht" value="${q.heroTitle}"></div>
+      <div class="fg"><label class="fl">Subtitulo do Hero</label><input class="fi" id="qs-hs" value="${q.heroSub}"></div>
+    </div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>Imagem da Equipe</div>
+      ${imgUploadHtml('qs-img', 'Foto da equipe', q.mainImgData || q.mainImg)}
+    </div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>Historia</div>
+      <div class="fg"><label class="fl">Kicker (ex: Nossa Historia)</label><input class="fi" id="qs-hkick2" value="${q.histKicker||'Nossa Historia'}"></div>
+      <div class="fg"><label class="fl">Titulo da Secao</label><input class="fi" id="qs-st" value="${q.secTitle}"></div>
+      <div class="fg"><label class="fl">Paragrafo 1</label><textarea class="ft" id="qs-t1" rows="3">${q.texto1}</textarea></div>
+      <div class="fg"><label class="fl">Paragrafo 2</label><textarea class="ft" id="qs-t2" rows="3">${q.texto2}</textarea></div>
+    </div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>Indicadores / Numeros</div>
+      <p class="text-xs text-gray-500 mb-3">Contadores exibidos na pagina Quem Somos (ex: 20+ Anos no mercado)</p>
+      ${(q.stats||[]).map((s,i) => `
+        <div class="stat-row">
+          <div class="fg" style="margin:0"><label class="fl">Valor</label><input class="fi" id="qs-sv${i}" type="number" value="${s.val}"></div>
+          <div class="fg" style="margin:0"><label class="fl">Sufixo</label><input class="fi" id="qs-ss${i}" value="${s.suf}"></div>
+          <div class="fg" style="margin:0"><label class="fl">Label</label><input class="fi" id="qs-sl${i}" value="${s.label}"></div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>Missao, Visao e Valores</div>
+      <div class="fg"><label class="fl">Titulo "Nossa Essencia"</label><input class="fi" id="qs-net" value="${q.nossaEssenciaTitle||'Nossa Essencia'}"></div>
+      <div class="fg"><label class="fl">Titulo "Missao, Visao e Valores"</label><input class="fi" id="qs-mvvt" value="${q.mvvTitle||'Missao, Visao e Valores'}"></div>
+      <div class="fg"><label class="fl">Missao</label><textarea class="ft" id="qs-mis" rows="3">${q.missao}</textarea></div>
+      <div class="fg"><label class="fl">Visao</label><textarea class="ft" id="qs-vis" rows="3">${q.visao}</textarea></div>
+      <div class="fg"><label class="fl">Valores (separados por virgula)</label><textarea class="ft" id="qs-val" rows="3">${q.valores}</textarea></div>
+    </div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>Chamada Final (CTA)</div>
+      <div class="fg"><label class="fl">Titulo</label><input class="fi" id="qs-ctat" value="${q.ctaFinalTitle||'Pronto para trabalhar conosco?'}"></div>
+      <div class="fg"><label class="fl">Texto</label><textarea class="ft" id="qs-ctax" rows="3">${q.ctaFinalText||''}</textarea></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+        <div class="fg"><label class="fl">Botao 1 - Texto</label><input class="fi" id="qs-cb1l" value="${q.ctaBtn1Label||'Entrar em Contato'}"></div>
+        <div class="fg"><label class="fl">Botao 1 - Link</label><input class="fi" id="qs-cb1u" value="${q.ctaBtn1Url||'contato.html'}"></div>
+        <div class="fg"><label class="fl">Botao 2 - Texto</label><input class="fi" id="qs-cb2l" value="${q.ctaBtn2Label||'Ver Atividades'}"></div>
+        <div class="fg"><label class="fl">Botao 2 - Link</label><input class="fi" id="qs-cb2u" value="${q.ctaBtn2Url||'atividades.html'}"></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Corpo Tecnico Qualificado</div>
+      <div class="fg"><label class="fl">Kicker da Secao (ex: Qualificacao)</label><input class="fi" id="qs-ct-kicker" value="${q.corpoTecnicoKicker||'Qualificacao'}"></div>
+      <div class="fg"><label class="fl">Titulo da Secao</label><input class="fi" id="qs-ct-title" value="${q.corpoTecnicoTitle||'Corpo Tecnico Qualificado'}"></div>
+      <div class="fg"><label class="fl">Subtitulo</label><textarea class="ft" id="qs-ct-sub" rows="2">${q.corpoTecnicoSub||''}</textarea></div>
+    </div>
+    <div class="cg">
+      ${(q.corpoTecnico||[]).map(c => `
+        <div class="ic">
+          <div class="ic-body">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-xs font-bold text-gray-400 uppercase">${c.icon}</span>
+            </div>
+            <h4 class="font-bold text-sm text-gray-800 mb-1">${c.titulo}</h4>
+            <p class="text-xs text-gray-500 leading-relaxed">${c.desc}</p>
+          </div>
+          <div class="ic-foot">
+            <button onclick="editCorpoTecnico(${c.id})" class="btn btn-p btn-sm">Editar</button>
+            <button onclick="delCorpoTecnico(${c.id})" class="btn btn-d btn-sm">Excluir</button>
+          </div>
+        </div>
+      `).join('')}
+      <div class="ac" onclick="addCorpoTecnico()">
+        <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M12 6v12m6-6H6"/></svg>
+        <span class="text-xs font-bold">Adicionar Card</span>
+      </div>
+    </div>
+    ${saveBtn('saveQuemSomos()')}
+  `;
+}
+function saveQuemSomos() {
+  const q = D.quemsomos;
+  q.heroKicker = document.getElementById('qs-hkick').value;
+  q.heroTitle  = document.getElementById('qs-ht').value;
+  q.heroSub    = document.getElementById('qs-hs').value;
+  q.histKicker = document.getElementById('qs-hkick2').value;
+  q.secTitle   = document.getElementById('qs-st').value;
+  q.texto1 = document.getElementById('qs-t1').value;
+  q.texto2 = document.getElementById('qs-t2').value;
+  q.missao = document.getElementById('qs-mis').value;
+  q.visao = document.getElementById('qs-vis').value;
+  q.valores = document.getElementById('qs-val').value;
+  q.corpoTecnicoKicker = document.getElementById('qs-ct-kicker').value;
+  q.corpoTecnicoTitle  = document.getElementById('qs-ct-title').value;
+  q.corpoTecnicoSub    = document.getElementById('qs-ct-sub').value;
+  q.nossaEssenciaTitle = document.getElementById('qs-net').value;
+  q.mvvTitle = document.getElementById('qs-mvvt').value;
+  q.ctaFinalTitle = document.getElementById('qs-ctat').value;
+  q.ctaFinalText  = document.getElementById('qs-ctax').value;
+  q.ctaBtn1Label  = document.getElementById('qs-cb1l').value;
+  q.ctaBtn1Url    = document.getElementById('qs-cb1u').value;
+  q.ctaBtn2Label  = document.getElementById('qs-cb2l').value;
+  q.ctaBtn2Url    = document.getElementById('qs-cb2u').value;
+  (q.stats||[]).forEach((s,i) => {
+    const vEl = document.getElementById('qs-sv'+i);
+    const sEl = document.getElementById('qs-ss'+i);
+    const lEl = document.getElementById('qs-sl'+i);
+    if (vEl) s.val = parseInt(vEl.value)||0;
+    if (sEl) s.suf = sEl.value;
+    if (lEl) s.label = lEl.value;
+  });
+  const imgD = getImgData('qs-img');
+  if (imgD && imgD.startsWith('data:')) q.mainImgData = imgD;
+  saveData();
+  renderQuemSomos(document.getElementById('s-quemsomos'));
+}
+function editCorpoTecnico(id) {
+  if (!D.quemsomos.corpoTecnico) D.quemsomos.corpoTecnico = [];
+  const c = D.quemsomos.corpoTecnico.find(x=>x.id===id) || {id:0,icon:'shield',titulo:'',desc:''};
+  const isNew = c.id === 0;
+  openModal(isNew ? 'Novo Card' : 'Editar Card', `
+    <div class="fg"><label class="fl">Icone</label>
+      <select class="fs" id="mc-icon">
+        <option value="graduate" ${c.icon==='graduate'?'selected':''}>Graduate (Formado)</option>
+        <option value="shield"   ${c.icon==='shield'  ?'selected':''}>Shield (Seguranca)</option>
+        <option value="tool"     ${c.icon==='tool'    ?'selected':''}>Tool (Ferramenta)</option>
+        <option value="search"   ${c.icon==='search'  ?'selected':''}>Search (Busca)</option>
+        <option value="zap"      ${c.icon==='zap'     ?'selected':''}>Zap (Energia)</option>
+        <option value="users"    ${c.icon==='users'   ?'selected':''}>Users (Equipe)</option>
+        <option value="book"     ${c.icon==='book'    ?'selected':''}>Book (Livro)</option>
+      </select>
+    </div>
+    <div class="fg"><label class="fl">Titulo <span class="req">*</span></label><input class="fi" id="mc-tit" value="${c.titulo}"></div>
+    <div class="fg"><label class="fl">Descricao <span class="req">*</span></label><textarea class="ft" id="mc-desc" rows="3">${c.desc}</textarea></div>
+  `, () => {
+    c.icon = document.getElementById('mc-icon').value;
+    c.titulo = document.getElementById('mc-tit').value;
+    c.desc = document.getElementById('mc-desc').value;
+    if (isNew) { c.id = nextId(D.quemsomos.corpoTecnico); D.quemsomos.corpoTecnico.push(c); }
+    saveData(); closeModal();
+    renderQuemSomos(document.getElementById('s-quemsomos'));
+  });
+}
+function addCorpoTecnico() { editCorpoTecnico(0); }
+function delCorpoTecnico(id) {
+  if (!confirm('Excluir este card?')) return;
+  D.quemsomos.corpoTecnico = (D.quemsomos.corpoTecnico||[]).filter(x=>x.id!==id);
+  saveData(); renderQuemSomos(document.getElementById('s-quemsomos'));
+}
+
+// ---- ATIVIDADES ----
+function renderAtividades(el) {
+  const a = D.atividades;
+  const icons = {shield:'M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 01-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 011-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 011.52 0C14.51 3.81 17 5 19 5a1 1 0 011 1z',zap:'M13 2L3 14h9l-1 8 10-12h-9l1-8z',search:'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z',tool:'M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z',book:'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'};
+  el.innerHTML = `
+    <div class="sh"><h2>Atividades / Servicos</h2><p>Gerencie os cards de servicos exibidos no site</p></div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Pagina Atividades (atividades.html)</div>
+      <div class="fg"><label class="fl">Titulo da Pagina (H1)</label><input class="fi" id="at-ptitle" value="${a.pageTitle||'Nossas Atividades'}"></div>
+      <div class="fg"><label class="fl">Texto Introdutorio da Pagina</label><textarea class="ft" id="at-pintro" rows="2">${a.pageIntro||''}</textarea></div>
+    </div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h7"/></svg>Cards de Servicos (Home)</div>
+      <div class="fg"><label class="fl">Titulo da Secao</label><input class="fi" id="at-t" value="${a.secTitle}"></div>
+      <div class="fg"><label class="fl">Subtitulo</label><textarea class="ft" id="at-s" rows="2">${a.secSub}</textarea></div>
+    </div>
+    <div class="sh" style="margin-top:1.5rem"><h3 style="font-size:1rem">Blocos Detalhados da Pagina</h3><p>Cada bloco corresponde a uma secao da pagina atividades.html</p></div>
+    ${(a.blocos||[]).map(b => `
+      <div class="card" id="bloco-card-${b.id}">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-bold text-brand-orange uppercase tracking-wider">${b.subtitulo}</span>
+          <button onclick="delBlocoAtividade(${b.id})" class="btn btn-d btn-sm">Excluir bloco</button>
+        </div>
+        <div class="fg"><label class="fl">Titulo do Bloco</label><input class="fi" id="bat-tit${b.id}" value="${b.titulo}"></div>
+        <div class="fg"><label class="fl">Subtitulo / Kicker</label><input class="fi" id="bat-sub${b.id}" value="${b.subtitulo}"></div>
+        <div class="fg"><label class="fl">Descricao</label><textarea class="ft" id="bat-desc${b.id}" rows="3">${b.desc}</textarea></div>
+        <div class="card-title mt-3" style="padding:0 0 .5rem 0;border:none;font-size:.75rem">Itens / Lista de topicos</div>
+        <div id="bat-itens${b.id}">
+          ${(b.itens||[]).map(it => `
+            <div class="lr" id="bat-item-${b.id}-${it.id}">
+              <input class="fi" id="bati-t${b.id}-${it.id}" value="${it.titulo}" style="flex:1;min-width:80px" placeholder="Titulo do item">
+              <input class="fi" id="bati-d${b.id}-${it.id}" value="${it.desc}" style="flex:1;min-width:80px" placeholder="Descricao breve">
+              <div class="lr-actions">
+                <button onclick="delItemBloco(${b.id},${it.id})" class="btn btn-d btn-sm" title="Excluir"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <button onclick="addItemBloco(${b.id})" class="btn btn-o btn-sm mt-2"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Adicionar Item</button>
+        ${imgUploadHtml('bat-img'+b.id, 'Imagem ilustrativa (opcional)', b.imgData||'')}
+      </div>
+    `).join('')}
+    <div class="ac" onclick="addBlocoAtividade()" style="margin-bottom:1rem">
+      <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M12 6v12m6-6H6"/></svg>
+      <span class="text-xs font-bold">Adicionar Bloco</span>
+    </div>
+    <div class="cg">
+      ${a.servicos.map(s => `
+        <div class="ic">
+          <div class="ic-body">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-8 h-8 rounded-lg bg-brand-orange/10 flex items-center justify-center">
+                <svg class="w-4 h-4 text-brand-orange" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="${icons[s.icon]||icons.shield}"/></svg>
+              </div>
+              <span class="text-xs font-bold text-gray-400 uppercase">${s.icon}</span>
+            </div>
+            <h4 class="font-bold text-sm text-gray-800 mb-1">${s.titulo}</h4>
+            <p class="text-xs text-gray-500 leading-relaxed">${s.desc}</p>
+          </div>
+          <div class="ic-foot">
+            <button onclick="editServico(${s.id})" class="btn btn-p btn-sm">Editar</button>
+            <button onclick="delServico(${s.id})" class="btn btn-d btn-sm">Excluir</button>
+          </div>
+        </div>
+      `).join('')}
+      <div class="ac" onclick="addServico()">
+        <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M12 6v12m6-6H6"/></svg>
+        <span class="text-xs font-bold">Adicionar Servico</span>
+      </div>
+    </div>
+    ${saveBtn('saveAtividades()')}
+  `;
+}
+function saveAtividades() {
+  const a = D.atividades;
+  a.pageTitle = document.getElementById('at-ptitle').value;
+  a.pageIntro = document.getElementById('at-pintro').value;
+  a.secTitle = document.getElementById('at-t').value;
+  a.secSub = document.getElementById('at-s').value;
+  (a.blocos||[]).forEach(b => {
+    const titEl  = document.getElementById('bat-tit'+b.id);
+    const subEl  = document.getElementById('bat-sub'+b.id);
+    const descEl = document.getElementById('bat-desc'+b.id);
+    if (titEl)  b.titulo    = titEl.value;
+    if (subEl)  b.subtitulo = subEl.value;
+    if (descEl) b.desc      = descEl.value;
+    (b.itens||[]).forEach(it => {
+      const tEl = document.getElementById('bati-t'+b.id+'-'+it.id);
+      const dEl = document.getElementById('bati-d'+b.id+'-'+it.id);
+      if (tEl) it.titulo = tEl.value;
+      if (dEl) it.desc   = dEl.value;
+    });
+    const imgD = getImgData('bat-img'+b.id);
+    if (imgD && imgD.startsWith('data:')) b.imgData = imgD;
+  });
+  saveData();
+}
+function addBlocoAtividade() {
+  if (!D.atividades.blocos) D.atividades.blocos = [];
+  saveAtividades();
+  D.atividades.blocos.push({id:nextId(D.atividades.blocos), titulo:'Novo Bloco', subtitulo:'Novo Servico', desc:'', imgData:null, itens:[]});
+  saveData(); renderAtividades(document.getElementById('s-atividades'));
+}
+function delBlocoAtividade(id) {
+  if (!confirm('Excluir este bloco?')) return;
+  saveAtividades();
+  D.atividades.blocos = (D.atividades.blocos||[]).filter(b=>b.id!==id);
+  saveData(); renderAtividades(document.getElementById('s-atividades'));
+}
+function addItemBloco(idBloco) {
+  saveAtividades();
+  const b = (D.atividades.blocos||[]).find(x=>x.id===idBloco);
+  if (!b) return;
+  if (!b.itens) b.itens = [];
+  b.itens.push({id:nextId(b.itens), titulo:'Novo Item', desc:''});
+  saveData(); renderAtividades(document.getElementById('s-atividades'));
+}
+function delItemBloco(idBloco, idItem) {
+  saveAtividades();
+  const b = (D.atividades.blocos||[]).find(x=>x.id===idBloco);
+  if (!b) return;
+  b.itens = (b.itens||[]).filter(it=>it.id!==idItem);
+  saveData(); renderAtividades(document.getElementById('s-atividades'));
+}
+function editServico(id) {
+  const s = D.atividades.servicos.find(x=>x.id===id) || {id:0,icon:'shield',titulo:'',desc:''};
+  const isNew = s.id === 0;
+  openModal(isNew ? 'Novo Servico' : 'Editar Servico', `
+    <div class="fg"><label class="fl">Icone</label>
+      <select class="fs" id="ms-icon"><option value="shield" ${s.icon==='shield'?'selected':''}>Shield (Seguranca)</option><option value="zap" ${s.icon==='zap'?'selected':''}>Zap (Energia)</option><option value="search" ${s.icon==='search'?'selected':''}>Search (Busca)</option><option value="tool" ${s.icon==='tool'?'selected':''}>Tool (Ferramenta)</option><option value="book" ${s.icon==='book'?'selected':''}>Book (Livro)</option></select>
+    </div>
+    <div class="fg"><label class="fl">Titulo <span class="req">*</span></label><input class="fi" id="ms-tit" value="${s.titulo}"></div>
+    <div class="fg"><label class="fl">Descricao <span class="req">*</span></label><textarea class="ft" id="ms-desc" rows="3">${s.desc}</textarea></div>
+  `, () => {
+    s.icon = document.getElementById('ms-icon').value;
+    s.titulo = document.getElementById('ms-tit').value;
+    s.desc = document.getElementById('ms-desc').value;
+    if (isNew) { s.id = nextId(D.atividades.servicos); D.atividades.servicos.push(s); }
+    saveData(); closeModal();
+    renderAtividades(document.getElementById('s-atividades'));
+  });
+}
+function addServico() { editServico(0); }
+function delServico(id) {
+  if (!confirm('Excluir este servico?')) return;
+  D.atividades.servicos = D.atividades.servicos.filter(x=>x.id!==id);
+  saveData(); renderAtividades(document.getElementById('s-atividades'));
+}
+
+// ---- PORTFOLIO ----
+function renderPortfolio(el) {
+  const p = D.portfolio;
+  el.innerHTML = `
+    <div class="sh"><h2>Portfolio / Projetos</h2><p>Gerencie os projetos exibidos na pagina de portfolio</p></div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>Secao Principal</div>
+      <div class="fg"><label class="fl">Titulo da Secao</label><input class="fi" id="pf-t" value="${p.secTitle}"></div>
+      <div class="fg"><label class="fl">Subtitulo / Descricao da Secao</label><textarea class="ft" id="pf-sub" rows="2">${p.secSubtitle||''}</textarea></div>
+      <div class="fg"><label class="fl">Categorias (separadas por virgula)</label><input class="fi" id="pf-cats" value="${p.categorias.join(', ')}"></div>
+    </div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>Chamada "Suas Fotos Aqui"</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="fg"><label class="fl">Titulo</label><input class="fi" id="pf-cpt" value="${p.callPhotosTitle||'Suas fotos aqui'}"></div>
+        <div class="fg"><label class="fl">Texto</label><input class="fi" id="pf-cpx" value="${p.callPhotosText||''}"></div>
+        <div class="fg"><label class="fl">Texto do Botao</label><input class="fi" id="pf-cpctal" value="${p.callPhotosCtaLabel||'Fale conosco →'}"></div>
+        <div class="fg"><label class="fl">Link do Botao</label><input class="fi" id="pf-cpctau" value="${p.callPhotosCtaUrl||'contato.html'}"></div>
+      </div>
+      <div class="card-title mt-4" style="padding:0 0 .5rem 0;border:none;font-size:.75rem">Galeria de Fotos (opcional)</div>
+      <div id="pf-galeria">
+        ${(p.galeria||[]).map(g => `
+          <div class="lr" id="gal-item-${g.id}">
+            ${imgUploadHtml('gal-img'+g.id, 'Foto', g.imgData||'')}
+            <input class="fi" id="gal-leg${g.id}" value="${g.legenda||''}" style="flex:1;min-width:80px;margin-left:.5rem" placeholder="Legenda">
+            <div class="lr-actions">
+              <button onclick="delGaleriaItem(${g.id})" class="btn btn-d btn-sm" title="Excluir"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <button onclick="addGaleriaItem()" class="btn btn-o btn-sm mt-2"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Adicionar Foto</button>
+    </div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>Blocos Finais</div>
+      <div class="fg"><label class="fl">Titulo "Quer ver mais projetos?"</label><input class="fi" id="pf-mpt" value="${p.moreProjectsTitle||'Quer ver mais projetos?'}"></div>
+      <div class="fg"><label class="fl">Texto</label><textarea class="ft" id="pf-mpx" rows="2">${p.moreProjectsText||''}</textarea></div>
+      <div class="fg"><label class="fl">Titulo "Veja obras em tempo real"</label><input class="fi" id="pf-lwt" value="${p.liveWorksTitle||'Veja obras em tempo real'}"></div>
+      <div class="fg"><label class="fl">Texto</label><textarea class="ft" id="pf-lwx" rows="2">${p.liveWorksText||''}</textarea></div>
+    </div>
+    <div class="cg">
+      ${p.projetos.map(pr => `
+        <div class="ic">
+          <div style="height:120px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;overflow:hidden">
+            ${pr.imgData ? `<img src="${pr.imgData}" style="width:100%;height:100%;object-fit:cover">` : `<svg class="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`}
+          </div>
+          <div class="ic-body">
+            <span class="text-xs font-bold text-brand-orange uppercase">${pr.cat}</span>
+            <h4 class="font-bold text-sm text-gray-800 mt-1">${pr.titulo}</h4>
+            <p class="text-xs text-gray-400 mt-1">${pr.local} | ${pr.norma}</p>
+          </div>
+          <div class="ic-foot">
+            <button onclick="editProjeto(${pr.id})" class="btn btn-p btn-sm">Editar</button>
+            <button onclick="dupProjeto(${pr.id})" class="btn btn-g btn-sm">Duplicar</button>
+            <button onclick="delProjeto(${pr.id})" class="btn btn-d btn-sm">Excluir</button>
+          </div>
+        </div>
+      `).join('')}
+      <div class="ac" onclick="addProjeto()">
+        <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M12 6v12m6-6H6"/></svg>
+        <span class="text-xs font-bold">Adicionar Projeto</span>
+      </div>
+    </div>
+    ${saveBtn('savePortfolio()')}
+  `;
+}
+function savePortfolio() {
+  const p = D.portfolio;
+  p.secTitle    = document.getElementById('pf-t').value;
+  p.secSubtitle = document.getElementById('pf-sub').value;
+  p.categorias  = document.getElementById('pf-cats').value.split(',').map(c=>c.trim()).filter(Boolean);
+  p.callPhotosTitle    = document.getElementById('pf-cpt').value;
+  p.callPhotosText     = document.getElementById('pf-cpx').value;
+  p.callPhotosCtaLabel = document.getElementById('pf-cpctal').value;
+  p.callPhotosCtaUrl   = document.getElementById('pf-cpctau').value;
+  p.moreProjectsTitle  = document.getElementById('pf-mpt').value;
+  p.moreProjectsText   = document.getElementById('pf-mpx').value;
+  p.liveWorksTitle     = document.getElementById('pf-lwt').value;
+  p.liveWorksText      = document.getElementById('pf-lwx').value;
+  (p.galeria||[]).forEach(g => {
+    const lEl = document.getElementById('gal-leg'+g.id);
+    if (lEl) g.legenda = lEl.value;
+    const imgD = getImgData('gal-img'+g.id);
+    if (imgD && imgD.startsWith('data:')) g.imgData = imgD;
+  });
+  saveData();
+}
+function addGaleriaItem() {
+  if (!D.portfolio.galeria) D.portfolio.galeria = [];
+  savePortfolio();
+  D.portfolio.galeria.push({id:nextId(D.portfolio.galeria), imgData:null, legenda:''});
+  saveData(); renderPortfolio(document.getElementById('s-portfolio'));
+}
+function delGaleriaItem(id) {
+  savePortfolio();
+  D.portfolio.galeria = (D.portfolio.galeria||[]).filter(g=>g.id!==id);
+  saveData(); renderPortfolio(document.getElementById('s-portfolio'));
+}
+function editProjeto(id) {
+  const pr = D.portfolio.projetos.find(x=>x.id===id) || {id:0,titulo:'',cat:'',local:'',desc:'',norma:'',img:'',imgData:null};
+  const isNew = pr.id === 0;
+  openModal(isNew ? 'Novo Projeto' : 'Editar Projeto', `
+    <div class="fg"><label class="fl">Titulo <span class="req">*</span></label><input class="fi" id="mp-tit" value="${pr.titulo}"></div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="fg"><label class="fl">Categoria</label><input class="fi" id="mp-cat" value="${pr.cat}" placeholder="Ex: Inspecao"></div>
+      <div class="fg"><label class="fl">Local</label><input class="fi" id="mp-loc" value="${pr.local}"></div>
+    </div>
+    <div class="fg"><label class="fl">Descricao</label><textarea class="ft" id="mp-desc" rows="3">${pr.desc}</textarea></div>
+    <div class="fg"><label class="fl">Norma</label><input class="fi" id="mp-norm" value="${pr.norma}"></div>
+    ${imgUploadHtml('mp-img', 'Imagem do Projeto', pr.imgData || '')}
+  `, () => {
+    pr.titulo = document.getElementById('mp-tit').value;
+    pr.cat = document.getElementById('mp-cat').value;
+    pr.local = document.getElementById('mp-loc').value;
+    pr.desc = document.getElementById('mp-desc').value;
+    pr.norma = document.getElementById('mp-norm').value;
+    const imgD = getImgData('mp-img');
+    if (imgD && imgD.startsWith('data:')) pr.imgData = imgD;
+    if (isNew) { pr.id = nextId(D.portfolio.projetos); D.portfolio.projetos.push(pr); }
+    saveData(); closeModal();
+    renderPortfolio(document.getElementById('s-portfolio'));
+  });
+}
+function addProjeto() { editProjeto(0); }
+function dupProjeto(id) {
+  const orig = D.portfolio.projetos.find(x=>x.id===id);
+  if (!orig) return;
+  const copy = {...orig, id: nextId(D.portfolio.projetos), titulo: orig.titulo + ' (copia)'};
+  D.portfolio.projetos.push(copy);
+  saveData(); renderPortfolio(document.getElementById('s-portfolio'));
+}
+function delProjeto(id) {
+  if (!confirm('Excluir este projeto?')) return;
+  D.portfolio.projetos = D.portfolio.projetos.filter(x=>x.id!==id);
+  saveData(); renderPortfolio(document.getElementById('s-portfolio'));
+}
+
+// ---- CONTATO ----
+function renderContato(el) {
+  const c = D.contato;
+  el.innerHTML = `
+    <div class="sh"><h2>Contato</h2><p>Informacoes de contato, telefones e WhatsApp</p></div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>Hero da Pagina</div>
+      <div class="fg"><label class="fl">Kicker (titulo pequeno, ex: Fale conosco)</label><input class="fi" id="ct-kicker" value="${c.pageKicker||'Fale conosco'}"></div>
+      <div class="fg"><label class="fl">Titulo</label><input class="fi" id="ct-ht" value="${c.heroTitle}"></div>
+      <div class="fg"><label class="fl">Texto Introdutorio</label><textarea class="ft" id="ct-intro" rows="2">${c.introText}</textarea></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="fg"><label class="fl">Breadcrumb – label "Home"</label><input class="fi" id="ct-bch" value="${c.breadcrumbHome||'Home'}"></div>
+        <div class="fg"><label class="fl">Breadcrumb – label pagina atual</label><input class="fi" id="ct-bcc" value="${c.breadcrumbCurrent||'Contato'}"></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Por que nos escolher?</div>
+      <div class="fg"><label class="fl">Titulo da Secao</label><input class="fi" id="ct-rst" value="${c.reasonsTitle||'Por que nos escolher?'}"></div>
+      <div id="ct-reasons">
+        ${(c.reasons||[]).map(r => `
+          <div class="lr" id="reason-${r.id}">
+            <span class="lr-num">${r.id}</span>
+            <input class="fi" id="rs-t${r.id}" value="${r.titulo}" style="flex:1;min-width:80px" placeholder="Titulo">
+            <textarea class="ft" id="rs-d${r.id}" rows="1" style="flex:1;min-width:80px;resize:none" placeholder="Descricao">${r.desc}</textarea>
+            <div class="lr-actions">
+              <button onclick="delReason(${r.id})" class="btn btn-d btn-sm" title="Excluir"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <button onclick="addReason()" class="btn btn-o btn-sm mt-3"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Adicionar Motivo</button>
+    </div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>Telefones</div>
+      <div id="tel-list">
+        ${c.telefones.map(t => `
+          <div class="lr">
+            <input class="fi" id="tel-n${t.id}" value="${t.num}" style="flex:1;min-width:120px" placeholder="Numero (ex: +55 91 9999-9999)">
+            <input class="fi" id="tel-t${t.id}" value="${t.tipo}" style="width:120px;flex-shrink:1" placeholder="Tipo (Fixo, Celular...)">
+            <div class="lr-actions">
+              <button onclick="delTel(${t.id})" class="btn btn-d btn-sm" title="Excluir"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <button onclick="addTel()" class="btn btn-o btn-sm mt-3"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Adicionar Telefone</button>
+    </div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>E-mail e Endereco</div>
+      <div class="fg"><label class="fl">E-mail</label><input class="fi" id="ct-email" value="${c.email}"></div>
+      <div class="fg"><label class="fl">Endereco Completo</label><textarea class="ft" id="ct-end" rows="2">${c.endereco}</textarea></div>
+    </div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>WhatsApp CTA</div>
+      <div class="fg"><label class="fl">Numero WhatsApp (apenas numeros com DDI)</label><input class="fi" id="ct-wanum" value="${c.whatsappNum}"></div>
+      <div class="fg"><label class="fl">Mensagem Padrao do WhatsApp</label><textarea class="ft" id="ct-wamsg" rows="2">${c.whatsappMsg}</textarea></div>
+      <div class="fg"><label class="fl">Texto do Botao WhatsApp</label><input class="fi" id="ct-wabtn" value="${c.whatsappButtonLabel||'Falar no WhatsApp'}"></div>
+      <div class="bg-green-50 border border-green-200 rounded-lg p-3 mt-2">
+        <p class="text-xs text-green-700"><strong>Link gerado:</strong> https://wa.me/${c.whatsappNum}?text=${encodeURIComponent(c.whatsappMsg).substring(0,60)}...</p>
+      </div>
+    </div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/></svg>Textos Auxiliares</div>
+      <div class="fg"><label class="fl">Titulo "Siga-nos nas redes"</label><input class="fi" id="ct-soctit" value="${c.socialTitle||'Siga-nos nas redes'}"></div>
+      <div class="fg"><label class="fl">Titulo "Onde nos encontrar"</label><input class="fi" id="ct-loctit" value="${c.locationTitle||'Onde nos encontrar'}"></div>
+    </div>
+    ${saveBtn('saveContato()')}
+  `;
+}
+function saveContato() {
+  const c = D.contato;
+  c.pageKicker        = document.getElementById('ct-kicker').value;
+  c.heroTitle         = document.getElementById('ct-ht').value;
+  c.introText         = document.getElementById('ct-intro').value;
+  c.breadcrumbHome    = document.getElementById('ct-bch').value;
+  c.breadcrumbCurrent = document.getElementById('ct-bcc').value;
+  c.reasonsTitle      = document.getElementById('ct-rst').value;
+  c.telefones.forEach(t => {
+    const nEl = document.getElementById('tel-n'+t.id);
+    const tEl = document.getElementById('tel-t'+t.id);
+    if (nEl) t.num = nEl.value;
+    if (tEl) t.tipo = tEl.value;
+  });
+  (c.reasons||[]).forEach(r => {
+    const tEl = document.getElementById('rs-t'+r.id);
+    const dEl = document.getElementById('rs-d'+r.id);
+    if (tEl) r.titulo = tEl.value;
+    if (dEl) r.desc   = dEl.value;
+  });
+  c.email              = document.getElementById('ct-email').value;
+  c.endereco           = document.getElementById('ct-end').value;
+  c.whatsappNum        = document.getElementById('ct-wanum').value;
+  c.whatsappMsg        = document.getElementById('ct-wamsg').value;
+  c.whatsappButtonLabel = document.getElementById('ct-wabtn').value;
+  c.socialTitle        = document.getElementById('ct-soctit').value;
+  c.locationTitle      = document.getElementById('ct-loctit').value;
+  saveData();
+  renderContato(document.getElementById('s-contato'));
+}
+function addReason() {
+  if (!D.contato.reasons) D.contato.reasons = [];
+  saveContato();
+  D.contato.reasons.push({id:nextId(D.contato.reasons), titulo:'Novo Motivo', desc:''});
+  saveData(); renderContato(document.getElementById('s-contato'));
+}
+function delReason(id) {
+  saveContato();
+  D.contato.reasons = (D.contato.reasons||[]).filter(r=>r.id!==id);
+  saveData(); renderContato(document.getElementById('s-contato'));
+}
+function addTel() {
+  D.contato.telefones.push({id: nextId(D.contato.telefones), num:'', tipo:''});
+  renderContato(document.getElementById('s-contato'));
+}
+function delTel(id) {
+  D.contato.telefones = D.contato.telefones.filter(t=>t.id!==id);
+  renderContato(document.getElementById('s-contato'));
+}
+
+// ---- RODAPE ----
+function renderRodape(el) {
+  const r = D.rodape;
+  el.innerHTML = `
+    <div class="sh"><h2>Rodape / Footer</h2><p>Descricao da empresa, CNPJ e links rapidos</p></div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>Informacoes Legais</div>
+      <div class="fg"><label class="fl">Descricao da Empresa</label><textarea class="ft" id="rod-desc" rows="2">${r.descricao}</textarea></div>
+      <div class="fg"><label class="fl">CNPJ</label><input class="fi" id="rod-cnpj" value="${r.cnpj}"></div>
+      <div class="fg"><label class="fl">Texto de Copyright</label><input class="fi" id="rod-copy" value="${r.copyright}"></div>
+    </div>
+    <div class="card"><div class="card-title"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>Links Rapidos</div>
+      <div id="rod-links">
+        ${r.links.map(l => `
+          <div class="lr">
+            <input class="fi" id="rl-l${l.id}" value="${l.label}" style="width:130px;flex-shrink:1" placeholder="Label">
+            <input class="fi" id="rl-u${l.id}" value="${l.url}" style="flex:1;min-width:80px" placeholder="URL (ex: index.html)">
+            <div class="lr-actions">
+              <button onclick="delRodLink(${l.id})" class="btn btn-d btn-sm" title="Excluir"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <button onclick="addRodLink()" class="btn btn-o btn-sm mt-3"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Adicionar Link</button>
+    </div>
+    ${saveBtn('saveRodape()')}
+  `;
+}
+function saveRodape() {
+  const r = D.rodape;
+  r.descricao = document.getElementById('rod-desc').value;
+  r.cnpj = document.getElementById('rod-cnpj').value;
+  r.copyright = document.getElementById('rod-copy').value;
+  r.links.forEach(l => {
+    const lEl = document.getElementById('rl-l'+l.id);
+    const uEl = document.getElementById('rl-u'+l.id);
+    if (lEl) l.label = lEl.value;
+    if (uEl) l.url = uEl.value;
+  });
+  saveData();
+  renderRodape(document.getElementById('s-rodape'));
+}
+function addRodLink() {
+  D.rodape.links.push({id: nextId(D.rodape.links), label:'Novo Link', url:'#'});
+  renderRodape(document.getElementById('s-rodape'));
+}
+function delRodLink(id) {
+  D.rodape.links = D.rodape.links.filter(l=>l.id!==id);
+  renderRodape(document.getElementById('s-rodape'));
+}
+
+// ---- REDES SOCIAIS ----
+function renderRedes(el) {
+  const rr = D.redes;
+  const nets = [
+    {key:'instagram', label:'Instagram', color:'bg-gradient-to-r from-purple-500 to-pink-500', icon:'<rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>'},
+    {key:'facebook', label:'Facebook', color:'bg-blue-600', icon:'<path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/>'},
+    {key:'whatsapp', label:'WhatsApp', color:'bg-green-500', icon:'<path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>'},
+    {key:'linkedin', label:'LinkedIn', color:'bg-blue-700', icon:'<path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/>'},
+    {key:'youtube', label:'YouTube', color:'bg-red-600', icon:'<path d="M22.54 6.42a2.78 2.78 0 00-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 00-1.94 2A29 29 0 001 11.75a29 29 0 00.46 5.33A2.78 2.78 0 003.4 19.1c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 001.94-2 29 29 0 00.46-5.25 29 29 0 00-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>'}
+  ];
+  el.innerHTML = `
+    <div class="sh"><h2>Redes Sociais</h2><p>Configure os links das redes sociais exibidos em todas as paginas</p></div>
+    <div class="card">
+      ${nets.map(n => `
+        <div class="sr">
+          <div class="si ${n.color}"><svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">${n.icon}</svg></div>
+          <div class="flex-1">
+            <label class="fl">${n.label}</label>
+            <input class="fi" id="rd-${n.key}" value="${rr[n.key]||''}" placeholder="https://...">
+          </div>
+          <span class="${rr[n.key] ? 'badge-on' : 'badge-off'}">${rr[n.key] ? 'Ativo' : 'Vazio'}</span>
+        </div>
+      `).join('')}
+    </div>
+    ${saveBtn('saveRedes()')}
+  `;
+}
+function saveRedes() {
+  ['instagram','facebook','whatsapp','linkedin','youtube'].forEach(k => {
+    D.redes[k] = document.getElementById('rd-'+k).value;
+  });
+  saveData();
+  renderRedes(document.getElementById('s-redes'));
+}
+
+// ---- PARCEIROS ----
+function renderParceiros(el) {
+  const pp = D.parceiros;
+  el.innerHTML = `
+    <div class="sh"><h2>Parceiros / Clientes</h2><p>Gerencie as logos de parceiros e clientes exibidos na homepage</p></div>
+    <div class="cg">
+      ${pp.map(p => `
+        <div class="ic">
+          <div style="height:90px;background:#f8fafc;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative" onclick="document.getElementById('pi-${p.id}').click()">
+            ${p.logoData ? `<img src="${p.logoData}" style="max-height:70px;max-width:90%;object-fit:contain">` : `<span class="font-bold text-lg text-gray-300">${p.nome}</span>`}
+            <input type="file" id="pi-${p.id}" accept="image/*" style="display:none" onchange="uploadPartnerLogo(${p.id}, this)">
+          </div>
+          <div class="ic-body">
+            <div class="fg" style="margin-bottom:.5rem"><label class="fl">Nome</label><input class="fi" id="pn-${p.id}" value="${p.nome}"></div>
+            <div class="fg" style="margin-bottom:.5rem"><label class="fl">Link (opcional)</label><input class="fi" id="pl-${p.id}" value="${p.link}"></div>
+            <div class="flex items-center gap-2">
+              <label class="fl" style="margin:0">Ativo:</label>
+              <input type="checkbox" id="pa-${p.id}" ${p.ativo?'checked':''} class="w-4 h-4 accent-brand-orange">
+            </div>
+          </div>
+          <div class="ic-foot">
+            <button onclick="delParceiro(${p.id})" class="btn btn-d btn-sm">Excluir</button>
+          </div>
+        </div>
+      `).join('')}
+      <div class="ac" onclick="addParceiro()">
+        <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M12 6v12m6-6H6"/></svg>
+        <span class="text-xs font-bold">Adicionar Parceiro</span>
+      </div>
+    </div>
+    ${saveBtn('saveParceiros()')}
+  `;
+}
+function saveParceiros() {
+  D.parceiros.forEach(p => {
+    const nEl = document.getElementById('pn-'+p.id);
+    const lEl = document.getElementById('pl-'+p.id);
+    const aEl = document.getElementById('pa-'+p.id);
+    if (nEl) p.nome = nEl.value;
+    if (lEl) p.link = lEl.value;
+    if (aEl) p.ativo = aEl.checked;
+  });
+  saveData();
+  renderParceiros(document.getElementById('s-parceiros'));
+}
+async function uploadPartnerLogo(id, input) {
+  const f = input.files[0]; if (!f) return;
+  const p = D.parceiros.find(x=>x.id===id);
+  if (!p) return;
+  // Tenta upload para Supabase Storage
+  try {
+    const sb = getSB();
+    const ext = f.name.split('.').pop().toLowerCase();
+    const path = `parceiros/${id}-${Date.now()}.${ext}`;
+    const { error } = await sb.storage.from('logos').upload(path, f, { upsert: true });
+    if (!error) {
+      const { data: urlData } = sb.storage.from('logos').getPublicUrl(path);
+      p.logoData = urlData.publicUrl;
+      p.logo     = urlData.publicUrl;
+      renderParceiros(document.getElementById('s-parceiros'));
+      return;
+    }
+  } catch (e) { console.error('Storage upload error:', e); }
+  // Fallback: converte para base64
+  const r = new FileReader();
+  r.onload = e => {
+    p.logoData = e.target.result;
+    renderParceiros(document.getElementById('s-parceiros'));
+  };
+  r.readAsDataURL(f);
+}
+function addParceiro() {
+  D.parceiros.push({id: nextId(D.parceiros), nome:'Novo Parceiro', logo:'', logoData:null, link:'#', ativo:true});
+  renderParceiros(document.getElementById('s-parceiros'));
+}
+function delParceiro(id) {
+  if (!confirm('Excluir este parceiro?')) return;
+  D.parceiros = D.parceiros.filter(p=>p.id!==id);
+  saveData(); renderParceiros(document.getElementById('s-parceiros'));
+}
+
+// ===================== IMPORT JSON =====================
+function importJSON(input) {
+  const f = input.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.home || !data.cabecalho) { toast('Arquivo JSON invalido!'); return; }
+      if (!confirm('Substituir todos os dados pelo backup importado?')) { input.value=''; return; }
+      D = data;
+      saveData();
+      renderSec(curSec);
+      toast('Backup importado com sucesso!');
+    } catch(err) { toast('Erro ao ler o arquivo JSON.'); }
+    input.value = '';
+  };
+  r.readAsText(f);
+}
+
+// ===================== DASHBOARD =====================
+function renderDashboard(el) {
+  const totalServicos  = D.atividades.servicos.length;
+  const totalProjetos  = D.portfolio.projetos.length;
+  const totalParceiros = D.parceiros.filter(p => p.ativo).length;
+  const totalRedes     = ['instagram','facebook','whatsapp','linkedin','youtube'].filter(k => D.redes[k]).length;
+  const totalMenu      = D.cabecalho.menuItems.length;
+  const dataSize       = (JSON.stringify(D).length / 1024).toFixed(1);
+
+  const statCards = [
+    {val: totalServicos,  label: 'Servicos',       sub: 'cadastrados',         color: '#1A3A8F', sec: 'atividades'},
+    {val: totalProjetos,  label: 'Projetos',        sub: 'no portfolio',        color: '#FF6600', sec: 'portfolio'},
+    {val: totalParceiros, label: 'Parceiros',       sub: 'ativos',              color: '#10b981', sec: 'parceiros'},
+    {val: totalRedes,     label: 'Redes Sociais',   sub: 'configuradas',        color: '#8b5cf6', sec: 'redes'},
+    {val: totalMenu,      label: 'Itens de Menu',   sub: 'no cabecalho',        color: '#f59e0b', sec: 'cabecalho'},
+    {val: dataSize+'KB',  label: 'Dados Salvos',    sub: 'no navegador',        color: '#64748b', sec: null},
+  ];
+
+  const pages = [
+    {id:'home',      label:'Home / Hero',          url:'index.html',       icon:'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4'},
+    {id:'quemsomos', label:'Quem Somos',            url:'quem-somos.html', icon:'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2'},
+    {id:'atividades',label:'Atividades',            url:'atividades.html', icon:'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4'},
+    {id:'portfolio', label:'Portfolio',             url:'portfolio.html',  icon:'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z'},
+    {id:'contato',   label:'Contato',               url:'contato.html',   icon:'M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z'},
+  ];
+
+  el.innerHTML = `
+    <div class="sh"><h2>Dashboard</h2><p>Visao geral e acesso rapido ao conteudo do site</p></div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:.875rem;margin-bottom:1.25rem">
+      ${statCards.map(s => `
+        <div class="card" style="margin:0;padding:1.1rem;cursor:${s.sec?'pointer':'default'}" ${s.sec?`onclick="showSec('${s.sec}')" title="Ir para ${s.label}"`:''}
+             onmouseover="${s.sec?`this.style.borderColor='${s.color}'`:''}"
+             onmouseout="${s.sec?`this.style.borderColor='#e5e7eb'`:''}">
+          <div style="font-size:1.75rem;font-weight:800;color:${s.color};line-height:1">${s.val}</div>
+          <div style="font-size:.8125rem;font-weight:700;color:#0f172a;margin-top:.3rem">${s.label}</div>
+          <div style="font-size:.6875rem;color:#94a3b8;margin-top:.1rem">${s.sub}</div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Paginas do Site
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.875rem">
+        ${pages.map(p => `
+          <div style="background:#f8fafc;border:1.5px solid #e5e7eb;border-radius:10px;padding:1rem;display:flex;flex-direction:column;gap:.6rem"
+               onmouseover="this.style.borderColor='#1A3A8F'" onmouseout="this.style.borderColor='#e5e7eb'">
+            <div style="display:flex;align-items:center;gap:.6rem">
+              <div style="width:32px;height:32px;border-radius:8px;background:rgba(26,58,143,.08);display:flex;align-items:center;justify-content:center">
+                <svg class="w-4 h-4" style="color:#1A3A8F" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="${p.icon}"/></svg>
+              </div>
+              <span style="font-weight:700;font-size:.8125rem;color:#0f172a">${p.label}</span>
+            </div>
+            <div style="display:flex;gap:.4rem;margin-top:auto">
+              <button onclick="showSec('${p.id}')" class="btn btn-p btn-sm flex-1 justify-center">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                Editar
+              </button>
+              <a href="${p.url}" target="_blank" class="btn btn-g btn-sm flex-1 justify-center" style="text-decoration:none">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                Ver
+              </a>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Informacoes do Painel
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div>
+          <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Dados Gerais</p>
+          <div style="display:flex;flex-direction:column;gap:.4rem">
+            <div class="lr" style="margin:0"><span class="text-xs text-gray-500 w-28">Site URL</span><span class="text-xs font-medium text-gray-700">${D.config?.siteUrl||'nao definido'}</span></div>
+            <div class="lr" style="margin:0"><span class="text-xs text-gray-500 w-28">Google Analytics</span><span class="text-xs font-medium text-gray-700">${D.config?.googleAnalytics||'nao configurado'}</span></div>
+            <div class="lr" style="margin:0"><span class="text-xs text-gray-500 w-28">Ultima Edicao</span><span class="text-xs font-medium text-gray-700">${new Date().toLocaleDateString('pt-BR')}</span></div>
+          </div>
+        </div>
+        <div>
+          <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Acoes Rapidas</p>
+          <div style="display:flex;flex-direction:column;gap:.4rem">
+            <button onclick="exportJSON()" class="btn btn-g btn-sm justify-start">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+              Exportar Backup JSON
+            </button>
+            <button onclick="showSec('seo')" class="btn btn-g btn-sm justify-start">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              Configurar SEO
+            </button>
+            <button onclick="showSec('config')" class="btn btn-g btn-sm justify-start">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+              Configuracoes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ===================== SEO =====================
+function renderSeo(el) {
+  const s = D.seo || {};
+  const pages = [
+    {key:'home',       label:'Pagina Inicial',  file:'index.html'},
+    {key:'quemsomos',  label:'Quem Somos',       file:'quem-somos.html'},
+    {key:'atividades', label:'Atividades',        file:'atividades.html'},
+    {key:'portfolio',  label:'Portfolio',         file:'portfolio.html'},
+    {key:'contato',    label:'Contato',           file:'contato.html'},
+  ];
+  el.innerHTML = `
+    <div class="sh"><h2>SEO / Meta Tags</h2><p>Configure titulos e descricoes para mecanismos de busca em cada pagina</p></div>
+    <div class="card" style="background:#eff6ff;border-color:#bfdbfe">
+      <p class="text-xs text-blue-700"><strong>Como funcionar:</strong> Apos salvar, copie os valores para as metatags &lt;title&gt; e &lt;meta name="description"&gt; nos respectivos arquivos HTML do site.</p>
+    </div>
+    ${pages.map(p => {
+      const d = s[p.key] || {};
+      return `
+      <div class="card">
+        <div class="card-title">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          ${p.label} <span style="font-size:.625rem;font-weight:400;color:#94a3b8;margin-left:.25rem">${p.file}</span>
+        </div>
+        <div class="fg">
+          <label class="fl">Title da Pagina <span class="req">*</span></label>
+          <input class="fi" id="seo-t-${p.key}" value="${(d.title||'').replace(/"/g,'&quot;')}" oninput="updateCharCount('seo-t-${p.key}','seo-tc-${p.key}',60)">
+          <div style="display:flex;justify-content:space-between;margin-top:.25rem">
+            <span class="text-xs text-gray-400">Ideal: 50-60 caracteres</span>
+            <span class="text-xs font-semibold" id="seo-tc-${p.key}" style="color:#94a3b8">... chars</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Meta Description</label>
+          <textarea class="ft" id="seo-d-${p.key}" rows="2" oninput="updateCharCount('seo-d-${p.key}','seo-dc-${p.key}',160)">${d.desc||''}</textarea>
+          <div style="display:flex;justify-content:space-between;margin-top:.25rem">
+            <span class="text-xs text-gray-400">Ideal: 150-160 caracteres</span>
+            <span class="text-xs font-semibold" id="seo-dc-${p.key}" style="color:#94a3b8">... chars</span>
+          </div>
+        </div>
+        ${p.key === 'home' ? `<div class="fg"><label class="fl">Keywords (separadas por virgula)</label><input class="fi" id="seo-k-home" value="${(s.home?.keywords||'').replace(/"/g,'&quot;')}"><p class="text-xs text-gray-400 mt-1">Menos relevante atualmente, mas util para referencia interna.</p></div>` : ''}
+      </div>`;
+    }).join('')}
+    ${saveBtn('saveSeo()')}
+  `;
+  // init char counts
+  const allKeys = ['home','quemsomos','atividades','portfolio','contato'];
+  allKeys.forEach(k => {
+    const ti = document.getElementById('seo-t-'+k);
+    const di = document.getElementById('seo-d-'+k);
+    if (ti) updateCharCount('seo-t-'+k, 'seo-tc-'+k, 60);
+    if (di) updateCharCount('seo-d-'+k, 'seo-dc-'+k, 160);
+  });
+}
+function updateCharCount(inputId, countId, ideal) {
+  const el = document.getElementById(inputId);
+  const ct = document.getElementById(countId);
+  if (!el || !ct) return;
+  const len = el.value.length;
+  ct.textContent = len + ' chars';
+  ct.style.color = len > ideal ? '#ef4444' : len >= ideal * 0.85 ? '#10b981' : '#94a3b8';
+}
+function saveSeo() {
+  if (!D.seo) D.seo = {};
+  ['home','quemsomos','atividades','portfolio','contato'].forEach(k => {
+    if (!D.seo[k]) D.seo[k] = {};
+    const ti = document.getElementById('seo-t-'+k);
+    const di = document.getElementById('seo-d-'+k);
+    if (ti) D.seo[k].title = ti.value;
+    if (di) D.seo[k].desc  = di.value;
+  });
+  const ki = document.getElementById('seo-k-home');
+  if (ki) D.seo.home.keywords = ki.value;
+  saveData();
+  renderSeo(document.getElementById('s-seo'));
+}
+
+// ===================== CONFIG =====================
+function renderConfig(el) {
+  const c = D.config || {};
+  el.innerHTML = `
+    <div class="sh"><h2>Configuracoes</h2><p>Configuracoes gerais do site e do painel administrativo</p></div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/></svg>
+        Informacoes do Site
+      </div>
+      <div class="fg"><label class="fl">URL do Site <span class="req">*</span></label><input class="fi" id="cfg-url" value="${c.siteUrl||''}" placeholder="https://balimax.com.br"></div>
+      <div class="fg">
+        <label class="fl">Google Analytics 4 (GA4)</label>
+        <input class="fi" id="cfg-ga" value="${c.googleAnalytics||''}" placeholder="G-XXXXXXXXXX">
+        <p class="text-xs text-gray-400 mt-1">Insira o ID do Google Analytics para rastreamento de acessos.</p>
+      </div>
+      <div class="fg">
+        <label class="fl">Meta Pixel (Facebook)</label>
+        <input class="fi" id="cfg-pixel" value="${c.pixelFacebook||''}" placeholder="000000000000000">
+        <p class="text-xs text-gray-400 mt-1">Insira o ID do Pixel do Facebook/Meta Ads.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
+        Dados e Backup
+      </div>
+      <p class="text-xs text-gray-500 mb-3">Gerencie os dados salvos neste navegador. O backup JSON contem todo o conteudo editavel do site.</p>
+      <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+        <button onclick="exportJSON()" class="btn btn-p btn-sm">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          Exportar Backup JSON
+        </button>
+        <label class="btn btn-g btn-sm cursor-pointer">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 17V7m0 10l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          Importar Backup JSON
+          <input type="file" accept=".json" style="display:none" onchange="importJSON(this)">
+        </label>
+        <button onclick="resetData()" class="btn btn-d btn-sm">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Resetar para Padrao
+        </button>
+      </div>
+    </div>
+
+    ${saveBtn('saveConfig()')}
+  `;
+}
+function saveConfig() {
+  if (!D.config) D.config = {};
+  D.config.siteUrl        = document.getElementById('cfg-url').value;
+  D.config.googleAnalytics= document.getElementById('cfg-ga').value;
+  D.config.pixelFacebook  = document.getElementById('cfg-pixel').value;
+  saveData();
+  renderConfig(document.getElementById('s-config'));
+  toast('Configuracoes salvas!');
+}
+
+// ===================== INIT =====================
+document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+// Auto-save when closing/reloading the page
+window.addEventListener('beforeunload', () => {
+  if (sessionStorage.getItem('balimax_auth') !== '1') return;
+  if (_saveFnMap[curSec]) {
+    _silentSave = true;
+    try { _saveFnMap[curSec](); } catch(e) {}
+    _silentSave = false;
+  }
+});
+
+checkAuth();
+</script>
+</body>
+</html>

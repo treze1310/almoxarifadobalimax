@@ -140,8 +140,9 @@ export const ColaboradorDialog = ({
           <TabsContent value="details">
             <div className="p-1 pt-4">
               <ColaboradorForm
-                colaborador={colaborador}
-                onSuccess={handleSuccess}
+                initialData={colaborador as any}
+                onSubmit={async () => onOpenChange(false)}
+                onCancel={() => onOpenChange(false)}
               />
             </div>
           </TabsContent>

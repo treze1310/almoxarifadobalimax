@@ -195,7 +195,7 @@ const RomaneiosPage = () => {
       
       // Create a temporary element with the new PDF content
       const printElement = document.createElement('div')
-      printElement.innerHTML = generateRomaneoPDFContent(selectedRomaneio, company)
+      printElement.innerHTML = generateRomaneoPDFContent(selectedRomaneio as any, company)
       printElement.style.position = 'absolute'
       printElement.style.left = '-9999px'
       printElement.style.top = '0'
@@ -222,8 +222,7 @@ const RomaneiosPage = () => {
             allowTaint: true,
             backgroundColor: 'white',
             width: printElement.scrollWidth,
-            height: printElement.scrollHeight,
-            timeout: 10000
+            height: printElement.scrollHeight
           })
           break
         } catch (canvasError) {
@@ -564,11 +563,11 @@ const RomaneiosPage = () => {
                   
                   <div className="section">
                     <h3>Localização</h3>
-                    {selectedRomaneio.localizacao_origem && (
-                      <p><strong>Origem:</strong> {selectedRomaneio.localizacao_origem.nome}</p>
+                    {(selectedRomaneio as any).localizacao_origem && (
+                      <p><strong>Origem:</strong> {(selectedRomaneio as any).localizacao_origem.nome}</p>
                     )}
-                    {selectedRomaneio.localizacao_destino && (
-                      <p><strong>Destino:</strong> {selectedRomaneio.localizacao_destino.nome}</p>
+                    {(selectedRomaneio as any).localizacao_destino && (
+                      <p><strong>Destino:</strong> {(selectedRomaneio as any).localizacao_destino.nome}</p>
                     )}
                     {selectedRomaneio.centro_custo_origem && (
                       <p><strong>Centro de Custo Origem:</strong> {selectedRomaneio.centro_custo_origem.codigo} - {selectedRomaneio.centro_custo_origem.empresas?.nome || selectedRomaneio.centro_custo_origem.descricao}</p>
@@ -705,7 +704,7 @@ const RomaneiosPage = () => {
                             )}
                             {item.materiais_equipamentos?.centros_custo && (
                               <p className="text-sm text-blue-600">
-                                Centro de Custo: {item.materiais_equipamentos.centros_custo.codigo} - {item.materiais_equipamentos.centros_custo.empresas?.nome || item.materiais_equipamentos.centros_custo.descricao}
+                                Centro de Custo: {item.materiais_equipamentos.centros_custo.codigo} - {(item.materiais_equipamentos.centros_custo as any).empresas?.nome || (item.materiais_equipamentos.centros_custo as any).descricao}
                               </p>
                             )}
                           </div>

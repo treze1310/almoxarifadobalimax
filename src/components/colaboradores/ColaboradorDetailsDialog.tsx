@@ -28,7 +28,8 @@ import { useToast } from '@/hooks/use-toast'
 import { generateFichaEPIPDF } from './FichaEPIPDF'
 import { supabase } from '@/lib/supabase'
 import { Tables } from '@/types/database'
-import { ColaboradorForm, type ColaboradorFormData } from './ColaboradorForm'
+import { ColaboradorForm } from './ColaboradorForm'
+import type { ColaboradorFormData } from '@/lib/validations'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
@@ -147,8 +148,8 @@ const ColaboradorDetailsDialog = ({ colaboradorId, isOpen, onClose, onColaborado
 
       const episFormatados: EPIVinculadoRomaneio[] = []
       
-      data?.forEach(romaneio => {
-        romaneio.romaneios_itens?.forEach(item => {
+      data?.forEach((romaneio: any) => {
+        romaneio.romaneios_itens?.forEach((item: any) => {
           if (item.materiais_equipamentos?.is_epi) {
             episFormatados.push({
               romaneio_id: romaneio.id,

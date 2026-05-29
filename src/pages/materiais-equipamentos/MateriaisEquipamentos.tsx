@@ -400,7 +400,7 @@ const MateriaisEquipamentosPage = () => {
                     <div>
                       <span className="text-muted-foreground text-xs">Estoque</span>
                       <div className="font-medium">
-                        {material.quantidade_atual || 0} {material.unidade_medida || 'UN'}
+                        {material.estoque_atual || 0} {material.unidade_medida || 'UN'}
                       </div>
                     </div>
                     <div>
@@ -427,7 +427,7 @@ const MateriaisEquipamentosPage = () => {
                             materialId={material.id}
                             centroCusto={{
                               codigo: material.centros_custo.codigo,
-                              nome: material.centros_custo.nome,
+                              nome: (material.centros_custo as any).nome,
                             }}
                           />
                         </div>

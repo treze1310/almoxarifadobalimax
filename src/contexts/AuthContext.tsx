@@ -32,10 +32,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const { toast } = useToast()
 
   useEffect(() => {
-    // Buscar sessão atual
+    // Limpar qualquer sessão local antiga
+    localStorage.removeItem('local_user_session')
+
+    // Buscar sessão Supabase atual
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
+      setLoading(false)
+    }).catch(() => {
       setLoading(false)
     })
 
@@ -45,7 +50,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setSession(session)
         setUser(session?.user ?? null)
         setLoading(false)
-        
+
         if (event === 'SIGNED_IN') {
           toast({
             title: 'Login realizado com sucesso!',
@@ -66,7 +71,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true)
-      
+
+      // Login via Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -74,7 +80,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (error) {
         let errorMessage = 'Erro ao fazer login'
-        
+
         if (error.message.includes('Invalid login credentials')) {
           errorMessage = 'Email ou senha incorretos'
         } else if (error.message.includes('Email not confirmed')) {
@@ -82,7 +88,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         } else if (error.message.includes('Too many requests')) {
           errorMessage = 'Muitas tentativas. Tente novamente em alguns minutos.'
         }
-        
+
         return { error: errorMessage }
       }
 
@@ -102,8 +108,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signOut = async () => {
     try {
       setLoading(true)
+
       const { error } = await supabase.auth.signOut()
-      
+
       if (error) {
         toast({
           title: 'Erro ao fazer logout',

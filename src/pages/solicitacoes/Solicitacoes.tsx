@@ -363,8 +363,8 @@ const SolicitacoesPage = () => {
       const jsPDFModule = await import('jspdf')
       const html2canvasModule = await import('html2canvas')
       
-      const jsPDF = jsPDFModule.default || jsPDFModule
-      const html2canvas = html2canvasModule.default || html2canvasModule
+      const jsPDF = jsPDFModule.default
+      const html2canvas = html2canvasModule.default
       const printElement = document.createElement('div')
       printElement.innerHTML = generateSolicitacaoPDFContent(selectedSolicitacao, company, centroCustoOrigem, centroCustoDestino, materiaisInfo, colaboradorInfo)
       printElement.style.position = 'absolute'
@@ -448,7 +448,7 @@ const SolicitacoesPage = () => {
                 <CardTitle className="text-lg">{solicitacao.id}</CardTitle>
                 <CardDescription className="flex items-center gap-2 mt-1">
                   <Calendar className="h-4 w-4" />
-                  {formatDate(solicitacao.data)}
+                  {formatDate(solicitacao.data as any)}
                 </CardDescription>
               </div>
             </div>
@@ -708,7 +708,7 @@ const SolicitacoesPage = () => {
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">Data:</span>
-                    <span>{formatDate(selectedSolicitacao.data)}</span>
+                    <span>{formatDate(selectedSolicitacao.data as any)}</span>
                   </div>
                   
                   <div className="flex items-center gap-2">

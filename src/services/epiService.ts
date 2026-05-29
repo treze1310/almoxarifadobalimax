@@ -5,7 +5,31 @@ export type EPIAtribuicao = Tables<'epi_atribuicoes'>
 export type EPIAtribuicaoInsert = TablesInsert<'epi_atribuicoes'>
 export type EPIAtribuicaoUpdate = TablesUpdate<'epi_atribuicoes'>
 
-export type EPIComAtribuicao = Tables<'epi_com_atribuicoes'>
+// NOTE: depends on the DB view `epi_com_atribuicoes`, which does NOT exist in the
+// current Supabase project. This type describes the expected shape so the code
+// compiles; the view must be created for these queries to work at runtime.
+export interface EPIComAtribuicao {
+  atribuicao_id: string
+  colaborador_id: string | null
+  colaborador_nome: string | null
+  colaborador_matricula: string | null
+  colaborador_cargo: string | null
+  colaborador_setor: string | null
+  material_equipamento_id: string | null
+  nome: string | null
+  codigo: string | null
+  numero_ca: string | null
+  data_atribuicao: string | null
+  data_vencimento: string | null
+  status_atribuicao: string | null
+  status_calculado: string | null
+  quantidade_atribuida: number | null
+  observacoes_atribuicao: string | null
+  atribuido_por_nome: string | null
+  colaboradores?: { cpf?: string | null } & Record<string, unknown>
+  empresas?: { nome?: string | null; cnpj?: string | null; logo_url?: string | null } & Record<string, unknown>
+  marcas?: { nome?: string | null } & Record<string, unknown>
+}
 
 export interface EPIFicha {
   colaborador: {

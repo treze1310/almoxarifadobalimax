@@ -8,6 +8,8 @@ export interface BaseReportFilter {
   status?: 'ativo' | 'inativo' | 'todos'
   valorMinimo?: number
   valorMaximo?: number
+  tipoMovimentacao?: string
+  formato?: string
 }
 
 export interface ReportColumn {
@@ -88,7 +90,7 @@ export interface ReportData {
 export interface InventarioGeralFilter extends BaseReportFilter {
   incluirInativos?: boolean
   incluirZerados?: boolean
-  agruparPor: 'categoria' | 'localizacao' | 'fornecedor'
+  agruparPor?: 'categoria' | 'localizacao' | 'fornecedor'
   incluirAnaliseABC?: boolean
 }
 
@@ -96,7 +98,7 @@ export interface InventarioGeralFilter extends BaseReportFilter {
 export interface MovimentacaoFilter extends BaseReportFilter {
   tipoMovimentacao?: 'entrada' | 'saida' | 'ajuste' | 'todos'
   responsavel?: string
-  formato: 'analitico' | 'sintetico'
+  formato?: 'analitico' | 'sintetico'
   incluirGraficos?: boolean
 }
 
@@ -104,7 +106,7 @@ export interface MovimentacaoFilter extends BaseReportFilter {
 export interface VencimentoValidadeFilter extends BaseReportFilter {
   diasAlerta?: number
   incluirVencidos?: boolean
-  tipoMaterial: 'epi' | 'medicamento' | 'todos'
+  tipoMaterial?: 'epi' | 'medicamento' | 'todos'
   criticidade?: 'critica' | 'alerta' | 'atencao' | 'normal' | 'todas'
 }
 
@@ -119,20 +121,20 @@ export interface ConsumoCentroCustoFilter extends BaseReportFilter {
 export interface FornecedoresFilter extends BaseReportFilter {
   incluirPerformance?: boolean
   incluirHistoricoPrecos?: boolean
-  ordenarPor: 'leadtime' | 'qualidade' | 'participacao' | 'pontualidade'
+  ordenarPor?: 'leadtime' | 'qualidade' | 'participacao' | 'pontualidade'
 }
 
 // 6. REQUISIÇÕES PENDENTES
 export interface RequisicoesFilter extends BaseReportFilter {
   prioridade?: 'alta' | 'media' | 'baixa' | 'todas'
-  aging: boolean
+  aging?: boolean
   responsavelAtendimento?: string
 }
 
 // 7. ANÁLISE ABC/XYZ
 export interface AnaliseABCXYZFilter extends BaseReportFilter {
-  criterioABC: 'valor' | 'quantidade' | 'movimentacao'
-  criterioXYZ: 'giro' | 'variabilidade' | 'sazonalidade'
+  criterioABC?: 'valor' | 'quantidade' | 'movimentacao'
+  criterioXYZ?: 'giro' | 'variabilidade' | 'sazonalidade'
   incluirMatriz?: boolean
   incluirSugestoes?: boolean
 }

@@ -111,31 +111,39 @@ const RelatorioInterativo = ({ reportId, titulo, onClose }: RelatorioInterativoP
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            <h2 className="text-xl font-bold">{titulo}</h2>
+      <div className="min-h-screen w-full flex flex-col">
+        {/* Container centralizado com largura máxima */}
+        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="space-y-6 py-6">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                <h2 className="text-xl font-bold">{titulo}</h2>
+              </div>
+              <Button variant="outline" onClick={onClose}>
+                Fechar
+              </Button>
+            </div>
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+            </div>
           </div>
-          <Button variant="outline" onClick={onClose}>
-            Fechar
-          </Button>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <Activity className="h-5 w-5" />
-          <h2 className="text-xl font-bold">{titulo}</h2>
-        </div>
-        <div className="flex gap-2">
+    <div className="min-h-screen w-full flex flex-col">
+      {/* Container centralizado com largura máxima */}
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="space-y-6 py-6">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              <h2 className="text-xl font-bold">{titulo}</h2>
+            </div>
+            <div className="flex gap-2">
           <Button 
             variant="outline" 
             onClick={handleExportReport}
@@ -350,6 +358,8 @@ const RelatorioInterativo = ({ reportId, titulo, onClose }: RelatorioInterativoP
           )}
         </CardContent>
       </Card>
+        </div>
+      </div>
     </div>
   )
 }

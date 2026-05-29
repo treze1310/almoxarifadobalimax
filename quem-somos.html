@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quem Somos - 20 Anos de Experiência em Engenharia Industrial | Balimax Barcarena-PA</title>
+  <meta name="description" content="Conheça a Balimax Engenharia: fundada em 2006 em Barcarena-PA, 20 anos de excelência em ensaios não destrutivos, soldagem e inspeção industrial. Missão, visão, valores e equipe qualificada.">
+  <meta name="keywords" content="Balimax Engenharia quem somos, história empresa Barcarena, inspeção industrial PA, 20 anos experiência, SNQC ABENDI, IWE soldagem">
+  <meta name="robots" content="index, follow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'brand-blue': '#1A3A8F',
+            'brand-orange': '#FF6600',
+            'brand-gray': '#111827',
+            'background': '#F9FAFB',
+          },
+          fontFamily: {
+            'display': ['Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    .nav-link { position: relative; }
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 2px;
+      bottom: -2px;
+      left: 0;
+      background-color: #FF6600;
+      transform-origin: bottom right;
+      transform: scaleX(0);
+      transition: transform 0.3s;
+    }
+    .nav-link:hover::after { transform: scaleX(1); transform-origin: bottom left; }
+    .nav-link.active::after { transform: scaleX(1); transform-origin: bottom left; }
+    .nav-link.active { color: #FF6600 !important; }
+  </style>
+</head>
+<body class="font-sans bg-white">
+
+  <!-- Header -->
+  <header id="header" class="fixed top-0 w-full z-50 transition-all duration-300 bg-brand-blue py-3 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 flex items-center justify-between">
+      <a href="index.html" class="flex items-center">
+        <img src="LOGO_BRANCO.png" alt="Balimax Engenharia" class="h-12 md:h-14 w-auto drop-shadow-sm" data-sd="logo">
+      </a>
+      <nav class="hidden lg:flex items-center gap-8">
+        <ul class="flex gap-6">
+          <li><a href="index.html" class="nav-link text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:text-brand-orange">Home</a></li>
+          <li><a href="quem-somos.html" class="nav-link active text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:text-brand-orange">Quem Somos</a></li>
+          <li><a href="atividades.html" class="nav-link text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:text-brand-orange">Atividades</a></li>
+          <li><a href="portfolio.html" class="nav-link text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:text-brand-orange">Portfólio</a></li>
+        </ul>
+        <a href="contato.html" data-sd="nav-cta" class="inline-flex items-center justify-center h-10 px-4 bg-brand-orange hover:bg-orange-600 text-white font-display font-bold uppercase tracking-wide rounded shadow-[0_10px_20px_rgba(255,102,0,0.4)] hover:shadow-[0_10px_30px_rgba(255,102,0,0.6)] transition-all text-sm">Fale Conosco</a>
+        <a href="/sistema/" class="inline-flex items-center gap-2 h-10 px-4 border border-white/40 hover:border-white/80 text-white/70 hover:text-white font-display font-semibold uppercase tracking-wide rounded transition-all text-xs hover:bg-white/10 whitespace-nowrap"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Área do Colaborador</a>
+        <div class="flex items-center gap-3 ml-2">
+          <a href="https://instagram.com/balimax.engenharia" target="_blank" rel="noopener noreferrer" class="text-white/80 hover:text-pink-400 transition-colors" aria-label="Instagram">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
+          </a>
+          <a href="#" target="_blank" rel="noopener noreferrer" class="text-white/80 hover:text-blue-400 transition-colors" aria-label="Facebook">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+          </a>
+          <a href="https://wa.me/559199797250" target="_blank" rel="noopener noreferrer" class="text-white/80 hover:text-green-400 transition-colors" aria-label="WhatsApp">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+          </a>
+        </div>
+      </nav>
+      <button id="mobile-menu-btn" class="lg:hidden inline-flex items-center justify-center h-10 w-10 text-white hover:bg-white/20 rounded-md transition-colors" aria-label="Abrir menu">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8" aria-hidden="true">
+          <path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Mobile Overlay -->
+  <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-40 opacity-0 pointer-events-none transition-opacity duration-300"></div>
+  <!-- Mobile Menu -->
+  <div id="mobile-menu" class="fixed top-0 right-0 h-full w-80 bg-brand-blue z-50 transform translate-x-full transition-transform duration-300 shadow-2xl">
+    <div class="p-6">
+      <div class="flex justify-between items-center mb-8">
+        <span class="font-display font-bold text-white text-lg">Menu</span>
+        <button id="mobile-close-btn" class="text-white hover:text-brand-orange transition-colors" aria-label="Fechar menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <nav class="flex flex-col gap-1">
+        <a href="index.html" class="text-white hover:text-brand-orange font-semibold uppercase tracking-wide text-sm py-3 px-2 border-b border-white/10 transition-colors">Home</a>
+        <a href="quem-somos.html" class="text-brand-orange font-semibold uppercase tracking-wide text-sm py-3 px-2 border-b border-white/10">Quem Somos</a>
+        <a href="atividades.html" class="text-white hover:text-brand-orange font-semibold uppercase tracking-wide text-sm py-3 px-2 border-b border-white/10 transition-colors">Atividades</a>
+        <a href="portfolio.html" class="text-white hover:text-brand-orange font-semibold uppercase tracking-wide text-sm py-3 px-2 border-b border-white/10 transition-colors">Portfólio</a>
+        <a href="contato.html" class="mt-6 inline-flex items-center justify-center h-12 px-6 bg-brand-orange hover:bg-orange-600 text-white font-display font-bold uppercase tracking-wide rounded text-sm transition-colors">Fale Conosco</a>
+        <a href="/sistema/" class="mt-2 inline-flex items-center justify-center gap-2 h-12 px-6 border border-white/40 text-white/80 hover:text-white hover:border-white font-display font-semibold uppercase tracking-wide rounded text-sm transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Área do Colaborador</a>
+        <div class="flex items-center gap-4 mt-4 px-2">
+          <a href="https://instagram.com/balimax.engenharia" target="_blank" rel="noopener noreferrer" class="text-white/70 hover:text-pink-400 transition-colors" aria-label="Instagram">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
+          </a>
+          <a href="#" target="_blank" rel="noopener noreferrer" class="text-white/70 hover:text-blue-400 transition-colors" aria-label="Facebook">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+          </a>
+          <a href="https://wa.me/559199797250" target="_blank" rel="noopener noreferrer" class="text-white/70 hover:text-green-400 transition-colors" aria-label="WhatsApp">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+          </a>
+        </div>
+      </nav>
+    </div>
+  </div>
+
+  <main class="pt-16">
+
+    <!-- Page Hero -->
+    <section class="relative py-24 bg-brand-blue overflow-hidden">
+      <div class="absolute inset-0 bg-cover bg-center opacity-20" style="background-image: url('https://img.usecurling.com/p/1920/600?q=industrial%20engineering%20factory&color=blue');"></div>
+      <div class="absolute inset-0 bg-gradient-to-r from-brand-blue via-brand-blue/90 to-transparent"></div>
+      <div class="max-w-7xl mx-auto px-4 relative z-10">
+        <div class="max-w-2xl">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white text-sm mb-6 backdrop-blur-sm">
+            <span class="w-2 h-2 rounded-full bg-brand-orange animate-pulse"></span>
+            <span data-sd="qs-hero-kicker">Nossa Empresa</span>
+          </div>
+          <h1 data-sd="qs-hero-title" class="font-display font-bold text-4xl md:text-5xl text-white mb-4">Quem <span class="text-brand-orange">Somos</span></h1>
+          <p data-sd="qs-hero-sub" class="text-blue-200 text-lg leading-relaxed">Conheça a história, os valores e a equipe por trás da Balimax Engenharia.</p>
+          <div class="flex items-center gap-2 mt-6 text-sm text-gray-300">
+            <a href="index.html" class="hover:text-white transition-colors">Home</a>
+            <span>/</span>
+            <span class="text-brand-orange">Quem Somos</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mission Section -->
+    <section class="py-24 bg-background relative overflow-hidden">
+      <div class="absolute top-0 right-0 w-64 h-64 bg-brand-blue/5 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl pointer-events-none"></div>
+      <div class="max-w-7xl mx-auto px-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+          <div class="relative">
+            <div class="absolute -inset-4 bg-brand-orange/20 transform rotate-3 rounded-lg z-0 hidden md:block"></div>
+            <img alt="Equipe Balimax Engenharia" data-sd="qs-img" class="relative z-10 rounded-lg shadow-xl object-cover w-full aspect-[4/3] grayscale hover:grayscale-0 transition-all duration-700" src="quem-somos-equipe.png">
+            <div class="absolute -bottom-8 -right-8 bg-brand-blue text-white p-6 rounded-lg shadow-xl z-20 hidden md:block">
+              <p class="font-display font-bold text-4xl text-brand-orange">20+</p>
+              <p class="text-sm uppercase tracking-wider font-semibold">Anos de<br>Experiência</p>
+            </div>
+          </div>
+          <div class="space-y-8">
+            <div>
+              <h2 class="text-brand-orange font-bold tracking-wider uppercase mb-2 text-sm flex items-center gap-2">
+                <span class="w-8 h-0.5 bg-brand-orange inline-block"></span> <span data-sd="qs-hist-kicker">Nossa História</span>
+              </h2>
+              <h3 data-sd="qs-sec-title" class="font-display text-3xl md:text-4xl font-bold text-brand-blue">Fundada na experiência e focada na excelência.</h3>
+            </div>
+            <p data-sd="qs-text1" class="text-gray-600 leading-relaxed text-lg">
+              A Balimax Engenharia nasceu com o objetivo de suprir as necessidades da região de Barcarena-PA em relação a END (Ensaios Não Destrutivos). Desde a nossa fundação, atuamos com rigor técnico e compromisso com a segurança dos equipamentos industriais.
+            </p>
+            <p data-sd="qs-text2" class="text-gray-600 leading-relaxed">
+              Com o tempo, expandimos nossa expertise para abranger engenharia de soldagem, controle de qualidade e serviços industriais completos. Hoje somos referência regional em inspeção e análise de integridade de equipamentos, atendendo às principais plantas industriais de Barcarena e região.
+            </p>
+            <div class="grid grid-cols-2 gap-6 pt-4">
+              <div class="text-center p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+                <p data-sd="qs-stat-0" class="font-display font-bold text-3xl text-brand-orange">20+</p>
+                <p data-sd="qs-stat-label-0" class="text-sm text-gray-600 font-semibold uppercase tracking-wide mt-1">Anos no mercado</p>
+              </div>
+              <div class="text-center p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+                <p data-sd="qs-stat-1" class="font-display font-bold text-3xl text-brand-orange">500+</p>
+                <p data-sd="qs-stat-label-1" class="text-sm text-gray-600 font-semibold uppercase tracking-wide mt-1">Projetos realizados</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Values Section -->
+    <section class="py-24 bg-brand-blue text-white relative">
+      <div class="max-w-7xl mx-auto px-4">
+        <div class="text-center mb-16">
+          <h2 class="text-brand-orange font-bold tracking-wider uppercase mb-2 text-sm flex items-center justify-center gap-2">
+            <span class="w-8 h-0.5 bg-brand-orange inline-block"></span>
+            <span data-sd="qs-essencia-kicker">Nossa Essência</span>
+            <span class="w-8 h-0.5 bg-brand-orange inline-block"></span>
+          </h2>
+          <h3 data-sd="qs-mvv-title" class="font-display text-3xl md:text-4xl font-bold mb-4">Missão, Visão e Valores</h3>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <!-- Mission -->
+          <div class="bg-white/5 border border-white/10 rounded-lg p-8 hover:bg-white/10 transition-all duration-300 hover:-translate-y-1">
+            <div class="w-14 h-14 rounded-full bg-brand-orange/20 flex items-center justify-center mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-7 h-7 text-brand-orange" aria-hidden="true">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>
+              </svg>
+            </div>
+            <h4 class="font-display font-bold text-xl mb-4 text-white">Missão</h4>
+            <p data-sd="qs-missao" class="text-blue-200 text-sm leading-relaxed">Fornecer soluções técnicas de alta qualidade em ensaios não destrutivos, engenharia de soldagem e controle de qualidade, garantindo a segurança e a integridade dos equipamentos industriais de nossos clientes.</p>
+          </div>
+          <!-- Vision -->
+          <div class="bg-white/5 border border-white/10 rounded-lg p-8 hover:bg-white/10 transition-all duration-300 hover:-translate-y-1">
+            <div class="w-14 h-14 rounded-full bg-brand-orange/20 flex items-center justify-center mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-7 h-7 text-brand-orange" aria-hidden="true">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+            </div>
+            <h4 class="font-display font-bold text-xl mb-4 text-white">Visão</h4>
+            <p data-sd="qs-visao" class="text-blue-200 text-sm leading-relaxed">Ser reconhecida como a empresa de referência em inspeção industrial e engenharia de soldagem no Pará, expandindo nossa atuação para toda a região Norte do Brasil com excelência e inovação tecnológica.</p>
+          </div>
+          <!-- Values -->
+          <div class="bg-white/5 border border-white/10 rounded-lg p-8 hover:bg-white/10 transition-all duration-300 hover:-translate-y-1">
+            <div class="w-14 h-14 rounded-full bg-brand-orange/20 flex items-center justify-center mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-7 h-7 text-brand-orange" aria-hidden="true">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+            </div>
+            <h4 class="font-display font-bold text-xl mb-4 text-white">Valores</h4>
+            <ul data-sd="qs-valores" class="text-blue-200 text-sm leading-relaxed space-y-2">
+              <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-brand-orange inline-block shrink-0"></span>Qualidade e rigor técnico</li>
+              <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-brand-orange inline-block shrink-0"></span>Segurança em primeiro lugar</li>
+              <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-brand-orange inline-block shrink-0"></span>Ética e transparência</li>
+              <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-brand-orange inline-block shrink-0"></span>Inovação contínua</li>
+              <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-brand-orange inline-block shrink-0"></span>Comprometimento com o cliente</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Certifications Section -->
+    <section class="py-24 bg-background">
+      <div class="max-w-7xl mx-auto px-4">
+        <div class="text-center mb-16">
+          <h2 class="text-brand-orange font-bold tracking-wider uppercase mb-2 text-sm flex items-center justify-center gap-2">
+            <span class="w-8 h-0.5 bg-brand-orange inline-block"></span>
+            <span data-sd="qs-ct-kicker">Qualificação</span>
+            <span class="w-8 h-0.5 bg-brand-orange inline-block"></span>
+          </h2>
+          <h3 data-sd="qs-ct-title" class="font-display text-3xl md:text-4xl font-bold text-brand-blue mb-4">Corpo Técnico Qualificado</h3>
+          <p data-sd="qs-ct-sub" class="text-gray-600 max-w-2xl mx-auto">Nossa equipe é formada por profissionais certificados e com ampla experiência no setor industrial.</p>
+        </div>
+        <div data-sd="corpo-tecnico-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-8 hover:shadow-md transition-shadow">
+            <div class="w-12 h-12 bg-brand-blue/10 rounded-lg flex items-center justify-center mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-brand-blue" aria-hidden="true">
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>
+              </svg>
+            </div>
+            <h4 class="font-display font-bold text-lg text-brand-blue mb-2">Inspetores SNQC/ABENDI</h4>
+            <p class="text-gray-600 text-sm leading-relaxed">Profissionais certificados pelo Sistema Nacional de Qualificação e Certificação em END conforme normas ABNT.</p>
+          </div>
+          <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-8 hover:shadow-md transition-shadow">
+            <div class="w-12 h-12 bg-brand-blue/10 rounded-lg flex items-center justify-center mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-brand-blue" aria-hidden="true">
+                <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3 8 3"/><path d="M12 3v4"/>
+              </svg>
+            </div>
+            <h4 class="font-display font-bold text-lg text-brand-blue mb-2">Engenheiros de Soldagem</h4>
+            <p class="text-gray-600 text-sm leading-relaxed">Especialistas certificados com qualificação IWE (International Welding Engineer) para elaboração de procedimentos e laudos técnicos.</p>
+          </div>
+          <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-8 hover:shadow-md transition-shadow">
+            <div class="w-12 h-12 bg-brand-blue/10 rounded-lg flex items-center justify-center mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-brand-blue" aria-hidden="true">
+                <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>
+              </svg>
+            </div>
+            <h4 class="font-display font-bold text-lg text-brand-blue mb-2">Normas ASME e NR-13</h4>
+            <p class="text-gray-600 text-sm leading-relaxed">Expertise em inspeção de vasos de pressão e equipamentos de acordo com as normas ASME, NR-13 e demais regulamentações vigentes.</p>
+          </div>
+          <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-8 hover:shadow-md transition-shadow">
+            <div class="w-12 h-12 bg-brand-blue/10 rounded-lg flex items-center justify-center mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-brand-blue" aria-hidden="true">
+                <path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>
+              </svg>
+            </div>
+            <h4 class="font-display font-bold text-lg text-brand-blue mb-2">Ensaios Não Destrutivos</h4>
+            <p class="text-gray-600 text-sm leading-relaxed">Profissionais habilitados nos métodos LP, PM, US, CD, LT e EVS, garantindo inspeções com precisão e confiabilidade.</p>
+          </div>
+          <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-8 hover:shadow-md transition-shadow">
+            <div class="w-12 h-12 bg-brand-blue/10 rounded-lg flex items-center justify-center mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-brand-blue" aria-hidden="true">
+                <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>
+              </svg>
+            </div>
+            <h4 class="font-display font-bold text-lg text-brand-blue mb-2">Tecnologia Moderna</h4>
+            <p class="text-gray-600 text-sm leading-relaxed">Investimento constante em equipamentos de última geração para garantir resultados precisos e confiáveis nas inspeções.</p>
+          </div>
+          <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-8 hover:shadow-md transition-shadow">
+            <div class="w-12 h-12 bg-brand-blue/10 rounded-lg flex items-center justify-center mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-brand-blue" aria-hidden="true">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <h4 class="font-display font-bold text-lg text-brand-blue mb-2">Equipe Especializada</h4>
+            <p class="text-gray-600 text-sm leading-relaxed">Corpo técnico experiente em acompanhamento de obras, análise de integridade e elaboração de laudos e relatórios técnicos.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-20 bg-brand-blue relative overflow-hidden">
+      <div class="absolute inset-0 opacity-10 bg-cover bg-center" style="background-image: url('https://img.usecurling.com/p/1920/400?q=industrial%20factory&color=blue');"></div>
+      <div class="max-w-7xl mx-auto px-4 text-center relative z-10">
+        <h2 data-sd="qs-cta-title" class="font-display text-3xl md:text-4xl font-bold text-white mb-4">Pronto para trabalhar conosco?</h2>
+        <p data-sd="qs-cta-text" class="text-blue-200 text-lg mb-8 max-w-xl mx-auto">Entre em contato com nossa equipe e descubra como podemos ajudar na segurança e integridade dos seus equipamentos.</p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a data-sd="qs-cta-btn1" href="contato.html" class="inline-flex items-center justify-center h-14 px-8 bg-brand-orange hover:bg-orange-600 text-white font-display font-medium uppercase tracking-wide rounded text-base shadow-[0_0_20px_rgba(255,102,0,0.4)] hover:shadow-[0_0_30px_rgba(255,102,0,0.6)] transition-all">
+            Entrar em Contato
+          </a>
+          <a data-sd="qs-cta-btn2" href="atividades.html" class="inline-flex items-center justify-center h-14 px-8 bg-transparent border-2 border-white text-white hover:bg-white hover:text-brand-blue font-display font-medium uppercase tracking-wide rounded text-base transition-all">
+            Ver Atividades
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Floating WhatsApp Button -->
+  <a data-sd="wa-float" href="https://wa.me/559199797250?text=Olá,%20gostaria%20de%20solicitar%20um%20orçamento%20para%20serviços%20da%20Balimax%20Engenharia."
+     target="_blank" rel="noopener noreferrer"
+     class="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-5 rounded-full shadow-2xl transition-all hover:shadow-green-500/40 hover:scale-105"
+     aria-label="Falar no WhatsApp">
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
+    </svg>
+    <span class="text-sm hidden sm:inline">WhatsApp</span>
+  </a>
+
+  <!-- Footer -->
+  <footer class="bg-brand-gray text-white pt-16 pb-8 border-t-4 border-brand-orange">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+        <div class="space-y-4">
+          <div class="mb-4">
+            <img src="LOGO_BRANCO.png" alt="Balimax Engenharia" class="h-12 w-auto">
+          </div>
+          <p data-sd="foot-desc" class="text-gray-300 text-sm leading-relaxed">Empresa especializada em ensaios não destrutivos, controle de qualidade e engenharia de soldagem.</p>
+          <p data-sd="foot-cnpj" class="text-xs text-gray-500 font-mono">CNPJ: 08.296.443/0001-83</p>
+        </div>
+        <div>
+          <h4 class="font-display font-bold text-lg mb-6 text-brand-orange">Links Rápidos</h4>
+          <ul data-sd="foot-links" class="space-y-3">
+            <li><a href="index.html" class="text-gray-300 hover:text-white transition-colors flex items-center gap-2 text-sm"><span class="w-1.5 h-1.5 rounded-full bg-brand-orange inline-block"></span>Home</a></li>
+            <li><a href="quem-somos.html" class="text-gray-300 hover:text-white transition-colors flex items-center gap-2 text-sm"><span class="w-1.5 h-1.5 rounded-full bg-brand-orange inline-block"></span>Quem Somos</a></li>
+            <li><a href="atividades.html" class="text-gray-300 hover:text-white transition-colors flex items-center gap-2 text-sm"><span class="w-1.5 h-1.5 rounded-full bg-brand-orange inline-block"></span>Atividades</a></li>
+            <li><a href="portfolio.html" class="text-gray-300 hover:text-white transition-colors flex items-center gap-2 text-sm"><span class="w-1.5 h-1.5 rounded-full bg-brand-orange inline-block"></span>Portfólio</a></li>
+            <li><a href="contato.html" class="text-gray-300 hover:text-white transition-colors flex items-center gap-2 text-sm"><span class="w-1.5 h-1.5 rounded-full bg-brand-orange inline-block"></span>Contato</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-display font-bold text-lg mb-6 text-brand-orange">Contato</h4>
+          <ul class="space-y-4 text-gray-300 text-sm">
+            <li class="flex items-start gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-brand-orange shrink-0 mt-0.5" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+              <span data-sd="foot-address">Av. Felix Clemente Malcher, 128<br>Barcarena - PA, CEP: 68447-000</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-brand-orange shrink-0 mt-0.5" aria-hidden="true"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/></svg>
+              <div data-sd="foot-phones">
+                <a href="tel:+559137543597" class="block hover:text-white transition-colors">+55 91 3754-3597</a>
+                <a href="tel:+559199797250" class="block hover:text-white transition-colors">+55 91 9979-7250 (Orlando)</a>
+              </div>
+            </li>
+            <li class="flex items-center gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-brand-orange shrink-0" aria-hidden="true"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
+              <span data-sd="foot-email"><a href="mailto:balimax@balimax.com.br" class="hover:text-white transition-colors">balimax@balimax.com.br</a></span>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-display font-bold text-lg mb-6 text-brand-orange">Redes Sociais</h4>
+          <p class="text-gray-300 text-sm mb-4">Acompanhe nossas atividades e novidades.</p>
+          <div class="flex gap-4">
+            <a data-sd="foot-instagram" href="https://instagram.com/balimax.engenharia" target="_blank" rel="noopener noreferrer" class="bg-white/10 p-3 rounded hover:bg-brand-orange transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-white" aria-hidden="true"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
+            </a>
+            <a data-sd="foot-facebook" href="#" class="bg-white/10 p-3 rounded hover:bg-brand-orange transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-white" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-400">
+        <p data-sd="foot-copy">Balimax Engenharia &copy; 2026. Todos os direitos reservados.</p>
+        <div class="flex gap-4">
+          <a href="#" class="hover:text-white transition-colors">Política de Privacidade</a>
+          <a href="#" class="hover:text-white transition-colors">Termos de Uso</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const menuBtn = document.getElementById('mobile-menu-btn');
+    const closeBtn = document.getElementById('mobile-close-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const overlay = document.getElementById('mobile-overlay');
+    function openMenu() {
+      mobileMenu.classList.remove('translate-x-full'); mobileMenu.classList.add('translate-x-0');
+      overlay.classList.remove('opacity-0', 'pointer-events-none'); overlay.classList.add('opacity-100');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeMenu() {
+      mobileMenu.classList.add('translate-x-full'); mobileMenu.classList.remove('translate-x-0');
+      overlay.classList.add('opacity-0', 'pointer-events-none'); overlay.classList.remove('opacity-100');
+      document.body.style.overflow = '';
+    }
+    menuBtn.addEventListener('click', openMenu);
+    closeBtn.addEventListener('click', closeMenu);
+    overlay.addEventListener('click', closeMenu);
+  </script>
+  <script src="site-data.js"></script>
+</body>
+</html>

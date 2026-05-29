@@ -31,7 +31,7 @@ import LocalizacaoCadastroPage from './pages/cadastros/Localizacao'
 import RelatoriosPage from './pages/relatorios/Relatorios'
 
 const App = () => (
-  <BrowserRouter>
+  <BrowserRouter basename="/sistema">
     <AuthProvider>
       <TooltipProvider>
         <Toaster />
