@@ -25,10 +25,12 @@ import EmpresasPage from './pages/cadastros/Empresas'
 import FornecedoresPage from './pages/cadastros/Fornecedores'
 import CentrosCustoPage from './pages/cadastros/CentrosCusto'
 import MarcasPage from './pages/cadastros/Marcas'
+import CategoriasPage from './pages/cadastros/Categorias'
 import LocalizacaoPage from './pages/localizacao/Localizacao'
 import MapaPage from './pages/localizacao/Mapa'
 import LocalizacaoCadastroPage from './pages/cadastros/Localizacao'
 import RelatoriosPage from './pages/relatorios/Relatorios'
+import ConfiguracoesPage from './pages/configuracoes/Configuracoes'
 
 const App = () => (
   <BrowserRouter basename="/sistema">
@@ -73,6 +75,7 @@ const App = () => (
           <Route path="cadastros/fornecedores" element={<FornecedoresPage />} />
           <Route path="cadastros/centros-custo" element={<CentrosCustoPage />} />
           <Route path="cadastros/marcas" element={<MarcasPage />} />
+          <Route path="cadastros/categorias" element={<CategoriasPage />} />
           <Route path="cadastros/localizacao" element={<LocalizacaoCadastroPage />} />
 
           {/* 📍 Gestão de Localização */}
@@ -81,6 +84,9 @@ const App = () => (
 
           {/* 📊 Relatórios */}
           <Route path="relatorios" element={<RelatoriosPage />} />
+
+          {/* ⚙️ Configurações */}
+          <Route path="configuracoes" element={<ConfiguracoesPage />} />
         </Route>
 
           {/* 🖨️ Página de impressão (protegida) */}

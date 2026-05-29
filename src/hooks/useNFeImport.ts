@@ -173,22 +173,29 @@ export function useNFeImport() {
 
           // 5. Gerar códigos sequenciais para os itens que serão criados
           const itemsToCreate: typeof nfeData.items = []
-          const itemsToLink: Array<{ item: typeof nfeData.items[0], materialId: string }> = []
-          
+          // isExisting = material já cadastrado (somar estoque); false = recém-criado (estoque já definido)
+          const itemsToLink: Array<{ item: typeof nfeData.items[0], materialId: string, isExisting: boolean }> = []
+
           for (const item of nfeData.items) {
-            // Verificar se material já existe pelo código original da NFe
+            console.log(`🔍 Verificando item: ${item.code} - ${item.description}`)
+
+            // Prioridade 1: vínculo manual feito pelo usuário (lupa)
+            if (item.matchedMaterialId) {
+              console.log(`🔗 Vínculo manual ao material ${item.matchedMaterialId}`)
+              itemsToLink.push({ item, materialId: item.matchedMaterialId, isExisting: true })
+              continue
+            }
+
+            // Prioridade 2: material já existe pelo código original da NFe
             const { data: existingMaterial, error: existingError } = await supabase
               .from('materiais_equipamentos')
               .select('id')
               .eq('codigo', item.code)
               .maybeSingle() // ✅ Usar maybeSingle para não dar erro se não encontrar
 
-            // Log debug para cada item
-            console.log(`🔍 Verificando item: ${item.code} - ${item.description}`)
-            
             if (existingMaterial && !existingError) {
               console.log(`✅ Material existente encontrado: ${item.code}`)
-              itemsToLink.push({ item, materialId: existingMaterial.id })
+              itemsToLink.push({ item, materialId: existingMaterial.id, isExisting: true })
             } else {
               console.log(`➕ Novo material será criado: ${item.code}`)
               itemsToCreate.push(item)
@@ -226,7 +233,8 @@ export function useNFeImport() {
                 unidade: item.unit || 'UN',
                 valor_unitario: item.unitValue,
                 quantidade: item.quantity,
-                categoria: 'MATERIAL DE CONSUMO',
+                tipo: item.tipo || 'material',
+                categoria: item.categoria || 'MATERIAL DE CONSUMO',
                 fornecedor: nfeData.emitter.name,
                 aplicacao: 'Diversos',
                 data_emissao: nfeData.issueDate.toISOString().split('T')[0],
@@ -235,7 +243,7 @@ export function useNFeImport() {
 
               if (materialResult.data) {
                 console.log(`   ✅ Material criado com sucesso: ID ${materialResult.data.id}`)
-                itemsToLink.push({ item, materialId: materialResult.data.id })
+                itemsToLink.push({ item, materialId: materialResult.data.id, isExisting: false })
                 result.materialsCreated++
               } else {
                 console.log(`   ❌ Erro ao criar material: ${materialResult.error}`)
@@ -252,9 +260,9 @@ export function useNFeImport() {
           // 7. Processar itens (tanto novos quanto existentes)
           console.log(`🔗 Processando ${itemsToLink.length} itens vinculados...`)
           for (let i = 0; i < itemsToLink.length; i++) {
-            const { item, materialId } = itemsToLink[i]
+            const { item, materialId, isExisting } = itemsToLink[i]
             console.log(`📋 Processando item ${i + 1}/${itemsToLink.length}: ${item.description}`)
-            
+
             try {
               result.materialsLinked++
 
@@ -278,6 +286,55 @@ export function useNFeImport() {
 
               if (itemError) {
                 result.errors.push(`Erro ao salvar item ${item.code}: ${itemError.message}`)
+                continue
+              }
+
+              // Para materiais JÁ existentes (vínculo manual ou por código),
+              // somar a quantidade da nota ao estoque atual e registrar movimentação.
+              // Materiais recém-criados já tiveram o estoque definido na criação.
+              if (isExisting && item.quantity > 0) {
+                const { data: material, error: matError } = await supabase
+                  .from('materiais_equipamentos')
+                  .select('estoque_atual')
+                  .eq('id', materialId)
+                  .single()
+
+                if (matError || !material) {
+                  result.errors.push(`Erro ao ler estoque do material ${item.code}: ${matError?.message || 'não encontrado'}`)
+                  continue
+                }
+
+                const estoqueAnterior = material.estoque_atual ?? 0
+                const novoEstoque = estoqueAnterior + item.quantity
+
+                const { error: updateError } = await supabase
+                  .from('materiais_equipamentos')
+                  .update({ estoque_atual: novoEstoque })
+                  .eq('id', materialId)
+
+                if (updateError) {
+                  result.errors.push(`Erro ao atualizar estoque de ${item.code}: ${updateError.message}`)
+                  continue
+                }
+
+                // Registrar movimentação de entrada vinculada à NFe
+                const { error: movError } = await supabase
+                  .from('movimentacao_estoque')
+                  .insert({
+                    material_equipamento_id: materialId,
+                    tipo_movimentacao: 'entrada',
+                    quantidade: item.quantity,
+                    quantidade_anterior: estoqueAnterior,
+                    quantidade_atual: novoEstoque,
+                    motivo: `Entrada via NFe ${nfeData.number}`,
+                    valor_unitario: item.unitValue,
+                    nfe_id: nfeImport.id,
+                    data_movimentacao: new Date().toISOString(),
+                  })
+
+                if (movError) {
+                  console.warn(`Movimentação não registrada para ${item.code}: ${movError.message}`)
+                }
               }
 
             } catch (itemError: any) {

@@ -162,6 +162,13 @@ export interface NFeItem {
   
   // Tributos totais informativo
   totalTrib?: number             // vTotTrib (informação de tributos)
+
+  // Vínculo manual a material/equipamento já cadastrado (via lupa na pré-visualização)
+  matchedMaterialId?: string     // id do material existente que receberá o estoque desta NFe
+
+  // Classificação informada na pré-visualização (apenas para itens NOVOS, que serão criados)
+  tipo?: 'material' | 'equipamento'
+  categoria?: string
 }
 
 export interface NFeEmitter {

@@ -9,7 +9,8 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { PlusCircle, MoreHorizontal, Edit, Trash2, Search, Package, Wrench, Tag, Eye, RefreshCw, Settings } from 'lucide-react'
+import { PlusCircle, MoreHorizontal, Edit, Trash2, Search, Package, Wrench, Tag, Eye, RefreshCw, Settings, AlertTriangle } from 'lucide-react'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { verificarStatusCalibracao } from '@/utils/calibracao'
 import {
   DropdownMenu,
@@ -67,6 +68,7 @@ const MateriaisEquipamentosPage = () => {
   const [search, setSearch] = useState('')
   const [showInactive, setShowInactive] = useState(false)
   const [filtroCalibracaoVencida, setFiltroCalibracaoVencida] = useState(false)
+  const [filtroEstoqueBaixo, setFiltroEstoqueBaixo] = useState(false)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingMaterial, setEditingMaterial] = useState<any>(null)
   const [deletingMaterial, setDeletingMaterial] = useState<any>(null)
@@ -106,6 +108,13 @@ const MateriaisEquipamentosPage = () => {
     fetchMateriais({ includeInactive: showInactive })
   }, [fetchMateriais, showInactive])
 
+  // Estoque baixo (<= mínimo) ou zerado
+  const isEstoqueBaixoOuZerado = (material: any) => {
+    const estoque = material.estoque_atual || 0
+    const minimo = material.estoque_minimo || 0
+    return estoque === 0 || estoque <= minimo
+  }
+
   const filteredMateriais = materiaisEquipamentos.filter(material => {
     const matchesSearch = search === '' ||
       material.codigo.toLowerCase().includes(search.toLowerCase()) ||
@@ -114,7 +123,10 @@ const MateriaisEquipamentosPage = () => {
       (material.categoria && material.categoria.toLowerCase().includes(search.toLowerCase())) ||
       (material.subcategoria && material.subcategoria.toLowerCase().includes(search.toLowerCase())) ||
       (material.marcas?.nome && material.marcas.nome.toLowerCase().includes(search.toLowerCase()))
-    
+
+    // "Mostrar inativos": quando marcado, exibir APENAS inativos; caso contrário, apenas ativos
+    const matchesAtivo = showInactive ? material.ativo === false : material.ativo !== false
+
     // Filtro para calibração vencida
     let matchesCalibracaoVencida = true
     if (filtroCalibracaoVencida) {
@@ -123,12 +135,20 @@ const MateriaisEquipamentosPage = () => {
         material.proxima_calibracao,
         material.frequencia_calibracao_meses
       )
-      matchesCalibracaoVencida = statusCalibracao.status === 'vencida' || 
+      matchesCalibracaoVencida = statusCalibracao.status === 'vencida' ||
                                  statusCalibracao.status === 'proxima_vencimento'
     }
-    
-    return matchesSearch && matchesCalibracaoVencida
+
+    // Filtro para estoque baixo/zerado
+    const matchesEstoqueBaixo = !filtroEstoqueBaixo || isEstoqueBaixoOuZerado(material)
+
+    return matchesSearch && matchesAtivo && matchesCalibracaoVencida && matchesEstoqueBaixo
   })
+
+  // Contar itens com estoque baixo ou zerado (apenas ativos)
+  const itensEstoqueBaixo = materiaisEquipamentos.filter(
+    material => material.ativo !== false && isEstoqueBaixoOuZerado(material)
+  )
 
   // Contar equipamentos com problemas de calibração
   const equipamentosComProblemasCalibração = materiaisEquipamentos.filter(material => {
@@ -307,12 +327,48 @@ const MateriaisEquipamentosPage = () => {
                 </span>
               </label>
             </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="filtroEstoqueBaixo"
+                checked={filtroEstoqueBaixo}
+                onChange={(e) => setFiltroEstoqueBaixo(e.target.checked)}
+                className="rounded"
+              />
+              <label htmlFor="filtroEstoqueBaixo" className="text-sm text-muted-foreground cursor-pointer">
+                <span className="flex items-center gap-1">
+                  📦 <span className="hidden sm:inline">Estoque baixo/zerado</span>
+                  <span className="sm:hidden">Estoque baixo</span>
+                  {itensEstoqueBaixo.length > 0 && (
+                    <Badge variant="destructive" className="text-xs px-1 py-0 h-4">
+                      {itensEstoqueBaixo.length}
+                    </Badge>
+                  )}
+                </span>
+              </label>
+            </div>
           </div>
           <Badge variant="secondary" className="self-start sm:self-auto">
             {filteredMateriais.length} item{filteredMateriais.length !== 1 ? 's' : ''}
           </Badge>
         </div>
       </div>
+
+      {/* Alerta de estoque baixo/zerado */}
+      {itensEstoqueBaixo.length > 0 && (
+        <Alert variant="destructive" className="cursor-pointer" onClick={() => setFiltroEstoqueBaixo(true)}>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Atenção: estoque baixo ou zerado</AlertTitle>
+          <AlertDescription>
+            {itensEstoqueBaixo.length} {itensEstoqueBaixo.length === 1 ? 'item está' : 'itens estão'} com
+            estoque no mínimo ou zerado.{' '}
+            {itensEstoqueBaixo.filter(m => (m.estoque_atual || 0) === 0).length > 0 && (
+              <>({itensEstoqueBaixo.filter(m => (m.estoque_atual || 0) === 0).length} zerado(s)) </>
+            )}
+            Clique para filtrar.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
         <Eye className="h-3 w-3" />

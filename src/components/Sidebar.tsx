@@ -11,6 +11,7 @@ import {
   Truck,
   Landmark,
   Tag,
+  Layers,
   MapPin,
   BarChart2,
   SidebarIcon,
@@ -23,6 +24,7 @@ import {
   X,
   LogOut,
   User,
+  Settings,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import {
@@ -107,6 +109,11 @@ const menuItems = [
         href: '/cadastros/marcas',
         icon: Tag,
       },
+      {
+        title: 'Categorias',
+        href: '/cadastros/categorias',
+        icon: Layers,
+      },
     ],
   },
   {
@@ -118,6 +125,11 @@ const menuItems = [
     title: 'Relatórios',
     href: '/relatorios',
     icon: BarChart2,
+  },
+  {
+    title: 'Configurações',
+    href: '/configuracoes',
+    icon: Settings,
   },
 ]
 

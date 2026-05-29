@@ -72,6 +72,13 @@ export const marcaSchema = z.object({
   ativo: z.boolean().default(true),
 })
 
+// Categoria validation schema
+export const categoriaSchema = z.object({
+  nome: z.string().min(1, 'Nome é obrigatório').max(255, 'Nome muito longo'),
+  descricao: z.string().optional(),
+  ativo: z.boolean().default(true),
+})
+
 // Localização validation schema
 export const localizacaoSchema = z.object({
   codigo: z.string().min(1, 'Código é obrigatório').max(50, 'Código muito longo'),
@@ -198,6 +205,7 @@ export type CentroCustoFormData = z.infer<typeof centroCustoSchema>
 export type ColaboradorFormData = z.infer<typeof colaboradorSchema>
 export type FornecedorFormData = z.infer<typeof fornecedorSchema>
 export type MarcaFormData = z.infer<typeof marcaSchema>
+export type CategoriaFormData = z.infer<typeof categoriaSchema>
 export type LocalizacaoFormData = z.infer<typeof localizacaoSchema>
 export type MaterialEquipamentoFormData = z.infer<typeof materialEquipamentoSchema>
 export type RomaneioItemFormData = z.infer<typeof romaneioItemSchema>

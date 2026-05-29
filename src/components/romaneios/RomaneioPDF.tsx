@@ -3,8 +3,8 @@ import { CompanyWithLogo } from '@/services/companyService'
 
 type Romaneio = Tables<'romaneios'> & {
   colaboradores?: { nome: string; matricula: string } | null
-  centro_custo_origem?: { codigo: string; nome: string } | null
-  centro_custo_destino?: { codigo: string; nome: string } | null
+  centro_custo_origem?: { codigo: string; descricao: string | null; empresas?: { nome: string } | null } | null
+  centro_custo_destino?: { codigo: string; descricao: string | null; empresas?: { nome: string } | null } | null
   fornecedores?: { nome: string } | null
   romaneios_itens?: Array<{
     id: string
@@ -315,18 +315,26 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
               </div>
               <div class="info-cell">
                 <span class="info-label">Matrícula:</span>
-                <span class="info-value">${romaneio.colaboradores?.matricula || 'N/A'}</span>
+                <span class="info-value">${romaneio.colaboradores?.matricula || romaneio.responsavel_retirada?.match(/\(([^)]+)\)/)?.[1] || 'N/A'}</span>
               </div>
             </div>
             
             <div class="info-row">
               <div class="info-cell">
                 <span class="info-label">Centro de Custo:</span>
-                <span class="info-value">${romaneio.centro_custo_origem?.codigo || 'N/A'}</span>
+                <span class="info-value">${
+                  romaneio.centro_custo_origem
+                    ? `${romaneio.centro_custo_origem.codigo}${romaneio.centro_custo_origem.descricao ? ' - ' + romaneio.centro_custo_origem.descricao : ''}`
+                    : 'N/A'
+                }</span>
               </div>
               <div class="info-cell">
                 <span class="info-label">Cliente:</span>
-                <span class="info-value">${romaneio.centro_custo_destino?.nome || romaneio.fornecedores?.nome || 'N/A'}</span>
+                <span class="info-value">${
+                  romaneio.centro_custo_destino
+                    ? `${romaneio.centro_custo_destino.codigo}${romaneio.centro_custo_destino.empresas?.nome ? ' - ' + romaneio.centro_custo_destino.empresas.nome : ''}`
+                    : romaneio.fornecedores?.nome || 'N/A'
+                }</span>
               </div>
             </div>
           </div>

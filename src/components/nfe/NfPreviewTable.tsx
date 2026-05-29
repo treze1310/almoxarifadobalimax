@@ -7,6 +7,14 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -24,13 +32,36 @@ import {
   Loader2,
   Trash2,
   Package,
+  Search,
+  X,
 } from 'lucide-react'
+import { useState } from 'react'
+import {
+  MaterialSearchDialog,
+  MatchedMaterial,
+} from '@/components/nfe/MaterialSearchDialog'
+
+// fileId -> itemCode -> material vinculado
+export type ItemMatches = Record<string, Record<string, MatchedMaterial>>
+
+// Classificação informada para itens NOVOS (que serão criados)
+export interface ItemMetaValue {
+  tipo: 'material' | 'equipamento'
+  categoria: string
+}
+// fileId -> itemCode -> classificação
+export type ItemMeta = Record<string, Record<string, ItemMetaValue>>
 
 interface NfPreviewTableProps {
   files: UploadedNFeFile[]
   onRemoveFile: (id: string) => void
   selectedItems?: Record<string, string[]> // fileId -> itemCodes[]
   onItemSelectionChange?: (fileId: string, itemCode: string, selected: boolean) => void
+  matches?: ItemMatches
+  onMatchChange?: (fileId: string, itemCode: string, material: MatchedMaterial | null) => void
+  itemMeta?: ItemMeta
+  onItemMetaChange?: (fileId: string, itemCode: string, meta: ItemMetaValue) => void
+  categorias?: string[]
 }
 
 const statusConfig = {
@@ -76,8 +107,24 @@ export const NfPreviewTable = ({
   onRemoveFile,
   selectedItems = {},
   onItemSelectionChange,
+  matches = {},
+  onMatchChange,
+  itemMeta = {},
+  onItemMetaChange,
+  categorias = [],
 }: NfPreviewTableProps) => {
-  
+  // Item cuja lupa de busca está aberta
+  const [searchTarget, setSearchTarget] = useState<{
+    fileId: string
+    item: NFeItem
+  } | null>(null)
+
+  const getMatch = (fileId: string, itemCode: string): MatchedMaterial | undefined =>
+    matches[fileId]?.[itemCode]
+
+  const getMeta = (fileId: string, itemCode: string): ItemMetaValue =>
+    itemMeta[fileId]?.[itemCode] || { tipo: 'material', categoria: 'MATERIAL DE CONSUMO' }
+
   const isItemSelected = (fileId: string, itemCode: string) => {
     return selectedItems[fileId]?.includes(itemCode) || false
   }
@@ -202,6 +249,7 @@ export const NfPreviewTable = ({
                         <TableHead>Cód. Original</TableHead>
                         <TableHead>Novo Cód.</TableHead>
                         <TableHead>Descrição</TableHead>
+                        {onItemMetaChange && <TableHead className="w-56">Tipo / Categoria</TableHead>}
                         <TableHead>Qtd.</TableHead>
                         <TableHead>Vlr. Unit.</TableHead>
                         <TableHead className="text-right">Vlr. Total</TableHead>
@@ -210,8 +258,9 @@ export const NfPreviewTable = ({
                     <TableBody>
                       {uploadedFile.data.items.map((item, index) => {
                         const isSelected = isItemSelected(uploadedFile.id, item.code)
+                        const match = getMatch(uploadedFile.id, item.code)
                         return (
-                          <TableRow 
+                          <TableRow
                             key={`${uploadedFile.id}-${item.code}`}
                             className={isSelected ? 'bg-muted/50' : ''}
                           >
@@ -219,7 +268,7 @@ export const NfPreviewTable = ({
                               <TableCell>
                                 <Checkbox
                                   checked={isSelected}
-                                  onCheckedChange={(checked) => 
+                                  onCheckedChange={(checked) =>
                                     onItemSelectionChange(uploadedFile.id, item.code, !!checked)
                                   }
                                 />
@@ -229,11 +278,93 @@ export const NfPreviewTable = ({
                               {item.code}
                             </TableCell>
                             <TableCell className="font-mono">
-                              <Badge variant="outline" className="text-xs">
-                                {isSelected ? 'Auto' : 'N/A'}
+                              <Badge variant={match ? 'success' as any : 'outline'} className="text-xs">
+                                {match ? match.codigo : isSelected ? 'Auto' : 'N/A'}
                               </Badge>
                             </TableCell>
-                            <TableCell>{item.description}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <span className="flex-1">{item.description}</span>
+                                {onMatchChange && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 shrink-0"
+                                    title="Vincular a material existente"
+                                    onClick={() =>
+                                      setSearchTarget({ fileId: uploadedFile.id, item })
+                                    }
+                                  >
+                                    <Search className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                              {match && (
+                                <div className="mt-1 flex items-center gap-1 text-xs text-success">
+                                  <span>
+                                    → {match.nome} (estoque atual: {match.estoque_atual} →{' '}
+                                    {match.estoque_atual + item.quantity})
+                                  </span>
+                                  {onMatchChange && (
+                                    <button
+                                      type="button"
+                                      className="ml-1 inline-flex items-center text-muted-foreground hover:text-destructive"
+                                      title="Remover vínculo"
+                                      onClick={() =>
+                                        onMatchChange(uploadedFile.id, item.code, null)
+                                      }
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </TableCell>
+                            {onItemMetaChange && (
+                              <TableCell>
+                                {match ? (
+                                  // Já cadastrado: classificação preenchida automaticamente
+                                  <div className="text-xs text-muted-foreground">
+                                    <div className="capitalize">{match.tipo || 'material'}</div>
+                                    <div>{match.categoria || '—'}</div>
+                                    <span className="text-[10px] italic">(do cadastro)</span>
+                                  </div>
+                                ) : (
+                                  // Item novo: perguntar tipo e categoria
+                                  <div className="space-y-1">
+                                    <Select
+                                      value={getMeta(uploadedFile.id, item.code).tipo}
+                                      onValueChange={(value) =>
+                                        onItemMetaChange(uploadedFile.id, item.code, {
+                                          ...getMeta(uploadedFile.id, item.code),
+                                          tipo: value as 'material' | 'equipamento',
+                                        })
+                                      }
+                                    >
+                                      <SelectTrigger className="h-7 text-xs">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="material">Material</SelectItem>
+                                        <SelectItem value="equipamento">Equipamento</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <Input
+                                      list="nfe-categorias-sugestoes"
+                                      className="h-7 text-xs"
+                                      placeholder="Categoria"
+                                      value={getMeta(uploadedFile.id, item.code).categoria}
+                                      onChange={(e) =>
+                                        onItemMetaChange(uploadedFile.id, item.code, {
+                                          ...getMeta(uploadedFile.id, item.code),
+                                          categoria: e.target.value,
+                                        })
+                                      }
+                                    />
+                                  </div>
+                                )}
+                              </TableCell>
+                            )}
                             <TableCell>{item.quantity}</TableCell>
                             <TableCell>
                               {item.unitValue.toLocaleString('pt-BR', {
@@ -268,6 +399,27 @@ export const NfPreviewTable = ({
           </AccordionItem>
         )
       })}
+      {onItemMetaChange && (
+        <datalist id="nfe-categorias-sugestoes">
+          {categorias.map((c) => (
+            <option key={c} value={c} />
+          ))}
+        </datalist>
+      )}
+      {onMatchChange && (
+        <MaterialSearchDialog
+          open={!!searchTarget}
+          onOpenChange={(open) => {
+            if (!open) setSearchTarget(null)
+          }}
+          initialSearch={searchTarget?.item.description ?? ''}
+          onSelect={(material) => {
+            if (searchTarget) {
+              onMatchChange(searchTarget.fileId, searchTarget.item.code, material)
+            }
+          }}
+        />
+      )}
     </Accordion>
   )
 }

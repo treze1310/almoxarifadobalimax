@@ -18,6 +18,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { MaterialEquipamentoForm } from './MaterialEquipamentoForm'
+import { HistoricoFornecedoresPrecos } from './HistoricoFornecedoresPrecos'
+import { Separator } from '@/components/ui/separator'
 import { MaterialEquipamento } from '@/types'
 import { Trash2 } from 'lucide-react'
 
@@ -120,6 +122,12 @@ export const MaterialEquipamentoDialog = ({
             onSubmit={onSubmit || (async () => {})}
             onCancel={() => onOpenChange(false)}
           />
+          {(material as any)?.id && (
+            <>
+              <Separator className="my-6" />
+              <HistoricoFornecedoresPrecos materialId={(material as any).id} />
+            </>
+          )}
         </div>
       </DialogContent>
 

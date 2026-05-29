@@ -136,6 +136,7 @@ export type Database = {
           cnpj: string | null
           created_at: string | null
           email: string | null
+          emitente: boolean | null
           endereco: string | null
           id: string
           logo_url: string | null
@@ -148,6 +149,7 @@ export type Database = {
           cnpj?: string | null
           created_at?: string | null
           email?: string | null
+          emitente?: boolean | null
           endereco?: string | null
           id?: string
           logo_url?: string | null
@@ -160,6 +162,7 @@ export type Database = {
           cnpj?: string | null
           created_at?: string | null
           email?: string | null
+          emitente?: boolean | null
           endereco?: string | null
           id?: string
           logo_url?: string | null
@@ -358,6 +361,33 @@ export type Database = {
           timestamp?: string | null
           user_agent?: string | null
           usuario_id?: string | null
+        }
+        Relationships: []
+      }
+      categorias: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

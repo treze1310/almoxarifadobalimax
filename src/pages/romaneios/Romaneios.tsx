@@ -31,6 +31,7 @@ import { useCenteredDialog } from '@/hooks/useCenteredDialog'
 import RomaneioDialog from '@/components/romaneios/RomaneioDialog'
 import DevolucaoDialog from '@/components/romaneios/DevolucaoDialog'
 import { generateRomaneoPDFContent } from '@/components/romaneios/RomaneioPDF'
+import { enriquecerComMaiorPreco } from '@/utils/romaneioPdf'
 import { companyService } from '@/services/companyService'
 import { devolucaoService } from '@/services/devolucaoService'
 import StatusDevolucaoLabel from '@/components/romaneios/StatusDevolucaoLabel'
@@ -193,9 +194,12 @@ const RomaneiosPage = () => {
 
       console.log('✅ Dados da empresa carregados')
       
+      // Enriquecer com o maior valor do histórico de preços
+      const romaneioParaPdf = await enriquecerComMaiorPreco(selectedRomaneio as any)
+
       // Create a temporary element with the new PDF content
       const printElement = document.createElement('div')
-      printElement.innerHTML = generateRomaneoPDFContent(selectedRomaneio as any, company)
+      printElement.innerHTML = generateRomaneoPDFContent(romaneioParaPdf, company)
       printElement.style.position = 'absolute'
       printElement.style.left = '-9999px'
       printElement.style.top = '0'
@@ -783,7 +787,13 @@ const RomaneiosPage = () => {
                   {selectedRomaneio.status === 'pendente' && (
                     <Button
                       onClick={async () => {
-                        await approveRomaneio(selectedRomaneio.id)
+                        const res = await approveRomaneio(selectedRomaneio.id)
+                        if (!res.error) {
+                          // Após aprovar, oferecer impressão do comprovante
+                          if (window.confirm('Romaneio aprovado! Deseja imprimir o comprovante em PDF?')) {
+                            await handleDownloadPDF()
+                          }
+                        }
                         handleRomaneioUpdated()
                       }}
                     >

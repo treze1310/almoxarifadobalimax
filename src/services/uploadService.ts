@@ -56,6 +56,33 @@ export const uploadService = {
     }
   },
 
+  async uploadMaterialPhoto(file: File, materialId?: string): Promise<UploadResult> {
+    const fileExt = file.name.split('.').pop()
+    // Para itens novos (sem id ainda), gera nome único; a URL é persistida no campo foto_url ao salvar.
+    const baseName = materialId || `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const fileName = `materiais/${baseName}.${fileExt}`
+
+    const { data, error } = await supabase.storage
+      .from('avatars')
+      .upload(fileName, file, {
+        upsert: true,
+        contentType: file.type,
+      })
+
+    if (error) {
+      throw new Error(`Erro ao fazer upload da foto: ${error.message}`)
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(data.path)
+
+    return {
+      url: urlData.publicUrl,
+      path: data.path,
+    }
+  },
+
   async deleteFile(path: string): Promise<void> {
     const { error } = await supabase.storage
       .from('avatars')

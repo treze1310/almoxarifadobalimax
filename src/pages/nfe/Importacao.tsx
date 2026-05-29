@@ -15,7 +15,9 @@ import {
   NFePayment,
   NFeAdditionalInfo,
 } from '@/types'
-import { NfPreviewTable } from '@/components/nfe/NfPreviewTable'
+import { NfPreviewTable, ItemMatches, ItemMeta, ItemMetaValue } from '@/components/nfe/NfPreviewTable'
+import type { MatchedMaterial } from '@/components/nfe/MaterialSearchDialog'
+import { useCategorias } from '@/hooks/useCategorias'
 import { NfImportDialog } from '@/components/nfe/NfImportDialog'
 import { NfImportResult } from '@/components/nfe/NfImportResult'
 import { useNFeImport } from '@/hooks/useNFeImport'
@@ -362,7 +364,10 @@ const ImportacaoNFePage = () => {
     totalFiles: 0,
   })
   const [selectedItems, setSelectedItems] = useState<Record<string, string[]>>({})
-  
+  const [matches, setMatches] = useState<ItemMatches>({})
+  const [itemMeta, setItemMeta] = useState<ItemMeta>({})
+  const categorias = useCategorias()
+
   const { loading: importLoading, importNFe } = useNFeImport()
 
   // Controlar auto-seleção apenas uma vez por arquivo
@@ -438,6 +443,49 @@ const ImportacaoNFePage = () => {
       newSet.delete(id)
       return newSet
     })
+    // Remover vínculos manuais do arquivo
+    setMatches(prev => {
+      const updated = { ...prev }
+      delete updated[id]
+      return updated
+    })
+    // Remover classificações do arquivo
+    setItemMeta(prev => {
+      const updated = { ...prev }
+      delete updated[id]
+      return updated
+    })
+  }
+
+  const handleMatchChange = (
+    fileId: string,
+    itemCode: string,
+    material: MatchedMaterial | null,
+  ) => {
+    setMatches((prev) => {
+      const fileMatches = { ...(prev[fileId] || {}) }
+      if (material) {
+        fileMatches[itemCode] = material
+      } else {
+        delete fileMatches[itemCode]
+      }
+      return { ...prev, [fileId]: fileMatches }
+    })
+    // Vincular implica selecionar o item para importação
+    if (material) {
+      handleItemSelectionChange(fileId, itemCode, true)
+    }
+  }
+
+  const handleItemMetaChange = (
+    fileId: string,
+    itemCode: string,
+    meta: ItemMetaValue,
+  ) => {
+    setItemMeta((prev) => ({
+      ...prev,
+      [fileId]: { ...(prev[fileId] || {}), [itemCode]: meta },
+    }))
   }
 
   const handleItemSelectionChange = (fileId: string, itemCode: string, selected: boolean) => {
@@ -505,11 +553,23 @@ const ImportacaoNFePage = () => {
           const selectedItemsForFile = selectedItems[f.id] || []
           if (selectedItemsForFile.length === 0) return undefined
           
-          // Filtrar apenas os itens selecionados
-          const filteredItems = f.data.items.filter(item => 
-            selectedItemsForFile.includes(item.code)
-          )
-          
+          const fileMatches = matches[f.id] || {}
+          const fileMeta = itemMeta[f.id] || {}
+
+          // Filtrar apenas os itens selecionados e anexar vínculo manual + classificação
+          const filteredItems = f.data.items
+            .filter(item => selectedItemsForFile.includes(item.code))
+            .map(item => {
+              const meta = fileMeta[item.code]
+              return {
+                ...item,
+                matchedMaterialId: fileMatches[item.code]?.id,
+                // tipo/categoria só relevantes para itens novos (sem vínculo)
+                tipo: meta?.tipo || 'material',
+                categoria: meta?.categoria || 'MATERIAL DE CONSUMO',
+              }
+            })
+
           return {
             ...f.data,
             items: filteredItems
@@ -554,6 +614,8 @@ const ImportacaoNFePage = () => {
   const handleStartNewImport = () => {
     setFiles([])
     setSelectedItems({})
+    setMatches({})
+    setItemMeta({})
     setStage('upload')
   }
 
@@ -629,11 +691,16 @@ const ImportacaoNFePage = () => {
                 <div className="w-1/4 text-right">Valor Total</div>
               </div>
               {files.length > 0 ? (
-                <NfPreviewTable 
-                  files={files} 
+                <NfPreviewTable
+                  files={files}
                   onRemoveFile={handleRemoveFile}
                   selectedItems={selectedItems}
                   onItemSelectionChange={handleItemSelectionChange}
+                  matches={matches}
+                  onMatchChange={handleMatchChange}
+                  itemMeta={itemMeta}
+                  onItemMetaChange={handleItemMetaChange}
+                  categorias={categorias}
                 />
               ) : (
                 <div className="text-center p-10 text-muted-foreground">

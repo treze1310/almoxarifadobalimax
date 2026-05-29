@@ -26,8 +26,11 @@ import { materialEquipamentoSchema, type MaterialEquipamentoFormData } from '@/l
 import { useSupabaseTable } from '@/hooks/useSupabase'
 import type { Tables } from '@/types/database'
 import { buscarNCMPorDescricao } from '@/services/ncmService'
-import { Search, AlertTriangle, Upload } from 'lucide-react'
+import { Search, AlertTriangle, Upload, X, Image as ImageIcon } from 'lucide-react'
 import { MarcaComboboxWithAdd } from './MarcaComboboxWithAdd'
+import { CategoriaComboboxWithAdd } from './CategoriaComboboxWithAdd'
+import { uploadService } from '@/services/uploadService'
+import { useToast } from '@/hooks/use-toast'
 
 interface MaterialEquipamentoFormProps {
   initialData?: Tables<'materiais_equipamentos'>
@@ -40,11 +43,15 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
   const { data: localizacoes } = useSupabaseTable('localizacao')
   const [ncmSuggestions, setNcmSuggestions] = useState<Array<{ codigo: string; descricao: string; confianca: number }>>([])
   const [loadingNCM, setLoadingNCM] = useState(false)
+  const [uploadingFoto, setUploadingFoto] = useState(false)
+  const { toast } = useToast()
   
   const form = useForm<MaterialEquipamentoFormData>({
     resolver: zodResolver(materialEquipamentoSchema),
     defaultValues: {
       nome: initialData?.nome || '',
+      tipo: (initialData?.tipo as any) || 'material',
+      categoria: initialData?.categoria || '',
       marca_id: initialData?.marca_id || undefined,
       modelo: initialData?.modelo || '',
       numero_serie: initialData?.numero_serie || '',
@@ -79,6 +86,8 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
     if (initialData) {
       form.reset({
         nome: initialData.nome,
+        tipo: (initialData.tipo as any) || 'material',
+        categoria: initialData.categoria || '',
         marca_id: initialData.marca_id || undefined,
         modelo: initialData.modelo || '',
         numero_serie: initialData.numero_serie || '',
@@ -159,6 +168,33 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
     setNcmSuggestions([])
   }
 
+  const handleFotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const validation = uploadService.validateImageFile(file)
+    if (!validation.isValid) {
+      toast({ title: 'Erro', description: validation.error, variant: 'destructive' })
+      return
+    }
+
+    setUploadingFoto(true)
+    try {
+      const result = await uploadService.uploadMaterialPhoto(file, initialData?.id)
+      form.setValue('foto_url', result.url, { shouldDirty: true })
+      toast({ title: 'Sucesso', description: 'Foto enviada. Salve o item para confirmar.' })
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: error instanceof Error ? error.message : 'Erro ao enviar foto',
+        variant: 'destructive',
+      })
+    } finally {
+      setUploadingFoto(false)
+      event.target.value = ''
+    }
+  }
+
   // Filter only active records
   const activeFornecedores = fornecedores?.filter(fornecedor => fornecedor.ativo) || []
   const activeLocalizacoes = localizacoes?.filter(localizacao => localizacao.ativo) || []
@@ -166,7 +202,18 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        
+
+        {/* Capa: imagem do item acima do nome para melhor visualização */}
+        {form.watch('foto_url') && (
+          <div className="w-full overflow-hidden rounded-lg border bg-muted">
+            <img
+              src={form.watch('foto_url')}
+              alt="Imagem do item"
+              className="w-full max-h-56 object-cover"
+            />
+          </div>
+        )}
+
         {/* Nome do Material/Equipamento - Campo Principal */}
         <FormField
           control={form.control}
@@ -179,6 +226,25 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
                   placeholder="Ex: Parafuso Phillips, Furadeira Elétrica, Capacete de Segurança" 
                   className="text-lg p-4" 
                   {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Tipo (categoria) - campo definidor, alimentado pelo cadastro auxiliar de Categorias */}
+        <FormField
+          control={form.control}
+          name="categoria"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tipo *</FormLabel>
+              <FormControl>
+                <CategoriaComboboxWithAdd
+                  value={field.value ?? ''}
+                  onValueChange={field.onChange}
+                  placeholder="Selecione o tipo do item..."
                 />
               </FormControl>
               <FormMessage />
@@ -472,13 +538,62 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
           render={({ field }) => (
             <FormItem>
               <FormLabel>Foto do Item</FormLabel>
-              <FormControl>
-                <Input
-                  type="url"
-                  placeholder="https://exemplo.com/foto.jpg"
-                  {...field}
-                />
-              </FormControl>
+              <div className="flex items-center gap-4">
+                <div className="h-24 w-24 shrink-0 rounded-md border bg-muted/30 overflow-hidden flex items-center justify-center">
+                  {field.value ? (
+                    <img
+                      src={field.value}
+                      alt="Foto do item"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <label
+                      htmlFor="foto-upload"
+                      className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm cursor-pointer hover:bg-accent transition-colors"
+                    >
+                      {uploadingFoto ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+                          Enviando...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4" />
+                          {field.value ? 'Alterar foto' : 'Enviar foto'}
+                        </>
+                      )}
+                    </label>
+                    {field.value && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => field.onChange('')}
+                        className="text-red-600"
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Remover
+                      </Button>
+                    )}
+                  </div>
+                  <input
+                    id="foto-upload"
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleFotoUpload}
+                    disabled={uploadingFoto}
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    JPEG, PNG ou WebP • Máx. 5MB
+                  </span>
+                </div>
+              </div>
               <FormMessage />
             </FormItem>
           )}

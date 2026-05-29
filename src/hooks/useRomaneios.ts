@@ -4,6 +4,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { estoqueService } from '@/services/estoqueService'
 import { devolucaoService } from '@/services/devolucaoService'
 import { romaneioNumberService } from '@/services/romaneioNumberService'
+import { useAuth } from '@/contexts/AuthContext'
 
 import type { Tables } from '@/types/database'
 import type { RomaneioFormData } from '@/lib/validations'
@@ -40,8 +41,9 @@ export function useRomaneios() {
   const [romaneios, setRomaneios] = useState<Romaneio[]>([])
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
-  // TODO: Implementar sistema de usuário simplificado
-  const usuario = { id: 'temp-user-id' }
+  const { user } = useAuth()
+  // Usuário autenticado (id é UUID válido do Supabase Auth)
+  const usuario = user ? { id: user.id } : null
 
   // Função auxiliar para gerar número do romaneio
   const generateRomaneioNumber = useCallback(async (
@@ -216,11 +218,12 @@ export function useRomaneios() {
 
       if (itensError) throw itensError
 
-      // Se deve aprovar automaticamente, processar aprovação
-      if (shouldApprove && usuario?.id) {
+      // Se deve aprovar automaticamente, processar aprovação.
+      // Não depender de usuário autenticado: o estoqueService trata usuario_id inválido como null.
+      if (shouldApprove) {
         try {
           // Primeiro aprovar o romaneio
-          const resultado = await estoqueService.processarAprovacaoRomaneio(romaneio.id, usuario.id)
+          const resultado = await estoqueService.processarAprovacaoRomaneio(romaneio.id, usuario?.id || '')
           if (!resultado.success) {
             console.warn('Falha na aprovação automática:', resultado.message)
             toast({
@@ -266,19 +269,11 @@ export function useRomaneios() {
 
   // Nova função de aprovação com controle de estoque
   const approveRomaneio = useCallback(async (id: string) => {
-    if (!usuario?.id) {
-      toast({
-        title: 'Erro',
-        description: 'Usuário não identificado',
-        variant: 'destructive',
-      })
-      return { error: 'No user' }
-    }
-
     setLoading(true)
     try {
       // Usar o serviço de estoque para processar a aprovação
-      const resultado = await estoqueService.processarAprovacaoRomaneio(id, usuario.id)
+      // (usuario_id inválido/ausente é tratado como null pelo estoqueService)
+      const resultado = await estoqueService.processarAprovacaoRomaneio(id, usuario?.id || '')
       
       if (resultado.success) {
         toast({
@@ -493,6 +488,15 @@ export function useRomaneios() {
 
       if (itensError) throw itensError
 
+      // Remover vínculo de romaneios que referenciam este como origem
+      // (ex.: devoluções/transferências) para não violar a FK romaneio_origem_id
+      const { error: unlinkError } = await supabase
+        .from('romaneios')
+        .update({ romaneio_origem_id: null })
+        .eq('romaneio_origem_id', id)
+
+      if (unlinkError) throw unlinkError
+
       // Finally delete romaneio
       const { error: romaneioError } = await supabase
         .from('romaneios')
@@ -512,7 +516,7 @@ export function useRomaneios() {
       console.error('Erro ao excluir romaneio:', error)
       toast({
         title: 'Erro',
-        description: 'Erro ao excluir romaneio',
+        description: error?.message || 'Erro ao excluir romaneio',
         variant: 'destructive',
       })
       return { error }
@@ -578,6 +582,8 @@ export function useRomaneios() {
       const updateData: any = {
         data_romaneio: data.data_romaneio,
         responsavel_retirada: data.responsavel_retirada,
+        responsavel_nome: data.responsavel_nome ?? null,
+        colaborador_id: data.colaborador_id && data.colaborador_id !== '' ? data.colaborador_id : null,
         centro_custo_origem_id: data.centro_custo_origem_id && data.centro_custo_origem_id !== '' ? data.centro_custo_origem_id : null,
         centro_custo_destino_id: data.centro_custo_destino_id && data.centro_custo_destino_id !== '' ? data.centro_custo_destino_id : null,
         observacoes: data.observacoes,

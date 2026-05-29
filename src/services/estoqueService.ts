@@ -163,6 +163,13 @@ class EstoqueService {
         throw new Error('Erro ao atualizar estoque do material')
       }
 
+      // Sanitizar usuario_id: aceitar apenas UUID válido; caso contrário, null
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      const usuarioIdValido =
+        movimentacao.usuario_id && uuidRegex.test(movimentacao.usuario_id)
+          ? movimentacao.usuario_id
+          : null
+
       // Registrar movimentação
       const movimentacaoData = {
         material_equipamento_id: movimentacao.material_equipamento_id,
@@ -172,7 +179,7 @@ class EstoqueService {
         motivo: movimentacao.motivo || null,
         romaneio_id: movimentacao.romaneio_id || null,
         observacoes: movimentacao.observacoes || null,
-        usuario_id: movimentacao.usuario_id,
+        usuario_id: usuarioIdValido,
         data_movimentacao: new Date().toISOString(),
         tipo_movimentacao: movimentacao.quantidade < 0 ? 'saida' : 'entrada',
         valor_unitario: null, // Campo obrigatório na estrutura

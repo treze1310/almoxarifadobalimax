@@ -8,7 +8,6 @@ import {
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
 import {
   Package,
   PackageX,
@@ -20,7 +19,6 @@ import {
   Building,
   FileText,
   ShoppingCart,
-  Zap,
   ArrowUpRight,
   Calendar,
   Eye,
@@ -29,6 +27,15 @@ import {
   Send,
   Search,
 } from 'lucide-react'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { formatCurrency } from '@/lib/utils'
 
@@ -73,6 +80,7 @@ const DashboardPage = () => {
   })
   
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
+  const [comprasMensais, setComprasMensais] = useState<Array<{ mes: string; total: number; quantidade: number }>>([])
   const [loading, setLoading] = useState(true)
 
   const loadDashboardData = async () => {
@@ -201,6 +209,41 @@ const DashboardPage = () => {
       }))
 
       setRecentActivities(recentActivities)
+
+      // Compras mensais (últimos 12 meses) a partir das NF-e importadas
+      const inicioJanela = new Date()
+      inicioJanela.setMonth(inicioJanela.getMonth() - 11)
+      inicioJanela.setDate(1)
+      const inicioStr = inicioJanela.toISOString().split('T')[0]
+
+      const { data: comprasData } = await supabase
+        .from('nfe_importacao')
+        .select('data_emissao, valor_total')
+        .gte('data_emissao', inicioStr)
+
+      // Montar buckets dos últimos 12 meses (com zeros)
+      const buckets = new Map<string, { mes: string; total: number; quantidade: number }>()
+      const base = new Date()
+      base.setDate(1)
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(base.getFullYear(), base.getMonth() - i, 1)
+        const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+        const label = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '')
+        buckets.set(chave, { mes: label, total: 0, quantidade: 0 })
+      }
+
+      ;(comprasData || []).forEach((nfe) => {
+        if (!nfe.data_emissao) return
+        const d = new Date(nfe.data_emissao)
+        const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+        const bucket = buckets.get(chave)
+        if (bucket) {
+          bucket.total += nfe.valor_total || 0
+          bucket.quantidade += 1
+        }
+      })
+
+      setComprasMensais(Array.from(buckets.values()))
 
     } catch (error) {
       console.error('Erro ao carregar dados do dashboard:', error)
@@ -388,30 +431,55 @@ const DashboardPage = () => {
         ))}
       </div>
 
-      {/* Ocupação do Estoque */}
+      {/* Compras Mensais */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Zap className="h-5 w-5" />
-            <span>Ocupação do Estoque</span>
+            <ShoppingCart className="h-5 w-5" />
+            <span>Compras Mensais (últimos 12 meses)</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Capacidade utilizada</span>
-              <span className="font-medium">
-                {metrics.percentualOcupacao.toFixed(1)}%
-              </span>
+          {loading ? (
+            <div className="flex items-center justify-center h-72">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-            <Progress 
-              value={metrics.percentualOcupacao} 
-              className="h-2"
-            />
-            <p className="text-xs text-muted-foreground">
-              {metrics.estoqueTotal.toLocaleString()} unidades em estoque
-            </p>
-          </div>
+          ) : comprasMensais.every((m) => m.total === 0) ? (
+            <div className="flex flex-col items-center justify-center h-72 text-muted-foreground">
+              <ShoppingCart className="h-12 w-12 mb-3 opacity-50" />
+              <p>Nenhuma compra registrada no período</p>
+              <p className="text-xs">As compras são contabilizadas a partir das NF-e importadas</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={288}>
+              <BarChart data={comprasMensais} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
+                <XAxis dataKey="mes" tickLine={false} axisLine={false} fontSize={12} />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  fontSize={12}
+                  width={70}
+                  tickFormatter={(value) =>
+                    new Intl.NumberFormat('pt-BR', {
+                      notation: 'compact',
+                      style: 'currency',
+                      currency: 'BRL',
+                    }).format(value as number)
+                  }
+                />
+                <Tooltip
+                  formatter={(value: number, _name, props: any) => [
+                    formatCurrency(value),
+                    `${props?.payload?.quantidade || 0} NF-e`,
+                  ]}
+                  labelFormatter={(label) => `Mês: ${label}`}
+                  contentStyle={{ fontSize: 12 }}
+                />
+                <Bar dataKey="total" name="Total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
 

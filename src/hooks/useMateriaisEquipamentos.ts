@@ -33,10 +33,10 @@ export function useMateriaisEquipamentos() {
       const { data, error } = await supabase
         .from('centros_custo')
         .select('id')
-        .or('nome.ilike.%almoxarifado%,codigo.ilike.%almox%')
+        .or('descricao.ilike.%almoxarifado%,codigo.ilike.%almox%')
         .eq('ativo', true)
         .limit(1)
-        .single()
+        .maybeSingle()
 
       if (error || !data) {
         console.warn('Centro de custo do almoxarifado não encontrado, usando null')
@@ -151,7 +151,7 @@ export function useMateriaisEquipamentos() {
         .from('materiais_equipamentos')
         .select('codigo')
         .eq('codigo', materialData.codigo)
-        .single()
+        .maybeSingle()
 
       if (existing) {
         throw new Error('Código já existe no sistema')
@@ -221,18 +221,23 @@ export function useMateriaisEquipamentos() {
         throw new Error('Material/equipamento não encontrado')
       }
 
-      // Verificar se o código já existe em outro registro
-      if (materialData.codigo !== currentData.codigo) {
+      // Verificar se o código já existe em outro registro (apenas se foi informado e mudou)
+      if (materialData.codigo && materialData.codigo !== currentData.codigo) {
         const { data: existing } = await supabase
           .from('materiais_equipamentos')
           .select('codigo')
           .eq('codigo', materialData.codigo)
           .neq('id', id)
-          .single()
+          .maybeSingle()
 
         if (existing) {
           throw new Error('Código já existe no sistema')
         }
+      }
+
+      // Não sobrescrever o código existente com undefined/vazio
+      if (!materialData.codigo) {
+        delete (materialData as any).codigo
       }
 
       const { data, error } = await supabase
@@ -447,6 +452,7 @@ export function useMateriaisEquipamentos() {
     unidade?: string
     valor_unitario: number
     quantidade?: number
+    tipo?: 'material' | 'equipamento'
     categoria?: string
     fornecedor?: string
     aplicacao?: string
@@ -468,7 +474,7 @@ export function useMateriaisEquipamentos() {
         codigo: nfeItem.codigo_produto,
         nome: nfeItem.descricao_produto,
         descricao: descricaoCompleta,
-        tipo: 'material' as const,
+        tipo: nfeItem.tipo || ('material' as const),
         categoria: nfeItem.categoria || 'MATERIAL DE CONSUMO',
         unidade_medida: nfeItem.unidade || 'UN',
         estoque_atual: Math.floor(nfeItem.quantidade || 0), // ✅ Usar quantidade da NFe

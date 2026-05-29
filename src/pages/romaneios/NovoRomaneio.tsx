@@ -47,6 +47,8 @@ import { useSupabaseTable } from '@/hooks/useSupabase'
 import { useRomaneios } from '@/hooks/useRomaneios'
 import { romaneioSchema, type RomaneioFormData } from '@/lib/validations'
 import { estoqueService } from '@/services/estoqueService'
+import { devolucaoService } from '@/services/devolucaoService'
+import { gerarRomaneioPDF } from '@/utils/romaneioPdf'
 
 import type { Tables } from '@/types/database'
 
@@ -132,7 +134,7 @@ const NovoRomaneioPage = () => {
     defaultValues: {
       tipo: tipo || 'retirada',
       data_romaneio: new Date().toISOString(),
-      responsavel_retirada: 'Usuário Logado',
+      responsavel_retirada: '',
       itens: [],
     },
   })
@@ -171,13 +173,29 @@ const NovoRomaneioPage = () => {
           form.reset({
             tipo: romaneio.tipo as 'retirada' | 'devolucao' | 'transferencia',
             data_romaneio: romaneio.data_romaneio ? new Date(romaneio.data_romaneio).toISOString() : new Date().toISOString(),
+            colaborador_id: (romaneio as any).colaborador_id || undefined,
+            responsavel_nome: (romaneio as any).responsavel_nome || undefined,
             responsavel_retirada: romaneio.responsavel_retirada || '',
             centro_custo_origem_id: romaneio.centro_custo_origem_id || '',
             centro_custo_destino_id: romaneio.centro_custo_destino_id || '',
             observacoes: romaneio.observacoes || '',
             itens: itensForForm
           })
-          
+
+          // Hidratar o autocomplete de responsável
+          const colabId = (romaneio as any).colaborador_id
+          if (colabId) {
+            const colab = colaboradores.find(c => c.id === colabId)
+            setResponsavelData({
+              type: 'colaborador',
+              colaborador_id: colabId,
+              displayName: colab ? `${colab.nome} (${colab.matricula})` : (romaneio.responsavel_retirada || ''),
+            })
+          } else if ((romaneio as any).responsavel_nome || romaneio.responsavel_retirada) {
+            const nome = (romaneio as any).responsavel_nome || romaneio.responsavel_retirada
+            setResponsavelData({ type: 'nome', nome, displayName: nome })
+          }
+
           // Ensure items are properly loaded with a slight delay
           setTimeout(() => {
             replace(itensForForm)
@@ -247,8 +265,15 @@ const NovoRomaneioPage = () => {
     name: 'itens',
   })
 
-  const handleSelectRomaneio = (romaneio: RomaneioRetirada) => {
+  const handleSelectRomaneio = async (romaneio: RomaneioRetirada) => {
     setSelectedRomaneio(romaneio)
+
+    // Saldo a devolver por material = qtd original - já devolvido (devoluções anteriores)
+    const statusDev = await devolucaoService.calcularStatusDevolucao(romaneio.id)
+    const devolvidoPorMaterial = new Map<string, number>()
+    statusDev.itensDevolvidos.forEach((it) => {
+      devolvidoPorMaterial.set(it.material_id, it.quantidade_devolvida)
+    })
     
     // Set reference to original romaneio in observations
     form.setValue('observacoes', `Devolução referente ao romaneio: ${romaneio.numero}`)
@@ -261,24 +286,44 @@ const NovoRomaneioPage = () => {
       form.setValue('centro_custo_destino_id', romaneio.centro_custo_origem_id)
     }
     
-    // Set responsible person
-    if (romaneio.responsavel_retirada) {
-      form.setValue('responsavel_retirada', romaneio.responsavel_retirada)
+    // Set responsible person (carregar do romaneio original)
+    const colabId = (romaneio as any).colaborador_id
+    if (colabId) {
+      const colab = colaboradores.find(c => c.id === colabId)
+      const display = colab ? `${colab.nome} (${colab.matricula})` : (romaneio.responsavel_retirada || '')
+      form.setValue('colaborador_id', colabId)
+      form.setValue('responsavel_nome', undefined)
+      form.setValue('responsavel_retirada', display)
+      setResponsavelData({ type: 'colaborador', colaborador_id: colabId, displayName: display })
+    } else if ((romaneio as any).responsavel_nome || romaneio.responsavel_retirada) {
+      const nome = (romaneio as any).responsavel_nome || romaneio.responsavel_retirada || ''
+      form.setValue('responsavel_nome', nome)
+      form.setValue('responsavel_retirada', nome)
+      setResponsavelData({ type: 'nome', nome, displayName: nome })
     }
     
     // Load items from original romaneio - Use setTimeout to ensure form is ready
     if (romaneio.romaneios_itens) {
-      const itemsWithOriginalQty = romaneio.romaneios_itens.map((item) => ({
-        material_equipamento_id: item.materiais_equipamentos?.id || '',
-        quantidade: item.quantidade, // Use original quantity as default for return
-        quantidadeOriginal: item.quantidade,
-        valor_unitario: item.valor_unitario || 0,
-        valor_total: (item.valor_unitario || 0) * item.quantidade,
-        observacoes: item.observacoes || '',
-        numero_serie: item.numero_serie || '',
-        codigo_patrimonial: item.codigo_patrimonial || '',
-      }))
-      
+      const itemsWithOriginalQty = romaneio.romaneios_itens
+        .map((item) => {
+          const materialId = item.materiais_equipamentos?.id || ''
+          const jaDevolvido = devolvidoPorMaterial.get(materialId) || 0
+          // Saldo restante a devolver (qtd original - devoluções anteriores)
+          const saldo = Math.max(item.quantidade - jaDevolvido, 0)
+          return {
+            material_equipamento_id: materialId,
+            quantidade: saldo, // default = saldo restante
+            quantidadeOriginal: saldo, // mostrar o saldo como base na devolução
+            valor_unitario: item.valor_unitario || 0,
+            valor_total: (item.valor_unitario || 0) * saldo,
+            observacoes: item.observacoes || '',
+            numero_serie: item.numero_serie || '',
+            codigo_patrimonial: item.codigo_patrimonial || '',
+          }
+        })
+        // Itens já totalmente devolvidos não aparecem
+        .filter((it) => it.quantidadeOriginal > 0)
+
       // Use setTimeout to ensure the form state is updated after the step change
       setTimeout(() => {
         replace(itemsWithOriginalQty)
@@ -291,8 +336,9 @@ const NovoRomaneioPage = () => {
 
   const onSubmit = async (data: ComponentFormValues, saveAndApprove: boolean = false) => {
     try {
-      // Para retiradas, validar estoque apenas se for aprovar
-      if (data.tipo === 'retirada' && data.itens.length > 0 && saveAndApprove) {
+      // Para retiradas, validar estoque apenas ao aprovar uma NOVA retirada.
+      // Na edição o estoque já foi baixado na aprovação original — não revalidar (bloquearia o salvamento).
+      if (data.tipo === 'retirada' && data.itens.length > 0 && saveAndApprove && !isEditing) {
         const itensParaValidacao = data.itens.map(item => {
           const material = materiaisEquipamentos.find(m => m.id === item.material_equipamento_id)
           return {
@@ -371,14 +417,27 @@ const NovoRomaneioPage = () => {
 
         const result = await createRomaneio(romaneioData)
         if (result.error === null) {
-          const message = saveAndApprove 
+          const message = saveAndApprove
             ? `Romaneio de ${data.tipo} criado e aprovado com sucesso! O estoque foi atualizado.`
             : `Romaneio de ${data.tipo} salvo como rascunho. Aguardando aprovação para movimentação do estoque.`
-          
+
           toast({
             title: 'Sucesso',
             description: message,
           })
+
+          // Após aprovação, oferecer impressão do comprovante em PDF
+          if (saveAndApprove && result.data?.id) {
+            if (window.confirm('Romaneio aprovado! Deseja imprimir o comprovante em PDF?')) {
+              try {
+                const full = await getRomaneioById(result.data.id)
+                if (full.data) await gerarRomaneioPDF(full.data)
+              } catch (e) {
+                console.error('Erro ao gerar PDF do romaneio:', e)
+              }
+            }
+          }
+
           navigate('/romaneios')
         }
       }
@@ -695,16 +754,20 @@ const NovoRomaneioPage = () => {
                 value={responsavelData}
                 onChange={(value) => {
                   setResponsavelData(value)
-                  // Atualizar os campos do form baseado no tipo
+                  // Atualizar os campos do form baseado no tipo.
+                  // responsavel_retirada é a coluna exibida na listagem/detalhe — sempre preencher.
                   if (value?.type === 'colaborador') {
                     form.setValue('colaborador_id', value.colaborador_id)
                     form.setValue('responsavel_nome', undefined)
+                    form.setValue('responsavel_retirada', value.displayName || '')
                   } else if (value?.type === 'nome') {
                     form.setValue('colaborador_id', undefined)
                     form.setValue('responsavel_nome', value.nome)
+                    form.setValue('responsavel_retirada', value.nome || '')
                   } else {
                     form.setValue('colaborador_id', undefined)
                     form.setValue('responsavel_nome', undefined)
+                    form.setValue('responsavel_retirada', '')
                   }
                 }}
                 disabled={isDevolucao}
@@ -739,7 +802,7 @@ const NovoRomaneioPage = () => {
                   <TableRow>
                     <TableHead className="w-[50%]">Item</TableHead>
                     <TableHead>Unidade</TableHead>
-                    {isDevolucao && <TableHead>Qtd. Original</TableHead>}
+                    {isDevolucao && <TableHead>Saldo a Devolver</TableHead>}
                     <TableHead>Quantidade</TableHead>
                     <TableHead className="text-right">Ação</TableHead>
                   </TableRow>
@@ -770,7 +833,7 @@ const NovoRomaneioPage = () => {
                         />
                       </TableCell>
                       <TableCell>
-                        {getSelectedItem(field.material_equipamento_id)?.unidade_medida || '-'}
+                        {getSelectedItem(form.watch(`itens.${index}.material_equipamento_id`))?.unidade_medida || '-'}
                       </TableCell>
                       {isDevolucao && (
                         <TableCell>
@@ -781,16 +844,34 @@ const NovoRomaneioPage = () => {
                         <FormField
                           control={form.control}
                           name={`itens.${index}.quantidade`}
-                          render={({ field: formField }) => (
-                            <FormItem>
-                              <Input 
-                                type="number" 
-                                {...formField}
-                                onChange={(e) => formField.onChange(parseInt(e.target.value) || 1)}
-                              />
-                              <FormMessage />
-                            </FormItem>
-                          )}
+                          render={({ field: formField }) => {
+                            const materialId = form.watch(`itens.${index}.material_equipamento_id`)
+                            const selectedMat = getSelectedItem(materialId)
+                            const estoqueDisponivel = selectedMat?.estoque_atual ?? 0
+                            const excede =
+                              !isDevolucao &&
+                              !!selectedMat &&
+                              Number(formField.value) > estoqueDisponivel
+                            return (
+                              <FormItem>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  {...formField}
+                                  onChange={(e) => formField.onChange(parseInt(e.target.value) || 1)}
+                                  className={excede ? 'border-destructive focus-visible:ring-destructive' : ''}
+                                />
+                                {selectedMat && (
+                                  <p className={`text-xs mt-1 ${excede ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                                    {excede
+                                      ? `⚠️ Excede estoque! Atual: ${estoqueDisponivel} ${selectedMat.unidade_medida || ''}`
+                                      : `Estoque atual: ${estoqueDisponivel} ${selectedMat.unidade_medida || ''}`}
+                                  </p>
+                                )}
+                                <FormMessage />
+                              </FormItem>
+                            )
+                          }}
                         />
                       </TableCell>
                       <TableCell className="text-right">
