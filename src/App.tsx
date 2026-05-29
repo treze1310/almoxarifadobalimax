@@ -1,4 +1,5 @@
 /* 🔐 App Component - WITH AUTHENTICATION */
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
@@ -9,28 +10,34 @@ import Layout from './components/Layout'
 import NotFound from './pages/NotFound'
 import LoginPage from './pages/Login'
 
-// 📱 Pages (Protected Routes)
-import DashboardPage from './pages/Dashboard'
-import NovoRomaneioPage from './pages/romaneios/NovoRomaneio'
-import RomaneiosPage from './pages/romaneios/Romaneios'
-import ImportacaoNFePage from './pages/nfe/Importacao'
-import HistoricoPage from './pages/nfe/Historico'
-import MateriaisEquipamentosPage from './pages/materiais-equipamentos/MateriaisEquipamentos'
-import SolicitacoesPage from './pages/solicitacoes/Solicitacoes'
-import NovaSolicitacaoPage from './pages/solicitacoes/NovaSolicitacao'
-import SolicitacaoPrintPage from './pages/solicitacoes/SolicitacaoPrint'
-import ColaboradoresPage from './pages/cadastros/Colaboradores'
-import FichaPrintPage from './pages/cadastros/colaboradores/FichaPrintPage'
-import EmpresasPage from './pages/cadastros/Empresas'
-import FornecedoresPage from './pages/cadastros/Fornecedores'
-import CentrosCustoPage from './pages/cadastros/CentrosCusto'
-import MarcasPage from './pages/cadastros/Marcas'
-import CategoriasPage from './pages/cadastros/Categorias'
-import LocalizacaoPage from './pages/localizacao/Localizacao'
-import MapaPage from './pages/localizacao/Mapa'
-import LocalizacaoCadastroPage from './pages/cadastros/Localizacao'
-import RelatoriosPage from './pages/relatorios/Relatorios'
-import ConfiguracoesPage from './pages/configuracoes/Configuracoes'
+// 📱 Pages carregadas sob demanda (code-splitting por rota)
+const DashboardPage = lazy(() => import('./pages/Dashboard'))
+const NovoRomaneioPage = lazy(() => import('./pages/romaneios/NovoRomaneio'))
+const RomaneiosPage = lazy(() => import('./pages/romaneios/Romaneios'))
+const ImportacaoNFePage = lazy(() => import('./pages/nfe/Importacao'))
+const HistoricoPage = lazy(() => import('./pages/nfe/Historico'))
+const MateriaisEquipamentosPage = lazy(() => import('./pages/materiais-equipamentos/MateriaisEquipamentos'))
+const SolicitacoesPage = lazy(() => import('./pages/solicitacoes/Solicitacoes'))
+const NovaSolicitacaoPage = lazy(() => import('./pages/solicitacoes/NovaSolicitacao'))
+const SolicitacaoPrintPage = lazy(() => import('./pages/solicitacoes/SolicitacaoPrint'))
+const ColaboradoresPage = lazy(() => import('./pages/cadastros/Colaboradores'))
+const FichaPrintPage = lazy(() => import('./pages/cadastros/colaboradores/FichaPrintPage'))
+const EmpresasPage = lazy(() => import('./pages/cadastros/Empresas'))
+const FornecedoresPage = lazy(() => import('./pages/cadastros/Fornecedores'))
+const CentrosCustoPage = lazy(() => import('./pages/cadastros/CentrosCusto'))
+const MarcasPage = lazy(() => import('./pages/cadastros/Marcas'))
+const CategoriasPage = lazy(() => import('./pages/cadastros/Categorias'))
+const LocalizacaoPage = lazy(() => import('./pages/localizacao/Localizacao'))
+const MapaPage = lazy(() => import('./pages/localizacao/Mapa'))
+const LocalizacaoCadastroPage = lazy(() => import('./pages/cadastros/Localizacao'))
+const RelatoriosPage = lazy(() => import('./pages/relatorios/Relatorios'))
+const ConfiguracoesPage = lazy(() => import('./pages/configuracoes/Configuracoes'))
+
+const PageFallback = () => (
+  <div className="flex items-center justify-center h-[60vh]">
+    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+  </div>
+)
 
 const App = () => (
   <BrowserRouter basename="/sistema">
@@ -38,6 +45,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <Suspense fallback={<PageFallback />}>
         <Routes>
           {/* 🔓 Public Routes */}
           <Route path="/login" element={<LoginPage />} />
@@ -99,6 +107,7 @@ const App = () => (
           {/* ❌ Página não encontrada */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
       </TooltipProvider>
     </AuthProvider>
   </BrowserRouter>
