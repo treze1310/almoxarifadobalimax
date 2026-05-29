@@ -17,7 +17,7 @@
 2. **Environment Variables**
    Configure the following environment variables in Vercel:
    ```
-   VITE_SUPABASE_URL=https://emcyvosymdelzxrokdvf.supabase.co
+   VITE_SUPABASE_URL=https://dqxrpsjalsmoyconcurz.supabase.co
    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
    ```
 
