@@ -62,6 +62,7 @@ export const fornecedorSchema = z.object({
   telefone: z.string().max(20, 'Telefone muito longo').optional(),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   contato: z.string().max(255, 'Contato muito longo').optional(),
+  tipo_fornecimento: z.string().max(255, 'Tipo de fornecimento muito longo').optional().or(z.literal('')).transform(val => val || undefined),
   ativo: z.boolean().default(true),
 })
 

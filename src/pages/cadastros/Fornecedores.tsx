@@ -41,6 +41,16 @@ import type { Tables } from '@/types/database'
 
 type Fornecedor = Tables<'fornecedores'>
 
+const normalizeSearchText = (value?: string | null) =>
+  (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const onlyDigits = (value?: string | null) => (value || '').replace(/\D/g, '')
+
 const FornecedoresPage = () => {
   const { data: fornecedores, loading, create, update, remove } = useSupabaseTable('fornecedores')
   
@@ -49,13 +59,27 @@ const FornecedoresPage = () => {
   const [editingFornecedor, setEditingFornecedor] = useState<Fornecedor | null>(null)
   const [deletingFornecedor, setDeletingFornecedor] = useState<Fornecedor | null>(null)
 
-  const filteredFornecedores = fornecedores.filter(fornecedor =>
-    fornecedor.nome.toLowerCase().includes(search.toLowerCase()) ||
-    (fornecedor.cnpj && fornecedor.cnpj.includes(search.replace(/\D/g, ''))) ||
-    (fornecedor.cpf && fornecedor.cpf.includes(search.replace(/\D/g, ''))) ||
-    (fornecedor.email && fornecedor.email.toLowerCase().includes(search.toLowerCase())) ||
-    (fornecedor.contato && fornecedor.contato.toLowerCase().includes(search.toLowerCase()))
-  )
+  const filteredFornecedores = fornecedores.filter(fornecedor => {
+    const searchText = normalizeSearchText(search)
+    const searchDigits = onlyDigits(search)
+
+    if (!searchText) return true
+
+    const nome = normalizeSearchText(fornecedor.nome)
+    const email = normalizeSearchText(fornecedor.email)
+    const contato = normalizeSearchText(fornecedor.contato)
+    const tipoFornecimento = normalizeSearchText(fornecedor.tipo_fornecimento)
+    const cnpj = onlyDigits(fornecedor.cnpj)
+    const cpf = onlyDigits(fornecedor.cpf)
+
+    return (
+      nome.includes(searchText) ||
+      email.includes(searchText) ||
+      contato.includes(searchText) ||
+      tipoFornecimento.includes(searchText) ||
+      (searchDigits.length > 0 && (cnpj.includes(searchDigits) || cpf.includes(searchDigits)))
+    )
+  })
 
   const handleCreate = async (data: any) => {
     const result = await create(data)
@@ -130,7 +154,7 @@ const FornecedoresPage = () => {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome, CNPJ/CPF ou email..."
+            placeholder="Buscar por nome, tipo de fornecimento, CNPJ/CPF ou email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-8"
@@ -147,6 +171,7 @@ const FornecedoresPage = () => {
             <TableRow>
               <TableHead>Fornecedor</TableHead>
               <TableHead>Documento</TableHead>
+              <TableHead>Tipo de Fornecimento</TableHead>
               <TableHead>Contato</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Status</TableHead>
@@ -183,6 +208,11 @@ const FornecedoresPage = () => {
                         <div className="font-medium">CPF</div>
                         <div className="text-sm">{formatCPF(fornecedor.cpf)}</div>
                       </div>
+                    ) : '-'}
+                  </TableCell>
+                  <TableCell>
+                    {fornecedor.tipo_fornecimento ? (
+                      <Badge variant="outline">{fornecedor.tipo_fornecimento}</Badge>
                     ) : '-'}
                   </TableCell>
                   <TableCell>
@@ -224,7 +254,7 @@ const FornecedoresPage = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="text-center">
+                <TableCell colSpan={7} className="text-center">
                   {search ? 'Nenhum fornecedor encontrado com os critérios de busca.' : 'Nenhum fornecedor cadastrado.'}
                 </TableCell>
               </TableRow>

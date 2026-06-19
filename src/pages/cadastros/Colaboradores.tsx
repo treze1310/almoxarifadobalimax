@@ -31,6 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import { useCenteredDialog } from '@/hooks/useCenteredDialog'
 import { supabase } from '@/lib/supabase'
+import { fetchRomaneiosRetiradaDoColaborador } from '@/services/colaboradorEpiRomaneiosService'
 import { formatDate, formatDateTime } from '@/lib/utils'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -55,6 +56,16 @@ interface EPIVinculadoRomaneio {
   numero_ca?: string | null
   status: 'retirado' | 'devolvido' | 'parcialmente_devolvido'
 }
+
+const normalizeSearchText = (value?: string | null) =>
+  (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const onlyDigits = (value?: string | null) => (value || '').replace(/\D/g, '')
 
 const ColaboradoresPage = () => {
   const { toast } = useToast()
@@ -153,14 +164,22 @@ const ColaboradoresPage = () => {
     })
   }, [])
 
-  const filteredColaboradores = (colaboradores as Colaborador[]).filter(colaborador =>
-    colaborador.nome.toLowerCase().includes(search.toLowerCase()) ||
-    (colaborador.cpf && colaborador.cpf.includes(search.replace(/\D/g, ''))) ||
-    (colaborador.matricula && colaborador.matricula.toLowerCase().includes(search.toLowerCase())) ||
-    (colaborador.cargo && colaborador.cargo.toLowerCase().includes(search.toLowerCase())) ||
-    (colaborador.setor && colaborador.setor.toLowerCase().includes(search.toLowerCase())) ||
-    (colaborador.email && colaborador.email.toLowerCase().includes(search.toLowerCase()))
-  )
+  const filteredColaboradores = (colaboradores as Colaborador[]).filter(colaborador => {
+    const searchText = normalizeSearchText(search)
+    const searchDigits = onlyDigits(search)
+
+    if (!searchText) return true
+
+    const nome = normalizeSearchText(colaborador.nome)
+    const matricula = normalizeSearchText(colaborador.matricula)
+    const cpf = onlyDigits(colaborador.cpf)
+
+    return (
+      nome.includes(searchText) ||
+      matricula.includes(searchText) ||
+      (searchDigits.length > 0 && cpf.includes(searchDigits))
+    )
+  })
 
   const handleCreate = async (data: any) => {
     const result = await create(data)
@@ -212,12 +231,13 @@ const ColaboradoresPage = () => {
   const loadEPIsRomaneio = async (colaboradorId: string) => {
     setLoadingEpis(true)
     try {
-      const { data, error } = await supabase
-        .from('romaneios')
-        .select(`
+      const { data, error } = await fetchRomaneiosRetiradaDoColaborador<any>(colaboradorId, `
           id,
           numero,
           data_romaneio,
+          colaborador_id,
+          responsavel_nome,
+          responsavel_retirada,
           romaneios_itens!inner(
             id,
             quantidade,
@@ -229,9 +249,6 @@ const ColaboradoresPage = () => {
             )
           )
         `)
-        .eq('colaborador_id', colaboradorId)
-        .eq('tipo', 'retirada')
-        .order('data_romaneio', { ascending: false })
 
       if (error) throw error
 

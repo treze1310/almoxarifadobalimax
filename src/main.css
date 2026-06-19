@@ -18,16 +18,11 @@ html {
   /* Reduce paint operations */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Enable GPU acceleration */
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
 }
 
 body {
   /* Prevent scroll-linked position changes */
   overflow-x: hidden;
-  /* Reduce layout thrashing */
-  contain: layout style;
 }
 
 @layer base {
@@ -345,13 +340,24 @@ body {
 
   /* Optimize Radix UI component animations */
   [data-radix-popover-content],
-  [data-radix-dialog-content],
   [data-radix-dropdown-menu-content] {
     /* Use GPU acceleration for overlays */
     will-change: transform, opacity;
     backface-visibility: hidden;
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
+  }
+
+  .relatorios-report-dialog {
+    position: fixed !important;
+    top: var(--relatorios-dialog-top, 50dvh) !important;
+    left: var(--relatorios-dialog-left, 50dvw) !important;
+    transform: translate3d(-50%, -50%, 0) !important;
+    width: min(calc(100vw - 2rem), 32rem);
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
   }
 
   /* Optimize table scrolling */

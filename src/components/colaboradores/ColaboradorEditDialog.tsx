@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { X, User, Shield, Calendar, Package } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
+import { fetchRomaneiosRetiradaDoColaborador } from '@/services/colaboradorEpiRomaneiosService'
 import { Tables } from '@/types/database'
 import { ColaboradorForm } from './ColaboradorForm'
 import { Badge } from '@/components/ui/badge'
@@ -95,13 +96,14 @@ export function ColaboradorEditDialog({
     setLoadingEpis(true)
     try {
       console.log('📋 Fetching EPIs from romaneios for colaborador...')
-      const { data, error } = await supabase
-        .from('romaneios')
-        .select(`
+      const { data, error } = await fetchRomaneiosRetiradaDoColaborador<any>(colaboradorId, `
           id,
           numero,
           data_romaneio,
           tipo,
+          colaborador_id,
+          responsavel_nome,
+          responsavel_retirada,
           romaneios_itens (
             id,
             quantidade,
@@ -111,13 +113,11 @@ export function ColaboradorEditDialog({
               codigo,
               nome,
               numero_ca,
-              tipo
+              tipo,
+              is_epi
             )
           )
         `)
-        .eq('colaborador_id', colaboradorId)
-        .eq('tipo', 'retirada')
-        .order('data_romaneio', { ascending: false })
 
       if (error) throw error
 

@@ -34,7 +34,7 @@ class ReportService {
 
   // Método de teste para diagnosticar problemas
   async generateTestReport(): Promise<ReportData> {
-    console.log('🧪 Gerando relatório de teste para diagnóstico')
+    console.log(' Gerando relatório de teste para diagnóstico')
     
     const dadosTeste = Array.from({ length: 5 }, (_, i) => ({
       codigo: `TST${String(i + 1).padStart(3, '0')}`,
@@ -104,7 +104,11 @@ class ReportService {
   }
 
   private formatPercentage(value: number): string {
-    return (value * 100).toFixed(2) + '%'
+    const numericValue = Number(value)
+    if (!Number.isFinite(numericValue)) return '0,00%'
+
+    const percentage = Math.abs(numericValue) <= 1 ? numericValue * 100 : numericValue
+    return `${percentage.toFixed(2).replace('.', ',')}%`
   }
 
   private formatDate(date: string): string {
@@ -116,11 +120,79 @@ class ReportService {
            new Date(date).toLocaleTimeString('pt-BR')
   }
 
+  private fixMojibake(value: any): string {
+    if (value === null || value === undefined) return ''
+
+    return String(value)
+      .replace(/\u00c3[\u0080]/g, '\u00c0')
+      .replace(/\u00c3[\u0081]/g, '\u00c1')
+      .replace(/\u00c3[\u0082]/g, '\u00c2')
+      .replace(/\u00c3[\u0083\u0192]/g, '\u00c3')
+      .replace(/\u00c3[\u0087\u2021]/g, '\u00c7')
+      .replace(/\u00c3[\u0089]/g, '\u00c9')
+      .replace(/\u00c3[\u008a\u0160]/g, '\u00ca')
+      .replace(/\u00c3[\u008d]/g, '\u00cd')
+      .replace(/\u00c3[\u0093\u201c]/g, '\u00d3')
+      .replace(/\u00c3[\u0094\u201d]/g, '\u00d4')
+      .replace(/\u00c3[\u0095\u2022]/g, '\u00d5')
+      .replace(/\u00c3[\u009a\u0161]/g, '\u00da')
+      .replace(/\u00c3\u00a0/g, '\u00e0')
+      .replace(/\u00c3\u00a1/g, '\u00e1')
+      .replace(/\u00c3\u00a2/g, '\u00e2')
+      .replace(/\u00c3\u00a3/g, '\u00e3')
+      .replace(/\u00c3\u00a7/g, '\u00e7')
+      .replace(/\u00c3\u00a9/g, '\u00e9')
+      .replace(/\u00c3\u00aa/g, '\u00ea')
+      .replace(/\u00c3\u00ad/g, '\u00ed')
+      .replace(/\u00c3\u00b3/g, '\u00f3')
+      .replace(/\u00c3\u00b4/g, '\u00f4')
+      .replace(/\u00c3\u00b5/g, '\u00f5')
+      .replace(/\u00c3\u00ba/g, '\u00fa')
+      .replace(/\u00c2\u00ba/g, '\u00ba')
+      .replace(/\u00e2\u2030\u00a4/g, '\u2264')
+  }
+
+  private getReportPeriod(filtros: { dataInicio?: string; dataFim?: string }, fallback = 'Analise geral'): string {
+    if (filtros.dataInicio && filtros.dataFim) {
+      return `${this.formatDate(filtros.dataInicio)} ate ${this.formatDate(filtros.dataFim)}`
+    }
+
+    if (filtros.dataInicio) {
+      return `A partir de ${this.formatDate(filtros.dataInicio)}`
+    }
+
+    if (filtros.dataFim) {
+      return `Ate ${this.formatDate(filtros.dataFim)}`
+    }
+
+    return fallback
+  }
+
+  private isDateInRange(dateValue?: string | null, dataInicio?: string, dataFim?: string): boolean {
+    if (!dateValue) return false
+
+    const date = new Date(dateValue)
+    if (Number.isNaN(date.getTime())) return false
+
+    if (dataInicio && date < new Date(dataInicio)) return false
+    if (dataFim && date > new Date(dataFim)) return false
+
+    return true
+  }
+
   private calcularAnaliseABC(dados: any[]): ABCDistribution {
     // Ordenar por valor decrescente
-    const dadosOrdenados = dados.sort((a, b) => (b.valor_total || 0) - (a.valor_total || 0))
+    const dadosOrdenados = [...dados].sort((a, b) => (b.valor_total || 0) - (a.valor_total || 0))
     const totalValor = dadosOrdenados.reduce((sum, item) => sum + (item.valor_total || 0), 0)
     const totalItens = dadosOrdenados.length
+
+    if (totalItens === 0 || totalValor <= 0) {
+      return {
+        A: { count: 0, value: 0, percentage: 0 },
+        B: { count: 0, value: 0, percentage: 0 },
+        C: { count: totalItens, value: 0, percentage: totalItens > 0 ? 100 : 0 }
+      }
+    }
 
     let valorAcumulado = 0
     let contadorA = 0, contadorB = 0, contadorC = 0
@@ -157,6 +229,17 @@ class ReportService {
     // Em produção, esses cálculos seriam mais complexos e baseados em dados históricos
     
     const totalItens = dados.length
+    if (totalItens === 0) {
+      return {
+        taxaAtendimento: 0,
+        acuracidadeInventario: 0,
+        giroEstoque: 0,
+        taxaRuptura: 0,
+        taxaObsolescencia: 0,
+        coberturaEstoque: 0
+      }
+    }
+
     const itensComEstoque = dados.filter(item => (item.estoque_atual || 0) > 0).length
     const itensComMovimento = dados.filter(item => (item.quantidade || 0) > 0).length
     
@@ -177,7 +260,7 @@ class ReportService {
       filtros = {}
     }
 
-    console.log('🔍 Executando query de Inventário Geral com filtros:', filtros)
+    console.log(' Executando query de Inventário Geral com filtros:', filtros)
 
     let query = supabase
       .from('materiais_equipamentos')
@@ -196,7 +279,9 @@ class ReportService {
       query = query.eq('localizacao_id', filtros.localizacao)
     }
 
-    if (!filtros.incluirInativos) {
+    if (filtros.status && filtros.status !== 'todos') {
+      query = query.eq('ativo', filtros.status === 'ativo')
+    } else if (!filtros.incluirInativos) {
       query = query.eq('ativo', true)
     }
 
@@ -215,17 +300,17 @@ class ReportService {
     const { data, error } = await query
 
     if (error) {
-      console.error('❌ Erro na query do inventário geral:', error)
+      console.error(' Erro na query do inventário geral:', error)
       throw error
     }
     
-    console.log('📊 Query executada - Inventário Geral:', {
+    console.log(' Query executada - Inventário Geral:', {
       registrosEncontrados: data?.length || 0,
       filtrosAplicados: filtros
     })
 
     if (!data || data.length === 0) {
-      console.warn('⚠️ Nenhum registro encontrado para inventário geral')
+      console.warn(' Nenhum registro encontrado para inventário geral')
       throw new Error('Nenhum material foi encontrado com os filtros aplicados. Verifique se existem materiais cadastrados e ativos no sistema.')
     }
 
@@ -243,6 +328,20 @@ class ReportService {
       valor_total: (item.valor_unitario || 0) * (item.estoque_atual || 0)
     }))
 
+    const inventarioRows = dadosComValorTotal.map(item => ({
+      codigo: item.codigo,
+      nome: item.nome,
+      categoria: item.categoria || '-',
+      unidade_medida: item.unidade_medida || 'UN',
+      estoque_atual: item.estoque_atual || 0,
+      valor_unitario: item.valor_unitario || 0,
+      valor_total: item.valor_total,
+      localizacao: item.localizacao?.nome || '-',
+      status: (item.estoque_atual || 0) <= (item.estoque_minimo || 0) ? 'CRITICO' :
+              item.ativo ? 'ATIVO' : 'INATIVO',
+      classificacaoABC: item.classificacaoABC || '-'
+    }))
+
     // Análise ABC se solicitada
     let abcAnalysis: ABCDistribution | undefined
     if (filtros.incluirAnaliseABC) {
@@ -256,11 +355,11 @@ class ReportService {
     let grupos
     const agruparPor = filtros.agruparPor || 'categoria'
     if (agruparPor === 'categoria') {
-      const categorias = [...new Set(data.map(item => item.categoria))]
+      const categorias = [...new Set(inventarioRows.map(item => item.categoria))]
       grupos = categorias.map(categoria => ({
         categoria: categoria || 'Sem Categoria',
-        itens: dadosComValorTotal.filter(item => item.categoria === categoria),
-        subtotal: dadosComValorTotal
+        itens: inventarioRows.filter(item => item.categoria === categoria),
+        subtotal: inventarioRows
           .filter(item => item.categoria === categoria)
           .reduce((sum, item) => sum + item.valor_total, 0)
       }))
@@ -285,19 +384,7 @@ class ReportService {
         { key: 'localizacao', label: 'Localização', type: 'text' },
         { key: 'status', label: 'Status', type: 'status', align: 'center' }
       ],
-      rows: dadosComValorTotal.map(item => ({
-        codigo: item.codigo,
-        nome: item.nome,
-        categoria: item.categoria || '-',
-        unidade_medida: item.unidade_medida || 'UN',
-        estoque_atual: item.estoque_atual || 0,
-        valor_unitario: item.valor_unitario || 0,
-        valor_total: item.valor_total,
-        localizacao: item.localizacao?.nome || '-',
-        status: (item.estoque_atual || 0) <= (item.estoque_minimo || 0) ? 'CRÍTICO' : 
-                item.ativo ? 'ATIVO' : 'INATIVO',
-        classificacaoABC: item.classificacaoABC || '-'
-      })),
+      rows: inventarioRows,
       grupos,
       kpis,
       abcAnalysis,
@@ -320,7 +407,7 @@ class ReportService {
       filtros = {}
     }
 
-    // Validar período obrigatório
+    // Validar período obrigatério
     const validacaoPeriodo = this.validarPeriodo(filtros.dataInicio, filtros.dataFim)
     if (validacaoPeriodo) {
       throw new Error(validacaoPeriodo)
@@ -786,23 +873,42 @@ class ReportService {
           return this.formatDateTime(value)
         case 'number':
           return Number(value).toLocaleString('pt-BR')
-        case 'status':
-          return `<span class="status status-${value.toString().toLowerCase()}">${value}</span>`
+        case 'status': {
+          const label = this.fixMojibake(value)
+          const statusClass = label
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9-]/g, '-')
+          return `<span class="status status-${statusClass}">${label}</span>`
+        }
         default:
-          return String(value)
+          return this.fixMojibake(value)
       }
     }
 
     const filtrosTexto = Object.entries(data.filtrosAplicados)
       .filter(([key, value]) => value && value !== 'todos' && value !== 'todas')
-      .map(([key, value]) => `${key}: ${value}`)
+      .map(([key, value]) => `${this.fixMojibake(key)}: ${this.fixMojibake(value)}`)
       .join(' | ')
+
+    const getGroupClass = (categoria: any) => {
+      const normalized = this.fixMojibake(categoria)
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+
+      if (normalized.includes('critica')) return 'critica'
+      if (normalized.includes('alerta')) return 'alerta'
+      if (normalized.includes('atencao')) return 'atencao'
+      return 'normal'
+    }
 
     // Garantir que temos dados mínimos
     const totalRegistros = data.summary?.totalRegistros || data.rows?.length || 0
     const numeroRelatorio = data.summary?.numeroRelatorio || `REL-${Date.now()}`
 
-    console.log('🎨 Gerando HTML com dados:', {
+    console.log(' Gerando HTML com dados:', {
       titulo: data.titulo,
       totalRegistros,
       colunas: data.columns?.length || 0,
@@ -810,13 +916,13 @@ class ReportService {
       grupos: data.grupos?.length || 0
     })
 
-    return `
+    const html = `
       <!DOCTYPE html>
       <html lang="pt-BR">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${data.titulo || 'Relatório'}</title>
+        <title>${this.fixMojibake(data.titulo || 'Relatório')}</title>
         <style>
           * { 
             margin: 0; 
@@ -963,9 +1069,9 @@ class ReportService {
             font-weight: bold;
           }
           
-          .status-crítico { background: ${CORES_PADRAO.alerta.critico}; color: white; }
+          .status-critico { background: ${CORES_PADRAO.alerta.critico}; color: white; }
           .status-alerta { background: ${CORES_PADRAO.alerta.alerta}; color: white; }
-          .status-atenção { background: ${CORES_PADRAO.alerta.atencao}; color: black; }
+          .status-atencao { background: ${CORES_PADRAO.alerta.atencao}; color: black; }
           .status-normal { background: ${CORES_PADRAO.alerta.normal}; color: white; }
           .status-ativo { background: ${CORES_PADRAO.alerta.normal}; color: white; }
           .status-inativo { background: #6b7280; color: white; }
@@ -1041,10 +1147,10 @@ class ReportService {
       </head>
       <body>
         <div class="header">
-          <h1>${data.titulo}</h1>
+          <h1>${this.fixMojibake(data.titulo)}</h1>
           <div class="header-info">
             <span>Relatório: ${data.summary.numeroRelatorio}</span>
-            <span>${data.periodo}</span>
+            <span>${this.fixMojibake(data.periodo)}</span>
             <span>Gerado em: ${this.formatDateTime(data.summary.geradoEm)}</span>
           </div>
         </div>
@@ -1085,18 +1191,16 @@ class ReportService {
 
         ${data.grupos ? 
           data.grupos.map(grupo => `
-            <div class="grupo ${grupo.categoria.toLowerCase().includes('crítica') ? 'critica' : 
-                                   grupo.categoria.toLowerCase().includes('alerta') ? 'alerta' :
-                                   grupo.categoria.toLowerCase().includes('atenção') ? 'atencao' : 'normal'}">
+            <div class="grupo ${getGroupClass(grupo.categoria)}">
               <div class="grupo-titulo">
-                ${grupo.categoria} (${grupo.itens.length} itens${grupo.subtotal ? ` - ${this.formatCurrency(grupo.subtotal)}` : ''})
+                ${this.fixMojibake(grupo.categoria)} (${grupo.itens.length} itens${grupo.subtotal ? ` - ${this.formatCurrency(grupo.subtotal)}` : ''})
               </div>
               ${grupo.itens.length > 0 ? `
                 <table>
                   <thead>
                     <tr>
                       ${data.columns.map(col => `
-                        <th class="${col.align ? 'text-' + col.align : ''}">${col.label}</th>
+                        <th class="${col.align ? 'text-' + col.align : ''}">${this.fixMojibake(col.label)}</th>
                       `).join('')}
                     </tr>
                   </thead>
@@ -1123,7 +1227,7 @@ class ReportService {
             <thead>
               <tr>
                 ${data.columns.map(col => `
-                  <th class="${col.align ? 'text-' + col.align : ''}">${col.label}</th>
+                  <th class="${col.align ? 'text-' + col.align : ''}">${this.fixMojibake(col.label)}</th>
                 `).join('')}
               </tr>
             </thead>
@@ -1222,6 +1326,8 @@ class ReportService {
       </body>
       </html>
     `
+
+    return this.fixMojibake(html)
   }
 
   // 5. RELATÓRIO DE FORNECEDORES
@@ -1765,7 +1871,7 @@ class ReportService {
       const divergenciaPercentual = estoqueNominale > 0 ? (divergencia / estoqueNominale) * 100 : 0
       const acuracidade = Math.abs(divergenciaPercentual) <= 2 ? 100 : 100 - Math.abs(divergenciaPercentual)
       
-      // Simular data da última contagem
+      // Simular data da Última contagem
       const diasDesdeContagem = Math.floor(Math.random() * 90)
       const dataUltimaContagem = new Date(hoje.getTime() - (diasDesdeContagem * 24 * 60 * 60 * 1000))
       
@@ -1925,11 +2031,746 @@ class ReportService {
     }
   }
 
+  private sanitizeFileName(value: string): string {
+    return value.replace(/[\\/:*?"<>|]+/g, '-')
+  }
+
+  private downloadTextFile(filename: string, content: string, mimeType: string): void {
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = this.sanitizeFileName(filename)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  private formatExportValue(value: any, column: any): string {
+    if (value === null || value === undefined) return ''
+
+    switch (column.type) {
+      case 'currency':
+        return this.formatCurrency(Number(value))
+      case 'percentage':
+        return this.formatPercentage(Number(value))
+      case 'date':
+        return this.formatDate(value)
+      case 'datetime':
+        return this.formatDateTime(value)
+      default:
+        return this.fixMojibake(value)
+    }
+  }
+
+  private generateCSVReport(data: ReportData): string {
+    const escape = (value: string) => `"${value.replace(/"/g, '""')}"`
+    const header = data.columns.map(column => escape(this.fixMojibake(column.label))).join(';')
+    const rows = data.rows.map(row =>
+      data.columns.map(column => escape(this.formatExportValue(row[column.key], column))).join(';')
+    )
+
+    return ['\ufeff' + this.fixMojibake(data.titulo), this.fixMojibake(data.periodo), '', header, ...rows].join('\r\n')
+  }
+
+  private generateExcelReport(data: ReportData): string {
+    const escape = (value: string) =>
+      value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+    const headers = data.columns.map(column => `<th>${escape(this.fixMojibake(column.label))}</th>`).join('')
+    const rows = data.rows.map(row => {
+      const cells = data.columns
+        .map(column => `<td>${escape(this.formatExportValue(row[column.key], column))}</td>`)
+        .join('')
+      return `<tr>${cells}</tr>`
+    }).join('')
+
+    return `<!doctype html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          table { border-collapse: collapse; font-family: Arial, sans-serif; font-size: 12px; }
+          th { background: #1f2937; color: #fff; font-weight: 700; }
+          th, td { border: 1px solid #d1d5db; padding: 6px 8px; }
+        </style>
+      </head>
+      <body>
+        <h1>${escape(this.fixMojibake(data.titulo))}</h1>
+        <p>${escape(this.fixMojibake(data.periodo))}</p>
+        <table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>
+      </body>
+      </html>`
+  }
+
+  private async generateMovimentacaoCorrigida(filtros: MovimentacaoFilter): Promise<ReportData> {
+    if (!filtros) filtros = {}
+
+    const validacaoPeriodo = this.validarPeriodo(filtros.dataInicio, filtros.dataFim)
+    if (validacaoPeriodo) throw new Error(validacaoPeriodo)
+
+    let query = supabase
+      .from('movimentacao_estoque')
+      .select(`
+        *,
+        materiais_equipamentos!material_equipamento_id (codigo, nome, unidade_medida, categoria)
+      `)
+      .gte('data_movimentacao', filtros.dataInicio!)
+      .lte('data_movimentacao', filtros.dataFim!)
+      .order('data_movimentacao', { ascending: false })
+
+    if (filtros.tipoMovimentacao && filtros.tipoMovimentacao !== 'todos') {
+      query = query.eq('tipo_movimentacao', filtros.tipoMovimentacao)
+    }
+
+    if (filtros.responsavel && filtros.responsavel !== 'todos') {
+      query = query.eq('usuario_id', filtros.responsavel)
+    }
+
+    const { data, error } = (await query) as any
+    if (error) throw error
+
+    let movimentacoes = data || []
+    if (filtros.categoria && filtros.categoria !== 'todas') {
+      movimentacoes = movimentacoes.filter((mov: any) => mov.materiais_equipamentos?.categoria === filtros.categoria)
+    }
+
+    if (movimentacoes.length === 0) throw new Error(VALIDACAO_REGRAS.mensagens.nenhumRegistro)
+
+    const usuariosPorId = new Map<string, string>()
+    const usuarioIds = [...new Set(movimentacoes.map((mov: any) => mov.usuario_id).filter(Boolean))]
+    if (usuarioIds.length > 0) {
+      const { data: usuarios } = await supabase
+        .from('usuarios')
+        .select('id, nome')
+        .in('id', usuarioIds as string[])
+
+      usuarios?.forEach(usuario => usuariosPorId.set(usuario.id, usuario.nome))
+    }
+
+    const totalEntradas = movimentacoes
+      .filter((mov: any) => mov.tipo_movimentacao === 'entrada')
+      .reduce((sum: number, mov: any) => sum + mov.quantidade, 0)
+    const totalSaidas = movimentacoes
+      .filter((mov: any) => mov.tipo_movimentacao === 'saida')
+      .reduce((sum: number, mov: any) => sum + mov.quantidade, 0)
+    const totalAjustes = movimentacoes
+      .filter((mov: any) => mov.tipo_movimentacao === 'ajuste')
+      .reduce((sum: number, mov: any) => sum + Math.abs(mov.quantidade), 0)
+    const volumeMovimentado = movimentacoes
+      .reduce((sum: number, mov: any) => sum + ((mov.valor_unitario || 0) * Math.abs(mov.quantidade)), 0)
+    const totalMovimentado = totalEntradas + totalSaidas + totalAjustes
+    const taxaAjustes = totalMovimentado > 0 ? (totalAjustes / totalMovimentado) * 100 : 0
+
+    let columns
+    let rows
+
+    if ((filtros.formato || 'analitico') === 'analitico') {
+      columns = [
+        { key: 'data_movimentacao', label: 'Data/Hora', type: 'datetime' },
+        { key: 'tipo_movimentacao', label: 'Mov', type: 'text', align: 'center' },
+        { key: 'codigo', label: 'Codigo', type: 'text' },
+        { key: 'nome', label: 'Descricao', type: 'text' },
+        { key: 'quantidade', label: 'Qtd', type: 'number', align: 'right' },
+        { key: 'unidade', label: 'UN', type: 'text', align: 'center' },
+        { key: 'valor_unitario', label: 'Valor', type: 'currency', align: 'right' },
+        { key: 'saldo', label: 'Saldo', type: 'number', align: 'right' },
+        { key: 'responsavel', label: 'Responsavel', type: 'text' },
+        { key: 'observacoes', label: 'Observacao', type: 'text' }
+      ]
+      rows = movimentacoes.map((mov: any) => ({
+        data_movimentacao: mov.data_movimentacao,
+        tipo_movimentacao: mov.tipo_movimentacao?.toUpperCase() || '-',
+        codigo: mov.materiais_equipamentos?.codigo || '-',
+        nome: mov.materiais_equipamentos?.nome || '-',
+        quantidade: mov.quantidade,
+        unidade: mov.materiais_equipamentos?.unidade_medida || 'UN',
+        valor_unitario: mov.valor_unitario || 0,
+        saldo: mov.quantidade_atual || 0,
+        responsavel: usuariosPorId.get(mov.usuario_id) || '-',
+        observacoes: mov.observacoes || '-'
+      }))
+    } else {
+      const materiais = [...new Set(movimentacoes.map((mov: any) => mov.material_equipamento_id))]
+      columns = [
+        { key: 'codigo', label: 'Material', type: 'text' },
+        { key: 'nome', label: 'Descricao', type: 'text' },
+        { key: 'saldo_inicial', label: 'Saldo Inicial', type: 'number', align: 'right' },
+        { key: 'entradas', label: 'Entradas', type: 'number', align: 'right' },
+        { key: 'saidas', label: 'Saidas', type: 'number', align: 'right' },
+        { key: 'ajustes', label: 'Ajustes', type: 'number', align: 'right' },
+        { key: 'saldo_final', label: 'Saldo Final', type: 'number', align: 'right' },
+        { key: 'variacao', label: 'Variacao %', type: 'percentage', align: 'right' }
+      ]
+      rows = materiais.map(materialId => {
+        const movimentacoesMaterial = movimentacoes.filter((mov: any) => mov.material_equipamento_id === materialId)
+        const material = movimentacoesMaterial[0]?.materiais_equipamentos
+        const entradas = movimentacoesMaterial.filter((mov: any) => mov.tipo_movimentacao === 'entrada').reduce((sum: number, mov: any) => sum + mov.quantidade, 0)
+        const saidas = movimentacoesMaterial.filter((mov: any) => mov.tipo_movimentacao === 'saida').reduce((sum: number, mov: any) => sum + mov.quantidade, 0)
+        const ajustes = movimentacoesMaterial.filter((mov: any) => mov.tipo_movimentacao === 'ajuste').reduce((sum: number, mov: any) => sum + mov.quantidade, 0)
+        const saldoInicial = movimentacoesMaterial[movimentacoesMaterial.length - 1]?.quantidade_anterior || 0
+        const saldoFinal = movimentacoesMaterial[0]?.quantidade_atual || 0
+
+        return {
+          codigo: material?.codigo || '-',
+          nome: material?.nome || '-',
+          saldo_inicial: saldoInicial,
+          entradas,
+          saidas,
+          ajustes,
+          saldo_final: saldoFinal,
+          variacao: saldoInicial !== 0 ? ((saldoFinal - saldoInicial) / saldoInicial) * 100 : 0
+        }
+      })
+    }
+
+    const numeroRelatorio = this.gerarNumeroRelatorio('movimentacao')
+    return {
+      reportId: 'movimentacao',
+      titulo: 'RELATORIO DE MOVIMENTACAO',
+      periodo: this.getReportPeriod(filtros),
+      filtrosAplicados: filtros,
+      columns: columns as any,
+      rows,
+      totals: { totalEntradas, totalSaidas, totalAjustes, volumeMovimentado, taxaAjustes },
+      kpis: this.calcularKPIs(movimentacoes, 'movimentacao'),
+      summary: {
+        totalRegistros: movimentacoes.length,
+        valorTotal: volumeMovimentado,
+        geradoPor: 'Sistema',
+        geradoEm: new Date().toISOString(),
+        numeroRelatorio
+      }
+    }
+  }
+
+  private async generateConsumoCentroCustoCorrigido(filtros: ConsumoCentroCustoFilter): Promise<ReportData> {
+    if (!filtros) filtros = {}
+
+    const validacaoPeriodo = this.validarPeriodo(filtros.dataInicio, filtros.dataFim)
+    if (validacaoPeriodo) throw new Error(validacaoPeriodo)
+
+    const { data, error } = (await supabase
+      .from('movimentacao_estoque')
+      .select(`
+        *,
+        materiais_equipamentos!material_equipamento_id (codigo, nome, categoria),
+        romaneios!romaneio_id (
+          centro_custo_destino_id,
+          centro_custo_destino:centro_custo_destino_id (codigo, descricao)
+        )
+      `)
+      .eq('tipo_movimentacao', 'saida')
+      .gte('data_movimentacao', filtros.dataInicio!)
+      .lte('data_movimentacao', filtros.dataFim!)) as any
+
+    if (error) throw error
+
+    let movimentos = data || []
+    if (filtros.categoria && filtros.categoria !== 'todas') {
+      movimentos = movimentos.filter((mov: any) => mov.materiais_equipamentos?.categoria === filtros.categoria)
+    }
+    if (filtros.centroCusto && filtros.centroCusto !== 'todos') {
+      movimentos = movimentos.filter((mov: any) => mov.romaneios?.centro_custo_destino_id === filtros.centroCusto)
+    }
+    if (movimentos.length === 0) throw new Error(VALIDACAO_REGRAS.mensagens.nenhumRegistro)
+
+    const consumoPorCentro = movimentos.reduce((acc: any, mov: any) => {
+      const centro = mov.romaneios?.centro_custo_destino
+      const centroCusto = centro ? `${centro.codigo} - ${centro.descricao}` : 'Sem Centro de Custo'
+      const categoria = mov.materiais_equipamentos?.categoria || 'Sem Categoria'
+      const valor = (mov.valor_unitario || 0) * Math.abs(mov.quantidade || 0)
+
+      acc[centroCusto] ||= { total: 0, categorias: {} }
+      acc[centroCusto].categorias[categoria] ||= 0
+      acc[centroCusto].total += valor
+      acc[centroCusto].categorias[categoria] += valor
+      return acc
+    }, {})
+
+    const categorias = [...new Set(movimentos.map((mov: any) => mov.materiais_equipamentos?.categoria || 'Sem Categoria'))]
+    const rows = Object.keys(consumoPorCentro).map(centro => {
+      const row: any = { centro_custo: centro, total: consumoPorCentro[centro].total }
+      categorias.forEach((categoria: any) => {
+        row[categoria] = consumoPorCentro[centro].categorias[categoria] || 0
+      })
+      return row
+    }).sort((a, b) => b.total - a.total)
+
+    if (filtros.limitarTop) rows.splice(filtros.limitarTop)
+
+    const consumoTotal = rows.reduce((sum, row) => sum + row.total, 0)
+    const numeroRelatorio = this.gerarNumeroRelatorio('consumo-centro-custo')
+    return {
+      reportId: 'consumo-centro-custo',
+      titulo: 'RELATORIO DE CONSUMO POR CENTRO DE CUSTO',
+      periodo: this.getReportPeriod(filtros),
+      filtrosAplicados: filtros,
+      columns: [
+        { key: 'centro_custo', label: 'Centro de Custo', type: 'text' },
+        ...categorias.map(categoria => ({ key: categoria, label: categoria, type: 'currency' as const, align: 'right' as const })),
+        { key: 'total', label: 'Total', type: 'currency', align: 'right' }
+      ],
+      rows,
+      totals: { consumoTotal, centrosCustoAtivos: rows.length },
+      kpis: this.calcularKPIs(movimentos, 'consumo-centro-custo'),
+      summary: {
+        totalRegistros: rows.length,
+        valorTotal: consumoTotal,
+        geradoPor: 'Sistema',
+        geradoEm: new Date().toISOString(),
+        numeroRelatorio
+      }
+    }
+  }
+
+  private async generateFornecedoresCorrigido(filtros: FornecedoresFilter): Promise<ReportData> {
+    if (!filtros) filtros = {}
+
+    let query = supabase.from('fornecedores').select('*').eq('ativo', true)
+    if (filtros.fornecedor && filtros.fornecedor !== 'todos') query = query.eq('id', filtros.fornecedor)
+
+    const { data: fornecedores, error } = await query
+    if (error) throw error
+    if (!fornecedores || fornecedores.length === 0) throw new Error(VALIDACAO_REGRAS.mensagens.nenhumRegistro)
+
+    const fornecedorIds = fornecedores.map(fornecedor => fornecedor.id)
+    const { data: materiais } = await supabase
+      .from('materiais_equipamentos')
+      .select('fornecedor_id, categoria')
+      .in('fornecedor_id', fornecedorIds)
+
+    let nfeQuery = supabase
+      .from('nfe_importacao')
+      .select('fornecedor_id, data_emissao, data_importacao, valor_total, status')
+      .in('fornecedor_id', fornecedorIds)
+
+    if (filtros.dataInicio) nfeQuery = nfeQuery.gte('data_emissao', filtros.dataInicio)
+    if (filtros.dataFim) nfeQuery = nfeQuery.lte('data_emissao', filtros.dataFim)
+
+    const { data: notas } = await nfeQuery
+
+    const fornecedoresProcessados = fornecedores.map(fornecedor => {
+      const notasFornecedor = (notas || []).filter(nota => nota.fornecedor_id === fornecedor.id)
+      const materiaisFornecedor = (materiais || []).filter(material => material.fornecedor_id === fornecedor.id)
+      const participacao = notasFornecedor.reduce((sum, nota) => sum + (nota.valor_total || 0), 0)
+      const leadTimes = notasFornecedor
+        .map(nota => {
+          if (!nota.data_importacao || !nota.data_emissao) return null
+          return Math.max(0, Math.ceil((new Date(nota.data_importacao).getTime() - new Date(nota.data_emissao).getTime()) / (1000 * 60 * 60 * 24)))
+        })
+        .filter((value): value is number => value !== null)
+      const leadTimeMedio = leadTimes.length ? leadTimes.reduce((sum, value) => sum + value, 0) / leadTimes.length : 0
+      const notasValidas = notasFornecedor.filter(nota => !['erro', 'cancelada', 'cancelado'].includes((nota.status || '').toLowerCase())).length
+      const taxaCumprimento = notasFornecedor.length ? (notasValidas / notasFornecedor.length) * 100 : 0
+
+      return {
+        ...fornecedor,
+        documento: fornecedor.cnpj || fornecedor.cpf || '-',
+        leadTimeMedio,
+        taxaCumprimento,
+        indiceQualidade: taxaCumprimento,
+        participacao,
+        totalMateriais: materiaisFornecedor.length,
+        totalNotas: notasFornecedor.length
+      }
+    })
+
+    switch (filtros.ordenarPor || 'leadtime') {
+      case 'qualidade':
+        fornecedoresProcessados.sort((a, b) => b.indiceQualidade - a.indiceQualidade)
+        break
+      case 'participacao':
+        fornecedoresProcessados.sort((a, b) => b.participacao - a.participacao)
+        break
+      case 'pontualidade':
+        fornecedoresProcessados.sort((a, b) => b.taxaCumprimento - a.taxaCumprimento)
+        break
+      default:
+        fornecedoresProcessados.sort((a, b) => a.leadTimeMedio - b.leadTimeMedio)
+    }
+
+    const participacaoTotal = fornecedoresProcessados.reduce((sum, fornecedor) => sum + fornecedor.participacao, 0)
+    const leadTimeGeral = fornecedoresProcessados.length
+      ? fornecedoresProcessados.reduce((sum, fornecedor) => sum + fornecedor.leadTimeMedio, 0) / fornecedoresProcessados.length
+      : 0
+    const numeroRelatorio = this.gerarNumeroRelatorio('fornecedores')
+
+    return {
+      reportId: 'fornecedores',
+      titulo: 'RELATORIO DE PERFORMANCE DE FORNECEDORES',
+      periodo: this.getReportPeriod(filtros),
+      filtrosAplicados: filtros,
+      columns: [
+        { key: 'nome', label: 'Fornecedor', type: 'text' },
+        { key: 'documento', label: 'Documento', type: 'text' },
+        { key: 'tipo_fornecimento', label: 'Tipo de Fornecimento', type: 'text' },
+        { key: 'leadTimeMedio', label: 'Lead Time (dias)', type: 'number', align: 'center' },
+        { key: 'taxaCumprimento', label: 'Pontualidade (%)', type: 'percentage', align: 'right' },
+        { key: 'indiceQualidade', label: 'Qualidade (%)', type: 'percentage', align: 'right' },
+        { key: 'participacao', label: 'Valor Fornecido', type: 'currency', align: 'right' },
+        { key: 'totalMateriais', label: 'SKUs', type: 'number', align: 'center' },
+        { key: 'totalNotas', label: 'Notas', type: 'number', align: 'center' }
+      ],
+      rows: fornecedoresProcessados.map(fornecedor => ({
+        nome: fornecedor.nome,
+        documento: fornecedor.documento,
+        tipo_fornecimento: fornecedor.tipo_fornecimento || '-',
+        leadTimeMedio: fornecedor.leadTimeMedio,
+        taxaCumprimento: fornecedor.taxaCumprimento,
+        indiceQualidade: fornecedor.indiceQualidade,
+        participacao: fornecedor.participacao,
+        totalMateriais: fornecedor.totalMateriais,
+        totalNotas: fornecedor.totalNotas
+      })),
+      kpis: {
+        taxaAtendimento: fornecedoresProcessados.length ? fornecedoresProcessados.reduce((sum, fornecedor) => sum + fornecedor.taxaCumprimento, 0) / fornecedoresProcessados.length : 0,
+        acuracidadeInventario: fornecedoresProcessados.length ? fornecedoresProcessados.reduce((sum, fornecedor) => sum + fornecedor.indiceQualidade, 0) / fornecedoresProcessados.length : 0,
+        giroEstoque: leadTimeGeral,
+        taxaRuptura: 0,
+        taxaObsolescencia: 0,
+        coberturaEstoque: fornecedoresProcessados.reduce((sum, fornecedor) => sum + fornecedor.totalMateriais, 0)
+      },
+      totals: { totalFornecedores: fornecedoresProcessados.length, participacaoTotal, leadTimeGeral },
+      summary: {
+        totalRegistros: fornecedoresProcessados.length,
+        valorTotal: participacaoTotal,
+        geradoPor: 'Sistema',
+        geradoEm: new Date().toISOString(),
+        numeroRelatorio
+      }
+    }
+  }
+
+  private async generateRequisicoesPendentesCorrigido(filtros: RequisicoesFilter): Promise<ReportData> {
+    if (!filtros) filtros = {}
+
+    let query = supabase
+      .from('solicitacoes')
+      .select(`
+        *,
+        colaboradores:colaborador_id (nome),
+        centros_custo:centro_custo_id (codigo, descricao),
+        solicitacoes_itens (
+          *,
+          materiais_equipamentos:material_equipamento_id (codigo, nome, categoria)
+        )
+      `)
+      .in('status', ['pendente', 'aprovada'])
+
+    if (filtros.centroCusto && filtros.centroCusto !== 'todos') query = query.eq('centro_custo_id', filtros.centroCusto)
+    if (filtros.dataInicio) query = query.gte('data_solicitacao', filtros.dataInicio)
+    if (filtros.dataFim) query = query.lte('data_solicitacao', filtros.dataFim)
+
+    const { data, error } = (await query.order('data_solicitacao', { ascending: true })) as any
+    if (error) throw error
+
+    const prioridadeMap: Record<string, string[]> = {
+      alta: ['alta', 'urgente'],
+      media: ['media', 'normal'],
+      baixa: ['baixa']
+    }
+
+    let solicitacoes = data || []
+    if (filtros.prioridade && filtros.prioridade !== 'todas') {
+      solicitacoes = solicitacoes.filter((solicitacao: any) =>
+        prioridadeMap[filtros.prioridade!]?.includes((solicitacao.urgencia || '').toLowerCase())
+      )
+    }
+    if (solicitacoes.length === 0) throw new Error(VALIDACAO_REGRAS.mensagens.nenhumRegistro)
+
+    const hoje = new Date()
+    const requisicoesProcessadas = solicitacoes.map((solicitacao: any) => {
+      const dataSolicitacao = new Date(solicitacao.data_solicitacao || solicitacao.created_at)
+      const aging = Math.floor((hoje.getTime() - dataSolicitacao.getTime()) / (1000 * 60 * 60 * 24))
+      const valorTotal = (solicitacao.solicitacoes_itens || []).reduce((sum: number, item: any) => {
+        const quantidade = item.quantidade || 0
+        const valorUnitario = item.valor_unitario || 0
+        return sum + (item.valor_total || quantidade * valorUnitario)
+      }, 0)
+
+      return {
+        ...solicitacao,
+        aging,
+        classificacaoAging: aging > 15 ? 'CRITICO' : aging > 7 ? 'ALERTA' : aging > 3 ? 'ATENCAO' : 'NORMAL',
+        valorTotal,
+        totalItens: solicitacao.solicitacoes_itens?.length || 0
+      }
+    })
+
+    const backlogQuantidade = requisicoesProcessadas.length
+    const backlogValor = requisicoesProcessadas.reduce((sum: number, req: any) => sum + req.valorTotal, 0)
+    const tempoMedioAtendimento = backlogQuantidade ? requisicoesProcessadas.reduce((sum: number, req: any) => sum + req.aging, 0) / backlogQuantidade : 0
+    const requisicoesNoPrazo = requisicoesProcessadas.filter((req: any) => req.aging <= 7).length
+    const taxaAtendimentoPrazo = backlogQuantidade ? (requisicoesNoPrazo / backlogQuantidade) * 100 : 0
+
+    const numeroRelatorio = this.gerarNumeroRelatorio('requisicoes-pendentes')
+    return {
+      reportId: 'requisicoes-pendentes',
+      titulo: 'RELATORIO DE REQUISICOES PENDENTES',
+      periodo: this.getReportPeriod(filtros, `Analise em ${this.formatDate(hoje.toISOString())}`),
+      filtrosAplicados: filtros,
+      columns: [
+        { key: 'numero_solicitacao', label: 'No Solicitacao', type: 'text' },
+        { key: 'data_solicitacao', label: 'Data', type: 'date' },
+        { key: 'solicitante', label: 'Solicitante', type: 'text' },
+        { key: 'centro_custo', label: 'Centro Custo', type: 'text' },
+        { key: 'prioridade', label: 'Prioridade', type: 'status', align: 'center' },
+        { key: 'aging', label: 'Aging (dias)', type: 'number', align: 'center' },
+        { key: 'totalItens', label: 'Itens', type: 'number', align: 'center' },
+        { key: 'valorTotal', label: 'Valor', type: 'currency', align: 'right' },
+        { key: 'status', label: 'Status', type: 'status', align: 'center' }
+      ],
+      rows: requisicoesProcessadas.map((req: any) => ({
+        numero_solicitacao: req.numero,
+        data_solicitacao: req.data_solicitacao,
+        solicitante: req.colaboradores?.nome || '-',
+        centro_custo: req.centros_custo ? `${req.centros_custo.codigo} - ${req.centros_custo.descricao}` : '-',
+        prioridade: req.urgencia?.toUpperCase() || 'NORMAL',
+        aging: req.aging,
+        totalItens: req.totalItens,
+        valorTotal: req.valorTotal,
+        status: req.status?.toUpperCase() || 'PENDENTE'
+      })),
+      totals: { backlogQuantidade, backlogValor, tempoMedioAtendimento, taxaAtendimentoPrazo },
+      kpis: {
+        taxaAtendimento: taxaAtendimentoPrazo,
+        acuracidadeInventario: 0,
+        giroEstoque: tempoMedioAtendimento,
+        taxaRuptura: 0,
+        taxaObsolescencia: 0,
+        coberturaEstoque: backlogQuantidade
+      },
+      summary: {
+        totalRegistros: backlogQuantidade,
+        valorTotal: backlogValor,
+        geradoPor: 'Sistema',
+        geradoEm: new Date().toISOString(),
+        numeroRelatorio
+      }
+    }
+  }
+
+  private async generateAnaliseABCXYZCorrigida(filtros: AnaliseABCXYZFilter): Promise<ReportData> {
+    if (!filtros) filtros = {}
+
+    const validacaoPeriodo = this.validarPeriodo(filtros.dataInicio, filtros.dataFim)
+    if (validacaoPeriodo) throw new Error(validacaoPeriodo)
+
+    let query = supabase
+      .from('materiais_equipamentos')
+      .select(`
+        *,
+        movimentacao_estoque!material_equipamento_id (quantidade, data_movimentacao, valor_unitario)
+      `)
+      .eq('ativo', true)
+
+    if (filtros.categoria && filtros.categoria !== 'todas') query = query.eq('categoria', filtros.categoria)
+    if (filtros.localizacao && filtros.localizacao !== 'todas') query = query.eq('localizacao_id', filtros.localizacao)
+
+    const { data, error } = (await query) as any
+    if (error) throw error
+    if (!data || data.length === 0) throw new Error(VALIDACAO_REGRAS.mensagens.nenhumRegistro)
+
+    const materiaisProcessados = data.map((material: any) => {
+      const movimentacoesPeriodo = (material.movimentacao_estoque || [])
+        .filter((mov: any) => this.isDateInRange(mov.data_movimentacao, filtros.dataInicio, filtros.dataFim))
+      const valorTotal = (material.valor_unitario || 0) * (material.estoque_atual || 0)
+      const quantidadeMovimentada = movimentacoesPeriodo.reduce((sum: number, mov: any) => sum + Math.abs(mov.quantidade || 0), 0)
+      const frequenciaMovimentacao = movimentacoesPeriodo.length
+      const giroEstoque = material.estoque_atual > 0 ? quantidadeMovimentada / material.estoque_atual : 0
+      const mediaDemanda = quantidadeMovimentada / (frequenciaMovimentacao || 1)
+      const variabilidade = frequenciaMovimentacao > 1
+        ? Math.sqrt(movimentacoesPeriodo.reduce((sum: number, mov: any) => sum + Math.pow(Math.abs(mov.quantidade || 0) - mediaDemanda, 2), 0) / frequenciaMovimentacao)
+        : 0
+
+      return { ...material, valorTotal, valor_total: valorTotal, quantidadeMovimentada, frequenciaMovimentacao, giroEstoque, variabilidade, mediaDemanda }
+    })
+
+    const dadosParaABC = [...materiaisProcessados]
+    switch (filtros.criterioABC || 'valor') {
+      case 'quantidade':
+        dadosParaABC.sort((a, b) => b.quantidadeMovimentada - a.quantidadeMovimentada)
+        break
+      case 'movimentacao':
+        dadosParaABC.sort((a, b) => b.frequenciaMovimentacao - a.frequenciaMovimentacao)
+        break
+      default:
+        dadosParaABC.sort((a, b) => b.valorTotal - a.valorTotal)
+    }
+
+    const dadosParaXYZ = [...materiaisProcessados]
+    switch (filtros.criterioXYZ || 'giro') {
+      case 'variabilidade':
+        dadosParaXYZ.sort((a, b) => a.variabilidade - b.variabilidade)
+        break
+      case 'sazonalidade':
+        dadosParaXYZ.sort((a, b) => b.frequenciaMovimentacao - a.frequenciaMovimentacao)
+        break
+      default:
+        dadosParaXYZ.sort((a, b) => b.giroEstoque - a.giroEstoque)
+    }
+
+    const totalItens = materiaisProcessados.length
+    materiaisProcessados.forEach((material: any) => {
+      const percentualABC = (dadosParaABC.findIndex(item => item.id === material.id) + 1) / totalItens
+      material.classificacaoABC = percentualABC <= 0.2 ? 'A' : percentualABC <= 0.5 ? 'B' : 'C'
+      const percentualXYZ = (dadosParaXYZ.findIndex(item => item.id === material.id) + 1) / totalItens
+      material.classificacaoXYZ = percentualXYZ <= 0.33 ? 'X' : percentualXYZ <= 0.67 ? 'Y' : 'Z'
+      material.classificacaoCombinada = `${material.classificacaoABC}${material.classificacaoXYZ}`
+    })
+
+    const numeroRelatorio = this.gerarNumeroRelatorio('analise-abc-xyz')
+    return {
+      reportId: 'analise-abc-xyz',
+      titulo: 'RELATORIO DE ANALISE ABC/XYZ',
+      periodo: this.getReportPeriod(filtros, 'Todo o historico'),
+      filtrosAplicados: filtros,
+      columns: [
+        { key: 'codigo', label: 'Codigo', type: 'text' },
+        { key: 'nome', label: 'Descricao', type: 'text' },
+        { key: 'categoria', label: 'Categoria', type: 'text' },
+        { key: 'valorTotal', label: 'Valor Total', type: 'currency', align: 'right' },
+        { key: 'giroEstoque', label: 'Giro', type: 'number', align: 'right' },
+        { key: 'classificacaoABC', label: 'ABC', type: 'status', align: 'center' },
+        { key: 'classificacaoXYZ', label: 'XYZ', type: 'status', align: 'center' },
+        { key: 'classificacaoCombinada', label: 'Combinada', type: 'status', align: 'center' }
+      ],
+      rows: materiaisProcessados.map((material: any) => ({
+        codigo: material.codigo,
+        nome: material.nome,
+        categoria: material.categoria || '-',
+        valorTotal: material.valorTotal,
+        giroEstoque: material.giroEstoque,
+        classificacaoABC: material.classificacaoABC,
+        classificacaoXYZ: material.classificacaoXYZ,
+        classificacaoCombinada: material.classificacaoCombinada
+      })),
+      abcAnalysis: this.calcularAnaliseABC(materiaisProcessados),
+      xyzAnalysis: {
+        X: { count: materiaisProcessados.filter((m: any) => m.classificacaoXYZ === 'X').length, percentage: (materiaisProcessados.filter((m: any) => m.classificacaoXYZ === 'X').length / totalItens) * 100 },
+        Y: { count: materiaisProcessados.filter((m: any) => m.classificacaoXYZ === 'Y').length, percentage: (materiaisProcessados.filter((m: any) => m.classificacaoXYZ === 'Y').length / totalItens) * 100 },
+        Z: { count: materiaisProcessados.filter((m: any) => m.classificacaoXYZ === 'Z').length, percentage: (materiaisProcessados.filter((m: any) => m.classificacaoXYZ === 'Z').length / totalItens) * 100 }
+      },
+      kpis: this.calcularKPIs(materiaisProcessados, 'analise-abc-xyz'),
+      summary: {
+        totalRegistros: totalItens,
+        valorTotal: materiaisProcessados.reduce((sum: number, material: any) => sum + material.valorTotal, 0),
+        geradoPor: 'Sistema',
+        geradoEm: new Date().toISOString(),
+        numeroRelatorio
+      }
+    }
+  }
+
+  private async generateInventarioRotativoCorrigido(filtros: InventarioRotativoFilter): Promise<ReportData> {
+    if (!filtros) filtros = {}
+
+    let query = supabase
+      .from('materiais_equipamentos')
+      .select(`
+        *,
+        localizacao (nome),
+        movimentacao_estoque!material_equipamento_id (data_movimentacao)
+      `)
+      .eq('ativo', true)
+
+    if (filtros.categoria && filtros.categoria !== 'todas') query = query.eq('categoria', filtros.categoria)
+    if (filtros.localizacao && filtros.localizacao !== 'todas') query = query.eq('localizacao_id', filtros.localizacao)
+
+    const { data, error } = (await query) as any
+    if (error) throw error
+    if (!data || data.length === 0) throw new Error(VALIDACAO_REGRAS.mensagens.nenhumRegistro)
+
+    const hoje = new Date()
+    const cicloDias = filtros.ciclo === 'semanal' ? 7 : filtros.ciclo === 'trimestral' ? 90 : 30
+    const materiaisInventario = data.map((material: any) => {
+      const movimentacoes = [...(material.movimentacao_estoque || [])]
+        .filter((mov: any) => mov.data_movimentacao)
+        .sort((a: any, b: any) => new Date(b.data_movimentacao).getTime() - new Date(a.data_movimentacao).getTime())
+      const dataUltimaContagem = movimentacoes[0]?.data_movimentacao
+        ? new Date(movimentacoes[0].data_movimentacao)
+        : new Date(material.created_at || hoje)
+      const proximaContagem = new Date(dataUltimaContagem.getTime() + cicloDias * 24 * 60 * 60 * 1000)
+      const diasParaContagem = Math.ceil((proximaContagem.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24))
+      const estoqueNominale = material.estoque_atual || 0
+
+      return {
+        ...material,
+        estoqueNominale,
+        estoqueFisico: estoqueNominale,
+        divergencia: 0,
+        divergenciaPercentual: 0,
+        acuracidade: 100,
+        dataUltimaContagem,
+        proximaContagem,
+        diasParaContagem,
+        statusContagem: diasParaContagem < 0 ? 'VENCIDO' : diasParaContagem <= 3 ? 'URGENTE' : diasParaContagem <= 7 ? 'PROXIMO' : 'OK',
+        valorDivergencia: 0
+      }
+    })
+
+    const numeroRelatorio = this.gerarNumeroRelatorio('inventario-rotativo')
+    return {
+      reportId: 'inventario-rotativo',
+      titulo: 'RELATORIO DE INVENTARIO ROTATIVO',
+      periodo: `Analise em ${this.formatDate(hoje.toISOString())} - Ciclo: ${filtros.ciclo || 'mensal'}`,
+      filtrosAplicados: filtros,
+      columns: [
+        { key: 'codigo', label: 'Codigo', type: 'text' },
+        { key: 'nome', label: 'Descricao', type: 'text' },
+        { key: 'categoria', label: 'Categoria', type: 'text' },
+        { key: 'estoqueNominale', label: 'Est. Sistema', type: 'number', align: 'right' },
+        { key: 'estoqueFisico', label: 'Est. Fisico', type: 'number', align: 'right' },
+        { key: 'divergencia', label: 'Divergencia', type: 'number', align: 'right' },
+        { key: 'divergenciaPercentual', label: 'Div. %', type: 'percentage', align: 'right' },
+        { key: 'acuracidade', label: 'Acuracidade %', type: 'percentage', align: 'right' },
+        { key: 'dataUltimaContagem', label: 'Ultima Contagem', type: 'date' },
+        { key: 'statusContagem', label: 'Status', type: 'status', align: 'center' }
+      ],
+      rows: materiaisInventario.map((item: any) => ({
+        codigo: item.codigo,
+        nome: item.nome,
+        categoria: item.categoria || '-',
+        estoqueNominale: item.estoqueNominale,
+        estoqueFisico: item.estoqueFisico,
+        divergencia: item.divergencia,
+        divergenciaPercentual: item.divergenciaPercentual,
+        acuracidade: item.acuracidade,
+        dataUltimaContagem: item.dataUltimaContagem.toISOString().split('T')[0],
+        statusContagem: item.statusContagem
+      })),
+      totals: {
+        totalItens: materiaisInventario.length,
+        itensComDivergencia: 0,
+        acuracidadeGeral: 100,
+        valorTotalDivergencias: 0,
+        categoriasAnalisadas: new Set(materiaisInventario.map((item: any) => item.categoria || 'Sem Categoria')).size
+      },
+      kpis: {
+        taxaAtendimento: 100,
+        acuracidadeInventario: 100,
+        giroEstoque: 0,
+        taxaRuptura: 0,
+        taxaObsolescencia: 0,
+        coberturaEstoque: materiaisInventario.length
+      },
+      summary: {
+        totalRegistros: materiaisInventario.length,
+        valorTotal: 0,
+        geradoPor: 'Sistema',
+        geradoEm: new Date().toISOString(),
+        numeroRelatorio
+      }
+    }
+  }
+
   async generateReport(request: ReportRequest): Promise<ReportResponse> {
     const inicioExecucao = Date.now()
     
     try {
-      console.log('🚀 Iniciando geração de relatório:', {
+      console.log(' Iniciando geração de relatório:', {
         reportId: request.reportId,
         formato: request.formato,
         filtros: request.filtros
@@ -1945,31 +2786,31 @@ class ReportService {
           reportData = await this.generateInventarioGeral(request.filtros as InventarioGeralFilter)
           break
         case 'movimentacao':
-          reportData = await this.generateMovimentacao(request.filtros as MovimentacaoFilter)
+          reportData = await this.generateMovimentacaoCorrigida(request.filtros as MovimentacaoFilter)
           break
         case 'vencimento-validade':
           reportData = await this.generateVencimentoValidade(request.filtros as VencimentoValidadeFilter)
           break
         case 'consumo-centro-custo':
-          reportData = await this.generateConsumoCentroCusto(request.filtros as ConsumoCentroCustoFilter)
+          reportData = await this.generateConsumoCentroCustoCorrigido(request.filtros as ConsumoCentroCustoFilter)
           break
         case 'fornecedores':
-          reportData = await this.generateFornecedores(request.filtros as FornecedoresFilter)
+          reportData = await this.generateFornecedoresCorrigido(request.filtros as FornecedoresFilter)
           break
         case 'requisicoes-pendentes':
-          reportData = await this.generateRequisicoesPendentes(request.filtros as RequisicoesFilter)
+          reportData = await this.generateRequisicoesPendentesCorrigido(request.filtros as RequisicoesFilter)
           break
         case 'analise-abc-xyz':
-          reportData = await this.generateAnaliseABCXYZ(request.filtros as AnaliseABCXYZFilter)
+          reportData = await this.generateAnaliseABCXYZCorrigida(request.filtros as AnaliseABCXYZFilter)
           break
         case 'inventario-rotativo':
-          reportData = await this.generateInventarioRotativo(request.filtros as InventarioRotativoFilter)
+          reportData = await this.generateInventarioRotativoCorrigido(request.filtros as InventarioRotativoFilter)
           break
         default:
           throw new Error(`Tipo de relatório '${request.reportId}' não encontrado`)
       }
 
-      console.log('📊 Dados do relatório gerados:', {
+      console.log(' Dados do relatório gerados:', {
         totalRegistros: reportData.summary.totalRegistros,
         totalLinhas: reportData.rows.length,
         possuiGrupos: !!reportData.grupos,
@@ -1987,11 +2828,11 @@ class ReportService {
       }
 
       if (request.formato === 'pdf') {
-        console.log('🎨 Gerando HTML para PDF...')
+        console.log(' Gerando HTML para PDF...')
         const htmlContent = this.generateHTMLReport(reportData)
         
         // Log do tamanho do HTML gerado
-        console.log('📄 HTML gerado:', {
+        console.log(' HTML gerado:', {
           tamanhoHTML: htmlContent.length,
           contemDados: htmlContent.includes('<tr>'),
           contemTabelas: htmlContent.includes('<table>')
@@ -2002,20 +2843,28 @@ class ReportService {
         const success = await pdfService.generatePDF({
           filename,
           htmlContent,
-          onStart: () => console.log('🖨️ Iniciando conversão para PDF...'),
-          onFinish: () => console.log('✅ PDF gerado com sucesso!'),
-          onError: (error) => console.error('❌ Erro na conversão PDF:', error)
+          onStart: () => console.log(' Iniciando conversão para PDF...'),
+          onFinish: () => console.log(' PDF gerado com sucesso!'),
+          onError: (error) => console.error(' Erro na conversão PDF:', error)
         })
 
         if (!success) {
           throw new Error('Erro ao gerar PDF - verifique os logs do console para mais detalhes')
         }
+      } else if (request.formato === 'csv') {
+        const filename = `${reportData.summary.numeroRelatorio}.csv`
+        this.downloadTextFile(filename, this.generateCSVReport(reportData), 'text/csv;charset=utf-8')
+      } else if (request.formato === 'excel') {
+        const filename = `${reportData.summary.numeroRelatorio}.xls`
+        this.downloadTextFile(filename, this.generateExcelReport(reportData), 'application/vnd.ms-excel;charset=utf-8')
+      } else {
+        throw new Error(`Formato '${request.formato}' nao suportado`)
       }
 
       const fimExecucao = Date.now()
       const tempoExecucao = ((fimExecucao - inicioExecucao) / 1000).toFixed(1) + 's'
 
-      console.log('✅ Relatório gerado com sucesso em:', tempoExecucao)
+      console.log(' Relatório gerado com sucesso em:', tempoExecucao)
 
       return { 
         success: true, 
@@ -2025,7 +2874,7 @@ class ReportService {
       }
       
     } catch (error: any) {
-      console.error('❌ Erro ao gerar relatório:', error)
+      console.error(' Erro ao gerar relatório:', error)
       return { 
         success: false, 
         error: error.message || 'Erro interno do servidor' 

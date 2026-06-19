@@ -17,6 +17,19 @@ import { DialogFooter } from '@/components/ui/dialog'
 import { fornecedorSchema, formatCNPJ, formatCPF, formatPhone, type FornecedorFormData } from '@/lib/validations'
 import type { Tables } from '@/types/database'
 
+const TIPOS_FORNECIMENTO = [
+  'Ferramentas',
+  'EPIs',
+  'Material de construcao',
+  'Material eletrico',
+  'Material hidraulico',
+  'Equipamentos',
+  'Pecas e manutencao',
+  'Insumos',
+  'Servicos',
+  'Outros',
+]
+
 interface FornecedorFormProps {
   initialData?: Tables<'fornecedores'>
   onSubmit: (data: FornecedorFormData) => Promise<void>
@@ -34,6 +47,7 @@ export function FornecedorForm({ initialData, onSubmit, onCancel }: FornecedorFo
       telefone: initialData?.telefone || '',
       email: initialData?.email || '',
       contato: initialData?.contato || '',
+      tipo_fornecimento: initialData?.tipo_fornecimento || '',
       ativo: initialData?.ativo ?? true,
     },
   })
@@ -48,6 +62,7 @@ export function FornecedorForm({ initialData, onSubmit, onCancel }: FornecedorFo
         telefone: initialData.telefone || '',
         email: initialData.email || '',
         contato: initialData.contato || '',
+        tipo_fornecimento: initialData.tipo_fornecimento || '',
         ativo: initialData.ativo,
       })
     }
@@ -60,6 +75,7 @@ export function FornecedorForm({ initialData, onSubmit, onCancel }: FornecedorFo
       cnpj: data.cnpj ? data.cnpj.replace(/\D/g, '') : null,
       cpf: data.cpf ? data.cpf.replace(/\D/g, '') : null,
       telefone: data.telefone ? data.telefone.replace(/\D/g, '') : null,
+      tipo_fornecimento: data.tipo_fornecimento?.trim() || null,
     }
     await onSubmit(cleanData)
   }
@@ -192,6 +208,29 @@ export function FornecedorForm({ initialData, onSubmit, onCancel }: FornecedorFo
               <FormControl>
                 <Input placeholder="Ex: João Silva - Gerente de Vendas" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="tipo_fornecimento"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tipo de Fornecimento</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Ex: Ferramentas, EPIs, Material de construcao"
+                  list="tipos-fornecimento-sugestoes"
+                  {...field}
+                />
+              </FormControl>
+              <datalist id="tipos-fornecimento-sugestoes">
+                {TIPOS_FORNECIMENTO.map((tipo) => (
+                  <option key={tipo} value={tipo} />
+                ))}
+              </datalist>
               <FormMessage />
             </FormItem>
           )}

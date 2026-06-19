@@ -215,23 +215,6 @@ export const REPORT_CONFIGS = [
     requisitoPermissao: 'relatorios.movimentacao.visualizar'
   },
 
-  // 9. MOVIMENTAÇÃO INTERATIVA (Consulta em tempo real)
-  {
-    id: 'movimentacao-interativa',
-    titulo: 'Consulta de Movimentação Interativa',
-    descricao: 'Visualização em tempo real das movimentações com filtros dinâmicos',
-    icon: 'Activity',
-    categoria: 'Movimentação',
-    periodicidade: 'Tempo Real',
-    kpis: ['totalMovimentacoes', 'entradas', 'saidas', 'valorMovimentado'],
-    filtrosObrigatorios: [],
-    filtrosOpcionais: ['tipoMovimentacao', 'categoria', 'dataInicio', 'dataFim', 'material', 'responsavel'],
-    formatosDisponiveis: ['pdf', 'excel'],
-    tempoExecucaoMedio: '1-2 segundos',
-    requisitoPermissao: 'relatorios.movimentacao.visualizar',
-    isInteractive: true
-  },
-  
   // 3. VENCIMENTO E VALIDADE
   {
     id: 'vencimento-validade',

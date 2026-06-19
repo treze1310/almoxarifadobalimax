@@ -27,6 +27,7 @@ import { formatDate, formatDateTime } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 import { generateFichaEPIPDF } from './FichaEPIPDF'
 import { supabase } from '@/lib/supabase'
+import { fetchRomaneiosRetiradaDoColaborador } from '@/services/colaboradorEpiRomaneiosService'
 import { Tables } from '@/types/database'
 import { ColaboradorForm } from './ColaboradorForm'
 import type { ColaboradorFormData } from '@/lib/validations'
@@ -123,12 +124,13 @@ const ColaboradorDetailsDialog = ({ colaboradorId, isOpen, onClose, onColaborado
 
     setLoadingEpis(true)
     try {
-      const { data, error } = await supabase
-        .from('romaneios')
-        .select(`
+      const { data, error } = await fetchRomaneiosRetiradaDoColaborador<any>(colaboradorId, `
           id,
           numero,
           data_romaneio,
+          colaborador_id,
+          responsavel_nome,
+          responsavel_retirada,
           romaneios_itens!inner(
             id,
             quantidade,
@@ -140,9 +142,6 @@ const ColaboradorDetailsDialog = ({ colaboradorId, isOpen, onClose, onColaborado
             )
           )
         `)
-        .eq('colaborador_id', colaboradorId)
-        .eq('tipo', 'retirada')
-        .order('data_romaneio', { ascending: false })
 
       if (error) throw error
 

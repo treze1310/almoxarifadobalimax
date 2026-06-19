@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { companyService, type CompanyWithLogo } from '@/services/companyService'
+import { fetchRomaneiosRetiradaDoColaborador } from '@/services/colaboradorEpiRomaneiosService'
 
 interface ColaboradorDetalhado {
   id: string
@@ -439,13 +440,14 @@ export const generateFichaEPIPDF = async (colaboradorId: string) => {
           .eq('id', colaboradorId)
           .single(),
         
-        supabase
-          .from('romaneios')
-          .select(`
+        fetchRomaneiosRetiradaDoColaborador<any>(colaboradorId, `
             id,
             numero,
             data_romaneio,
             tipo,
+            colaborador_id,
+            responsavel_nome,
+            responsavel_retirada,
             romaneios_itens (
               id,
               quantidade,
@@ -458,10 +460,7 @@ export const generateFichaEPIPDF = async (colaboradorId: string) => {
                 is_epi
               )
             )
-          `)
-          .eq('colaborador_id', colaboradorId)
-          .eq('tipo', 'retirada')
-          .order('data_romaneio', { ascending: false }),
+          `),
         
         companyService.getActiveCompany().catch(error => {
           console.warn('⚠️ Erro ao buscar empresa, continuando sem:', error)

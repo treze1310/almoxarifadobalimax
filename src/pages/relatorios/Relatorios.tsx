@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useLayoutEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -25,59 +25,54 @@ import {
   AlertTriangle,
   FileDown,
   Filter,
-  Download,
-  Activity,
-  ArrowLeft
+  Download
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
-import { useCenteredDialog } from '@/hooks/useCenteredDialog'
 import { useReports } from '@/hooks/useReports'
 import { ReportRequest, REPORT_CONFIGS } from '@/types/reports'
-import RelatorioInterativo from '@/components/relatorios/RelatorioInterativo'
+
+type ReportSelectOption = {
+  value: string
+  label: string
+}
+
+type ReportNativeSelectProps = {
+  value: string
+  onValueChange: (value: string) => void
+  options: ReportSelectOption[]
+  placeholder?: string
+}
+
+const ReportNativeSelect = ({ value, onValueChange, options, placeholder }: ReportNativeSelectProps) => (
+  <Select value={value} onValueChange={onValueChange}>
+    <SelectTrigger>
+      <SelectValue placeholder={placeholder || 'Selecione'} />
+    </SelectTrigger>
+    <SelectContent
+      className="z-[10001] max-h-52 border bg-white text-slate-900 shadow-md"
+      position="popper"
+      side="bottom"
+      align="start"
+      sideOffset={4}
+      avoidCollisions={false}
+    >
+      {options.map(option => (
+        <SelectItem key={option.value} value={option.value}>
+          {option.label}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+)
 
 const RelatoriosPage = () => {
   const { toast } = useToast()
   const [selectedReport, setSelectedReport] = useState<string | null>(null)
   const [filters, setFilters] = useState<Record<string, any>>({})
   const [format, setFormat] = useState<'pdf' | 'excel' | 'csv'>('pdf')
-  const [activeInteractiveReport, setActiveInteractiveReport] = useState<{
-    id: string
-    titulo: string
-  } | null>(null)
-
-  // Hook para centralização inteligente do dialog de relatórios (funciona com zoom)
-  const dialogPosition = useCenteredDialog(!!selectedReport)
-
-  // Forçar reposicionamento dos diálogos para lidar com zoom e scroll
-  useEffect(() => {
-    if (selectedReport) {
-      // Pequeno delay para permitir que o DOM se atualize
-      setTimeout(() => {
-        const dialogElements = document.querySelectorAll('[role="dialog"]')
-        dialogElements.forEach((dialog) => {
-          if (dialog instanceof HTMLElement) {
-            const viewportHeight = window.innerHeight
-            const viewportWidth = window.innerWidth
-            const scrollTop = window.pageYOffset || document.documentElement.scrollTop
-            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
-            
-            const centerY = scrollTop + (viewportHeight / 2)
-            const centerX = scrollLeft + (viewportWidth / 2)
-            
-            dialog.style.position = 'fixed'
-            dialog.style.top = `${centerY}px`
-            dialog.style.left = `${centerX}px`
-            dialog.style.transform = 'translate(-50%, -50%)'
-            dialog.style.zIndex = '9999'
-          }
-        })
-      }, 100)
-    }
-  }, [selectedReport])
-  
   const { isGenerating, generateReport, validateFilters, filterOptions } = useReports({
-    onSuccess: (response) => {
+    onSuccess: () => {
       const reportConfig = REPORT_CONFIGS.find(config => config.id === selectedReport)
       toast({
         title: 'Relatório gerado com sucesso!',
@@ -93,6 +88,54 @@ const RelatoriosPage = () => {
     }
   })
 
+  const applyReportDialogCenter = () => {
+    const viewport = window.visualViewport
+    const viewportTop = viewport?.offsetTop ?? 0
+    const viewportLeft = viewport?.offsetLeft ?? 0
+    const viewportWidth = viewport?.width ?? window.innerWidth
+    const viewportHeight = viewport?.height ?? window.innerHeight
+
+    document.documentElement.style.setProperty(
+      '--relatorios-dialog-top',
+      `${viewportTop + viewportHeight / 2}px`,
+    )
+    document.documentElement.style.setProperty(
+      '--relatorios-dialog-left',
+      `${viewportLeft + viewportWidth / 2}px`,
+    )
+  }
+
+  useLayoutEffect(() => {
+    if (!selectedReport) return
+
+    const originalOverflow = document.body.style.overflow
+    const originalPaddingRight = document.body.style.paddingRight
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+    const viewport = window.visualViewport
+
+    document.body.style.overflow = 'hidden'
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`
+    }
+
+    applyReportDialogCenter()
+    viewport?.addEventListener('resize', applyReportDialogCenter)
+    viewport?.addEventListener('scroll', applyReportDialogCenter)
+    window.addEventListener('resize', applyReportDialogCenter)
+    window.addEventListener('scroll', applyReportDialogCenter, true)
+
+    return () => {
+      viewport?.removeEventListener('resize', applyReportDialogCenter)
+      viewport?.removeEventListener('scroll', applyReportDialogCenter)
+      window.removeEventListener('resize', applyReportDialogCenter)
+      window.removeEventListener('scroll', applyReportDialogCenter, true)
+      document.body.style.overflow = originalOverflow
+      document.body.style.paddingRight = originalPaddingRight
+      document.documentElement.style.removeProperty('--relatorios-dialog-top')
+      document.documentElement.style.removeProperty('--relatorios-dialog-left')
+    }
+  }, [selectedReport])
+
   const getIcon = (iconName: string) => {
     const icons = {
       Package: Package,
@@ -104,29 +147,57 @@ const RelatoriosPage = () => {
       ClipboardList: ClipboardList,
       PieChart: PieChart,
       RotateCcw: RotateCcw,
-      AlertTriangle: AlertTriangle,
-      Activity: Activity
+      AlertTriangle: AlertTriangle
     }
     const IconComponent = icons[iconName as keyof typeof icons] || FileText
     return <IconComponent className="h-5 w-5" />
   }
 
-  const getCategoryColor = (category: string) => {
-    const colors = {
-      'Estoque': 'bg-blue-100 text-blue-800',
-      'Movimentação': 'bg-green-100 text-green-800', 
-      'Qualidade': 'bg-purple-100 text-purple-800',
-      'Custos': 'bg-yellow-100 text-yellow-800',
-      'Compras': 'bg-orange-100 text-orange-800',
-      'Operações': 'bg-teal-100 text-teal-800',
-      'Estratégico': 'bg-indigo-100 text-indigo-800',
-      'Controle': 'bg-red-100 text-red-800'
-    }
-    return colors[category as keyof typeof colors] || 'bg-gray-100 text-gray-800'
-  }
-
   const getCategoryLabel = (category: string) => {
     return category
+  }
+
+  const getDefaultDateRange = () => {
+    const end = new Date()
+    const start = new Date()
+    start.setDate(start.getDate() - 30)
+
+    return {
+      dataInicio: start.toISOString().split('T')[0],
+      dataFim: end.toISOString().split('T')[0],
+    }
+  }
+
+  const buildDefaultFilters = (config: typeof REPORT_CONFIGS[0]) => {
+    const defaultFilters: Record<string, any> = {}
+
+    if (config.filtrosObrigatorios.includes('dataInicio') || config.filtrosObrigatorios.includes('dataFim')) {
+      Object.assign(defaultFilters, getDefaultDateRange())
+    }
+    if (config.filtrosObrigatorios.includes('agruparPor')) {
+      defaultFilters.agruparPor = 'categoria'
+    }
+    if (config.filtrosObrigatorios.includes('formato')) {
+      defaultFilters.formato = 'analitico'
+    }
+    if (config.filtrosObrigatorios.includes('tipoMaterial')) {
+      defaultFilters.tipoMaterial = 'todos'
+    }
+    if (config.filtrosObrigatorios.includes('ordenarPor')) {
+      defaultFilters.ordenarPor = 'leadtime'
+    }
+    if (config.filtrosObrigatorios.includes('aging')) {
+      defaultFilters.aging = true
+    }
+    if (config.filtrosObrigatorios.includes('ciclo')) {
+      defaultFilters.ciclo = 'mensal'
+    }
+    if (config.filtrosObrigatorios.includes('criterioABC')) {
+      defaultFilters.criterioABC = 'valor'
+      defaultFilters.criterioXYZ = 'giro'
+    }
+
+    return defaultFilters
   }
 
   const handleGenerateReport = async () => {
@@ -162,17 +233,13 @@ const RelatoriosPage = () => {
     }
   }
 
-  const handleInteractiveReport = (config: typeof REPORT_CONFIGS[0]) => {
-    setActiveInteractiveReport({
-      id: config.id,
-      titulo: config.titulo
-    })
-  }
-
   const renderFilters = (config: typeof REPORT_CONFIGS[0]) => {
     return (
       <div className="space-y-4">
-        {(config.filtrosObrigatorios.includes('dataInicio') || config.filtrosObrigatorios.includes('dataFim')) && (
+        {(config.filtrosObrigatorios.includes('dataInicio') ||
+          config.filtrosObrigatorios.includes('dataFim') ||
+          config.filtrosOpcionais.includes('dataInicio') ||
+          config.filtrosOpcionais.includes('dataFim')) && (
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="dataInicio">Data Início</Label>
@@ -195,67 +262,102 @@ const RelatoriosPage = () => {
           </div>
         )}
 
+        {config.filtrosOpcionais.includes('localizacao') && (
+          <div>
+            <Label>Localização</Label>
+            <ReportNativeSelect
+              value={filters.localizacao || 'todas'}
+              onValueChange={(value) => setFilters(prev => ({ ...prev, localizacao: value === 'todas' ?undefined : value }))}
+              options={[
+                { value: 'todas', label: 'Todas as localizações' },
+                ...filterOptions.localizacoes.map(localizacao => ({
+                  value: localizacao.id,
+                  label: localizacao.nome
+                }))
+              ]}
+            />
+          </div>
+        )}
+
+        {config.filtrosOpcionais.includes('fornecedor') && (
+          <div>
+            <Label>Fornecedor</Label>
+            <ReportNativeSelect
+              value={filters.fornecedor || 'todos'}
+              onValueChange={(value) => setFilters(prev => ({ ...prev, fornecedor: value === 'todos' ?undefined : value }))}
+              options={[
+                { value: 'todos', label: 'Todos os fornecedores' },
+                ...filterOptions.fornecedores.map(fornecedor => ({
+                  value: fornecedor.id,
+                  label: fornecedor.nome
+                }))
+              ]}
+            />
+          </div>
+        )}
+
+        {config.filtrosOpcionais.includes('status') && (
+          <div>
+            <Label>Status</Label>
+            <ReportNativeSelect
+              value={filters.status || 'ativo'}
+              onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
+              options={[
+                { value: 'ativo', label: 'Ativos' },
+                { value: 'inativo', label: 'Inativos' },
+                { value: 'todos', label: 'Todos' }
+              ]}
+            />
+          </div>
+        )}
+
         {config.filtrosOpcionais.includes('categoria') && (
           <div>
             <Label>Categoria</Label>
-            <Select
+            <ReportNativeSelect
               value={filters.categoria || 'todas'}
-              onValueChange={(value) => setFilters(prev => ({ ...prev, categoria: value === 'todas' ? undefined : value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Todas as categorias" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Todas as categorias</SelectItem>
-                {filterOptions.categories.map(category => (
-                  <SelectItem key={category.id} value={category.nome}>
-                    {category.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onValueChange={(value) => setFilters(prev => ({ ...prev, categoria: value === 'todas' ?undefined : value }))}
+              options={[
+                { value: 'todas', label: 'Todas as categorias' },
+                ...filterOptions.categories.map(category => ({
+                  value: category.nome,
+                  label: category.nome
+                }))
+              ]}
+            />
           </div>
         )}
 
         {config.filtrosOpcionais.includes('tipoMovimentacao') && (
           <div>
             <Label>Tipo de Movimentação</Label>
-            <Select
+            <ReportNativeSelect
               value={filters.tipoMovimentacao || 'todos'}
-              onValueChange={(value) => setFilters(prev => ({ ...prev, tipoMovimentacao: value === 'todos' ? undefined : value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Todos os tipos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos os tipos</SelectItem>
-                <SelectItem value="entrada">Entrada</SelectItem>
-                <SelectItem value="saida">Saída</SelectItem>
-                <SelectItem value="ajuste">Ajuste</SelectItem>
-              </SelectContent>
-            </Select>
+              onValueChange={(value) => setFilters(prev => ({ ...prev, tipoMovimentacao: value === 'todos' ?undefined : value }))}
+              options={[
+                { value: 'todos', label: 'Todos os tipos' },
+                { value: 'entrada', label: 'Entrada' },
+                { value: 'saida', label: 'Saída' },
+                { value: 'ajuste', label: 'Ajuste' }
+              ]}
+            />
           </div>
         )}
 
         {config.filtrosOpcionais.includes('centroCusto') && (
           <div>
             <Label>Centro de Custo</Label>
-            <Select
+            <ReportNativeSelect
               value={filters.centroCusto || 'todos'}
-              onValueChange={(value) => setFilters(prev => ({ ...prev, centroCusto: value === 'todos' ? undefined : value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Todos os centros de custo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos os centros de custo</SelectItem>
-                {filterOptions.centrosCusto.map(centro => (
-                  <SelectItem key={centro.id} value={centro.id}>
-                    {centro.codigo} - {centro.descricao}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onValueChange={(value) => setFilters(prev => ({ ...prev, centroCusto: value === 'todos' ?undefined : value }))}
+              options={[
+                { value: 'todos', label: 'Todos os centros de custo' },
+                ...filterOptions.centrosCusto.map(centro => ({
+                  value: centro.id,
+                  label: `${centro.codigo} - ${centro.descricao}`
+                }))
+              ]}
+            />
           </div>
         )}
 
@@ -285,19 +387,15 @@ const RelatoriosPage = () => {
         {config.filtrosObrigatorios.includes('agruparPor') && (
           <div>
             <Label>Agrupar Por</Label>
-            <Select
+            <ReportNativeSelect
               value={filters.agruparPor || 'categoria'}
               onValueChange={(value) => setFilters(prev => ({ ...prev, agruparPor: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="categoria">Categoria</SelectItem>
-                <SelectItem value="localizacao">Localização</SelectItem>
-                <SelectItem value="fornecedor">Fornecedor</SelectItem>
-              </SelectContent>
-            </Select>
+              options={[
+                { value: 'categoria', label: 'Categoria' },
+                { value: 'localizacao', label: 'Localização' },
+                { value: 'fornecedor', label: 'Fornecedor' }
+              ]}
+            />
           </div>
         )}
 
@@ -306,35 +404,27 @@ const RelatoriosPage = () => {
           <>
             <div>
               <Label>Critério ABC</Label>
-              <Select
+              <ReportNativeSelect
                 value={filters.criterioABC || 'valor'}
                 onValueChange={(value) => setFilters(prev => ({ ...prev, criterioABC: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="valor">Valor</SelectItem>
-                  <SelectItem value="quantidade">Quantidade</SelectItem>
-                  <SelectItem value="movimentacao">Movimentação</SelectItem>
-                </SelectContent>
-              </Select>
+                options={[
+                  { value: 'valor', label: 'Valor' },
+                  { value: 'quantidade', label: 'Quantidade' },
+                  { value: 'movimentacao', label: 'Movimentação' }
+                ]}
+              />
             </div>
             <div>
               <Label>Critério XYZ</Label>
-              <Select
+              <ReportNativeSelect
                 value={filters.criterioXYZ || 'giro'}
                 onValueChange={(value) => setFilters(prev => ({ ...prev, criterioXYZ: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="giro">Giro</SelectItem>
-                  <SelectItem value="variabilidade">Variabilidade</SelectItem>
-                  <SelectItem value="sazonalidade">Sazonalidade</SelectItem>
-                </SelectContent>
-              </Select>
+                options={[
+                  { value: 'giro', label: 'Giro' },
+                  { value: 'variabilidade', label: 'Variabilidade' },
+                  { value: 'sazonalidade', label: 'Sazonalidade' }
+                ]}
+              />
             </div>
           </>
         )}
@@ -343,57 +433,45 @@ const RelatoriosPage = () => {
         {config.filtrosObrigatorios.includes('formato') && (
           <div>
             <Label>Formato do Relatório</Label>
-            <Select
+            <ReportNativeSelect
               value={filters.formato || 'analitico'}
               onValueChange={(value) => setFilters(prev => ({ ...prev, formato: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="analitico">Analítico</SelectItem>
-                <SelectItem value="sintetico">Sintético</SelectItem>
-              </SelectContent>
-            </Select>
+              options={[
+                { value: 'analitico', label: 'Analítico' },
+                { value: 'sintetico', label: 'Sintético' }
+              ]}
+            />
           </div>
         )}
 
         {config.filtrosObrigatorios.includes('tipoMaterial') && (
           <div>
             <Label>Tipo de Material</Label>
-            <Select
+            <ReportNativeSelect
               value={filters.tipoMaterial || 'todos'}
               onValueChange={(value) => setFilters(prev => ({ ...prev, tipoMaterial: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="epi">EPIs</SelectItem>
-                <SelectItem value="medicamento">Medicamentos</SelectItem>
-              </SelectContent>
-            </Select>
+              options={[
+                { value: 'todos', label: 'Todos' },
+                { value: 'epi', label: 'EPIs' },
+                { value: 'medicamento', label: 'Medicamentos' }
+              ]}
+            />
           </div>
         )}
 
         {config.filtrosObrigatorios.includes('ordenarPor') && (
           <div>
             <Label>Ordenar Por</Label>
-            <Select
+            <ReportNativeSelect
               value={filters.ordenarPor || 'leadtime'}
               onValueChange={(value) => setFilters(prev => ({ ...prev, ordenarPor: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="leadtime">Lead Time</SelectItem>
-                <SelectItem value="qualidade">Qualidade</SelectItem>
-                <SelectItem value="participacao">Participação</SelectItem>
-                <SelectItem value="pontualidade">Pontualidade</SelectItem>
-              </SelectContent>
-            </Select>
+              options={[
+                { value: 'leadtime', label: 'Lead Time' },
+                { value: 'qualidade', label: 'Qualidade' },
+                { value: 'participacao', label: 'Participação' },
+                { value: 'pontualidade', label: 'Pontualidade' }
+              ]}
+            />
           </div>
         )}
 
@@ -411,63 +489,49 @@ const RelatoriosPage = () => {
         {config.filtrosObrigatorios.includes('ciclo') && (
           <div>
             <Label>Ciclo de Inventário</Label>
-            <Select
+            <ReportNativeSelect
               value={filters.ciclo || 'mensal'}
               onValueChange={(value) => setFilters(prev => ({ ...prev, ciclo: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="semanal">Semanal</SelectItem>
-                <SelectItem value="mensal">Mensal</SelectItem>
-                <SelectItem value="trimestral">Trimestral</SelectItem>
-              </SelectContent>
-            </Select>
+              options={[
+                { value: 'semanal', label: 'Semanal' },
+                { value: 'mensal', label: 'Mensal' },
+                { value: 'trimestral', label: 'Trimestral' }
+              ]}
+            />
           </div>
         )}
 
         {config.filtrosOpcionais.includes('material') && (
           <div>
             <Label>Material/Equipamento</Label>
-            <Select
+            <ReportNativeSelect
               value={filters.material || 'todos'}
-              onValueChange={(value) => setFilters(prev => ({ ...prev, material: value === 'todos' ? undefined : value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Todos os materiais" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos os materiais</SelectItem>
-                {filterOptions.materiais.map(material => (
-                  <SelectItem key={material.id} value={material.id}>
-                    {material.codigo} - {material.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onValueChange={(value) => setFilters(prev => ({ ...prev, material: value === 'todos' ?undefined : value }))}
+              options={[
+                { value: 'todos', label: 'Todos os materiais' },
+                ...filterOptions.materiais.map(material => ({
+                  value: material.id,
+                  label: `${material.codigo} - ${material.nome}`
+                }))
+              ]}
+            />
           </div>
         )}
 
         {config.filtrosOpcionais.includes('responsavel') && (
           <div>
             <Label>Responsável</Label>
-            <Select
+            <ReportNativeSelect
               value={filters.responsavel || 'todos'}
-              onValueChange={(value) => setFilters(prev => ({ ...prev, responsavel: value === 'todos' ? undefined : value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Todos os responsáveis" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos os responsáveis</SelectItem>
-                {filterOptions.colaboradores.map(colaborador => (
-                  <SelectItem key={colaborador.id} value={colaborador.id}>
-                    {colaborador.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onValueChange={(value) => setFilters(prev => ({ ...prev, responsavel: value === 'todos' ?undefined : value }))}
+              options={[
+                { value: 'todos', label: 'Todos os responsáveis' },
+                ...filterOptions.colaboradores.map(colaborador => ({
+                  value: colaborador.id,
+                  label: colaborador.nome
+                }))
+              ]}
+            />
           </div>
         )}
 
@@ -484,6 +548,77 @@ const RelatoriosPage = () => {
             />
           </div>
         )}
+
+        {config.filtrosOpcionais.includes('prioridade') && (
+          <div>
+            <Label>Prioridade</Label>
+            <ReportNativeSelect
+              value={filters.prioridade || 'todas'}
+              onValueChange={(value) => setFilters(prev => ({ ...prev, prioridade: value === 'todas' ?undefined : value }))}
+              options={[
+                { value: 'todas', label: 'Todas' },
+                { value: 'alta', label: 'Alta/Urgente' },
+                { value: 'media', label: 'Normal' },
+                { value: 'baixa', label: 'Baixa' }
+              ]}
+            />
+          </div>
+        )}
+
+        {config.filtrosOpcionais.includes('criticidade') && (
+          <div>
+            <Label>Criticidade</Label>
+            <ReportNativeSelect
+              value={filters.criticidade || 'todas'}
+              onValueChange={(value) => setFilters(prev => ({ ...prev, criticidade: value === 'todas' ?undefined : value }))}
+              options={[
+                { value: 'todas', label: 'Todas' },
+                { value: 'critica', label: 'Crítica' },
+                { value: 'alerta', label: 'Alerta' },
+                { value: 'atencao', label: 'Atenção' },
+                { value: 'normal', label: 'Normal' }
+              ]}
+            />
+          </div>
+        )}
+
+        {config.filtrosOpcionais.includes('limitarTop') && (
+          <div>
+            <Label htmlFor="limitarTop">Limitar Top</Label>
+            <Input
+              id="limitarTop"
+              type="number"
+              min="1"
+              max="100"
+              value={filters.limitarTop || ''}
+              onChange={(e) => setFilters(prev => ({ ...prev, limitarTop: e.target.value ?parseInt(e.target.value) : undefined }))}
+              placeholder="Ex: 10"
+            />
+          </div>
+        )}
+
+        {[
+          ['incluirAnaliseABC', 'Incluir análise ABC'],
+          ['incluirVencidos', 'Incluir itens vencidos'],
+          ['incluirPerformance', 'Incluir métricas de performance'],
+          ['incluirHistoricoPrecos', 'Incluir histórico de preços'],
+          ['comparativoAnterior', 'Comparar com período anterior'],
+          ['incluirVariacao', 'Incluir variação'],
+          ['incluirGraficos', 'Incluir gráficos'],
+          ['incluirMatriz', 'Incluir matriz'],
+          ['incluirSugestoes', 'Incluir sugestões'],
+          ['incluirDivergencias', 'Incluir divergências'],
+          ['incluirTendencias', 'Incluir tendências'],
+        ].filter(([key]) => config.filtrosOpcionais.includes(key)).map(([key, label]) => (
+          <div key={key} className="flex items-center space-x-2">
+            <Checkbox
+              id={key}
+              checked={filters[key] || false}
+              onCheckedChange={(checked) => setFilters(prev => ({ ...prev, [key]: checked }))}
+            />
+            <Label htmlFor={key}>{label}</Label>
+          </div>
+        ))}
       </div>
     )
   }
@@ -499,40 +634,8 @@ const RelatoriosPage = () => {
     const success = await generateReport(request)
     
     if (success) {
-      console.log('✅ Relatório de teste gerado com sucesso!')
+      console.log('Relatório de teste gerado com sucesso!')
     }
-  }
-
-  // Se há um relatório interativo ativo, mostrar apenas ele
-  if (activeInteractiveReport) {
-    return (
-      <div className="min-h-screen w-full flex flex-col">
-        {/* Container centralizado com largura máxima */}
-        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="space-y-6 py-6">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setActiveInteractiveReport(null)}
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Voltar
-                </Button>
-                <h1 className="text-2xl font-bold">Relatórios</h1>
-              </div>
-            </div>
-
-            <RelatorioInterativo
-              reportId={activeInteractiveReport.id}
-              titulo={activeInteractiveReport.titulo}
-              onClose={() => setActiveInteractiveReport(null)}
-            />
-          </div>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -549,7 +652,7 @@ const RelatoriosPage = () => {
             onClick={handleTestReport}
             disabled={isGenerating}
           >
-            🧪 Teste Diagnóstico
+            Teste Diagnóstico
           </Button>
           <Filter className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">
@@ -558,253 +661,124 @@ const RelatoriosPage = () => {
         </div>
       </div>
 
-      {/* Cards de Relatórios agrupados por categoria */}
-      {['Estoque', 'Movimentação', 'Qualidade', 'Custos', 'Compras', 'Operações', 'Estratégico', 'Controle'].map(category => {
-        const categoryReports = REPORT_CONFIGS.filter(config => config.categoria === category)
-        if (categoryReports.length === 0) return null
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        {REPORT_CONFIGS.map((config) => (
+          <Card key={config.id} className="hover:shadow-sm transition-shadow">
+            <CardHeader className="p-4 pb-2">
+              <div className="flex items-start gap-2">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
+                  {getIcon(config.icon)}
+                </div>
+                <div className="min-w-0 space-y-1">
+                  <CardTitle className="text-sm leading-tight">{config.titulo}</CardTitle>
+                  <Badge variant="outline" className="text-[11px] leading-none">
+                    {getCategoryLabel(config.categoria)}
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3 p-4 pt-0">
+              <p className="text-xs text-muted-foreground leading-snug">
+                {config.descricao}
+              </p>
+              
+              <div className="flex flex-wrap gap-1">
+                {config.formatosDisponiveis.map(fmt => (
+                  <Badge key={fmt} variant="secondary" className="px-1.5 py-0 text-[10px]">
+                    {fmt.toUpperCase()}
+                  </Badge>
+                ))}
+              </div>
 
-        return (
-          <div key={category} className="space-y-4">
-            <div className="flex items-center gap-3">
-              <h2 className="text-lg font-semibold">{getCategoryLabel(category)}</h2>
-              <Badge className={getCategoryColor(category)}>
-                {categoryReports.length} relatório{categoryReports.length > 1 ? 's' : ''}
-              </Badge>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {categoryReports.map((config) => (
-                <Card key={config.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary/10 rounded-lg">
-                          {getIcon(config.icon)}
-                        </div>
-                        <div>
-                          <CardTitle className="text-base">{config.titulo}</CardTitle>
-                          <Badge variant="outline" className="mt-1 text-xs">
-                            {getCategoryLabel(config.categoria)}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {config.descricao}
-                    </p>
+              <Dialog
+                open={selectedReport === config.id}
+                onOpenChange={(open) => {
+                  if (!open && selectedReport === config.id) {
+                    setSelectedReport(null)
+                  }
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="h-8 w-full text-xs"
+                    onClick={() => {
+                      applyReportDialogCenter()
+                      setSelectedReport(config.id)
+                      setFilters(buildDefaultFilters(config))
+                      setFormat('pdf')
+                    }}
+                  >
+                    <FileDown className="mr-2 h-3.5 w-3.5" />
+                    Gerar Relatório
+                  </Button>
+                </DialogTrigger>
+                
+                {selectedReport === config.id && (
+                  <DialogContent
+                    className="relatorios-report-dialog max-w-md"
+                    aria-describedby="dialog-description"
+                  >
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        {getIcon(config.icon)}
+                        {config.titulo}
+                      </DialogTitle>
+                    </DialogHeader>
                     
-                    <div className="flex flex-wrap gap-1">
-                      {config.formatosDisponiveis.map(fmt => (
-                        <Badge key={fmt} variant="secondary" className="text-xs">
-                          {fmt.toUpperCase()}
-                        </Badge>
-                      ))}
-                    </div>
-
-                    {config.isInteractive ? (
-                      <div className="space-y-2">
-                        <Button 
-                          variant="default" 
-                          className="w-full"
-                          onClick={() => handleInteractiveReport(config)}
-                        >
-                          <Activity className="mr-2 h-4 w-4" />
-                          Visualizar Interativo
-                        </Button>
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              className="w-full"
-                              onClick={() => {
-                                setSelectedReport(config.id.replace('-interativa', ''))
-                                const defaultFilters: Record<string, any> = {}
-                                defaultFilters.formato = 'analitico'
-                                setFilters(defaultFilters)
-                                setFormat('pdf')
-                              }}
-                            >
-                              <FileDown className="mr-2 h-4 w-4" />
-                              Gerar PDF
-                            </Button>
-                          </DialogTrigger>
-                          
-                          {selectedReport === config.id.replace('-interativa', '') && (
-                            <DialogContent className="max-w-md" aria-describedby="dialog-description">
-                              <DialogHeader>
-                                <DialogTitle className="flex items-center gap-2">
-                                  {getIcon(config.icon)}
-                                  {config.titulo}
-                                </DialogTitle>
-                              </DialogHeader>
-                              
-                              <div className="space-y-6">
-                                <p id="dialog-description" className="sr-only">
-                                  Configure os filtros e formato para gerar o relatório {config.titulo}
-                                </p>
-                                <div>
-                                  <Label>Formato do Relatório</Label>
-                                  <Select value={format} onValueChange={(value: any) => setFormat(value)}>
-                                    <SelectTrigger>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {config.formatosDisponiveis.map(fmt => (
-                                        <SelectItem key={fmt} value={fmt}>
-                                          {fmt.toUpperCase()}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-
-                                {renderFilters(REPORT_CONFIGS.find(c => c.id === config.id.replace('-interativa', '')) || config)}
-
-                                <div className="flex gap-3">
-                                  <Button
-                                    variant="outline"
-                                    className="flex-1"
-                                    onClick={() => setSelectedReport(null)}
-                                  >
-                                    Cancelar
-                                  </Button>
-                                  <Button
-                                    className="flex-1"
-                                    onClick={handleGenerateReport}
-                                    disabled={isGenerating}
-                                  >
-                                    {isGenerating ? (
-                                      <div className="flex items-center gap-2">
-                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                        Gerando...
-                                      </div>
-                                    ) : (
-                                      <div className="flex items-center gap-2">
-                                        <Download className="h-4 w-4" />
-                                        Gerar
-                                      </div>
-                                    )}
-                                  </Button>
-                                </div>
-                              </div>
-                            </DialogContent>
-                          )}
-                        </Dialog>
+                    <div className="space-y-6">
+                      <p id="dialog-description" className="sr-only">
+                        Configure os filtros e formato para gerar o relatório {config.titulo}
+                      </p>
+                      <div>
+                        <Label>Formato do Relatório</Label>
+                        <ReportNativeSelect
+                          value={format}
+                          onValueChange={(value) => setFormat(value as 'pdf' | 'excel' | 'csv')}
+                          options={config.formatosDisponiveis.map(fmt => ({
+                            value: fmt,
+                            label: fmt.toUpperCase()
+                          }))}
+                        />
                       </div>
-                    ) : (
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            className="w-full"
-                            onClick={() => {
-                              setSelectedReport(config.id)
-                              // Inicializar filtros com valores padrão baseados nos filtros obrigatórios
-                              const defaultFilters: Record<string, any> = {}
-                              
-                              if (config.filtrosObrigatorios.includes('agruparPor')) {
-                                defaultFilters.agruparPor = 'categoria'
-                              }
-                              if (config.filtrosObrigatorios.includes('formato')) {
-                                defaultFilters.formato = 'analitico'
-                              }
-                              if (config.filtrosObrigatorios.includes('tipoMaterial')) {
-                                defaultFilters.tipoMaterial = 'todos'
-                              }
-                              if (config.filtrosObrigatorios.includes('ordenarPor')) {
-                                defaultFilters.ordenarPor = 'leadtime'
-                              }
-                              if (config.filtrosObrigatorios.includes('aging')) {
-                                defaultFilters.aging = true
-                              }
-                              if (config.filtrosObrigatorios.includes('ciclo')) {
-                                defaultFilters.ciclo = 'mensal'
-                              }
-                              if (config.filtrosObrigatorios.includes('criterioABC')) {
-                                defaultFilters.criterioABC = 'valor'
-                                defaultFilters.criterioXYZ = 'giro'
-                              }
-                              
-                              setFilters(defaultFilters)
-                              setFormat('pdf')
-                            }}
-                          >
-                            <FileDown className="mr-2 h-4 w-4" />
-                            Gerar Relatório
-                          </Button>
-                        </DialogTrigger>
-                        
-                        {selectedReport === config.id && (
-                          <DialogContent className="max-w-md" aria-describedby="dialog-description">
-                            <DialogHeader>
-                              <DialogTitle className="flex items-center gap-2">
-                                {getIcon(config.icon)}
-                                {config.titulo}
-                              </DialogTitle>
-                            </DialogHeader>
-                            
-                            <div className="space-y-6">
-                              <p id="dialog-description" className="sr-only">
-                                Configure os filtros e formato para gerar o relatório {config.titulo}
-                              </p>
-                              <div>
-                                <Label>Formato do Relatório</Label>
-                                <Select value={format} onValueChange={(value: any) => setFormat(value)}>
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {config.formatosDisponiveis.map(fmt => (
-                                      <SelectItem key={fmt} value={fmt}>
-                                        {fmt.toUpperCase()}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
 
-                              {renderFilters(config)}
+                      {renderFilters(config)}
 
-                              <div className="flex gap-3">
-                                <Button
-                                  variant="outline"
-                                  className="flex-1"
-                                  onClick={() => setSelectedReport(null)}
-                                >
-                                  Cancelar
-                                </Button>
-                                <Button
-                                  className="flex-1"
-                                  onClick={handleGenerateReport}
-                                  disabled={isGenerating}
-                                >
-                                  {isGenerating ? (
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                      Gerando...
-                                    </div>
-                                  ) : (
-                                    <div className="flex items-center gap-2">
-                                      <Download className="h-4 w-4" />
-                                      Gerar
-                                    </div>
-                                  )}
-                                </Button>
-                              </div>
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => setSelectedReport(null)}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          className="flex-1"
+                          onClick={handleGenerateReport}
+                          disabled={isGenerating}
+                        >
+                          {isGenerating ?(
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              Gerando...
                             </div>
-                          </DialogContent>
-                        )}
-                      </Dialog>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )
-      })}
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <Download className="h-4 w-4" />
+                              Gerar
+                            </div>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                )}
+              </Dialog>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
         </div>
       </div>
     </div>

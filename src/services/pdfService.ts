@@ -156,6 +156,8 @@ export const pdfService = {
     }
 
     let printElement: HTMLElement | null = null
+    const originalScrollX = window.scrollX
+    const originalScrollY = window.scrollY
 
     try {
       onStart?.()
@@ -197,14 +199,15 @@ export const pdfService = {
       
       // Estilos otimizados para PDF
       Object.assign(printElement.style, {
-        position: 'absolute',
-        left: '-9999px',
+        position: 'fixed',
+        left: '0',
         top: '0',
         width: '210mm',
         minHeight: '297mm',
         backgroundColor: 'white',
         zIndex: '-1000',
-        visibility: 'hidden'
+        visibility: 'visible',
+        pointerEvents: 'none'
       })
 
       document.body.appendChild(printElement)
@@ -215,6 +218,7 @@ export const pdfService = {
           printElement.parentNode.removeChild(printElement)
           console.log('🧹 Temporary element cleaned up')
         }
+        window.scrollTo(originalScrollX, originalScrollY)
       })
 
       // ⏳ Aguardar carregamento de recursos
@@ -323,6 +327,7 @@ export const pdfService = {
     } finally {
       // 🧹 Cleanup e finalização
       pdfStateManager.finishGeneration()
+      window.scrollTo(originalScrollX, originalScrollY)
       onFinish?.()
     }
   },
