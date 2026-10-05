@@ -27,6 +27,8 @@ export type AcaoAuditavel =
   | 'usuario.status_alterado'
   | 'perfil.permissoes_alteradas'
   | 'seguranca.acesso_negado'
+  | 'colaborador.cpf_consultado'
+  | 'romaneio.cancelar'
 
 interface RegistroAuditoria {
   acao: AcaoAuditavel

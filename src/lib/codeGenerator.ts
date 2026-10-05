@@ -88,61 +88,7 @@ export const generateDocumentCode = async (
  * @param centroCustoDestinoId - The destination cost center ID or code
  * @returns A promise that resolves to the generated purchase requisition code.
  */
-export const generatePurchaseRequisitionCode = async (
-  centroCustoDestinoId: string
-): Promise<string> => {
-  try {
-    // 1. SCO: Fixed document type for purchase requisitions
-    const sco = 'SCO'
+// A numeracao de solicitacoes passou a ser global e e reservada pelo banco
+// (public.proximo_numero_solicitacao), em vez de derivada do centro de custo.
+// A funcao antiga foi removida junto com o padrao SCO-AL-CCCC-NNNN.
 
-    // 2. AL: Responsible Sector (Hardcoded)
-    const al = 'AL'
-
-    // 3. Buscar o código do centro de custo se foi passado um UUID
-    let centroCustoCodigo = centroCustoDestinoId
-    
-    // Se parece com UUID (tem hífens), buscar o código no banco
-    if (centroCustoDestinoId.includes('-')) {
-      const { data: centroCusto } = await supabase
-        .from('centros_custo')
-        .select('codigo')
-        .eq('id', centroCustoDestinoId)
-        .single()
-      
-      centroCustoCodigo = centroCusto?.codigo || '0000'
-    }
-
-    // 4. CC_DESTINO: Last 4 digits of destination cost center code
-    const ccDestino = centroCustoCodigo && centroCustoCodigo.length >= 4 
-      ? centroCustoCodigo.slice(-4)
-      : centroCustoCodigo?.padStart(4, '0') || '0000'
-
-    // 5. SEQUENCIA: Sequential Number específico para este centro de custo
-    const pattern = `${sco}-${al}-${ccDestino}-%`
-    
-    const { data, error } = await supabase
-      .from('solicitacoes')
-      .select('numero')
-      .ilike('numero', pattern)
-      .order('created_at', { ascending: false })
-      .limit(1)
-
-    let sequence = 1
-    if (!error && data && data.length > 0) {
-      const lastNumber = data[0].numero
-      const parts = lastNumber.split('-')
-      if (parts.length >= 4) {
-        const lastSequence = parseInt(parts[3])
-        sequence = isNaN(lastSequence) ? 1 : lastSequence + 1
-      }
-    }
-
-    const sequencia = String(sequence).padStart(4, '0')
-    return `${sco}-${al}-${ccDestino}-${sequencia}`
-  } catch (error) {
-    console.error('Erro ao gerar código de requisição:', error)
-    // Fallback: usar timestamp para garantir unicidade
-    const timestamp = Date.now().toString().slice(-4)
-    return `SCO-AL-0000-${timestamp}`
-  }
-}

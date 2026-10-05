@@ -3,6 +3,7 @@ import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react-oxc'
 import reactTest from '@vitejs/plugin-react-swc'
 import path, { resolve } from 'path'
+import pkg from './package.json'
 
 // Dev-server history fallback for the React SPA mounted at /sistema.
 // Without this, refreshing a deep route (e.g. /sistema/dashboard) hits Vite's
@@ -81,6 +82,8 @@ export default defineConfig(({ mode }) => ({
   plugins: [mode === 'test' ? reactTest() : react(), sistemaSpaFallback()],
   define: {
     'process.env.NODE_ENV': JSON.stringify(mode ?? process.env.NODE_ENV ?? 'production'),
+    // Versao exibida na interface vem do package.json, em um unico lugar
+    __APP_VERSION__: JSON.stringify(pkg.version),
   },
   resolve: {
     alias: {

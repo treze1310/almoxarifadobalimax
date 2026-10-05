@@ -12,7 +12,8 @@ export default function Layout() {
       {/* 📱 Main content - otimizado para mobile */}
       <div className="flex flex-col flex-1 min-w-0">
         <Header />
-        <main className="flex-1 p-3 sm:p-4 md:p-6 relative overflow-hidden">
+        {/* Padding de página do design system: 16px mobile, 24px desktop */}
+        <main className="flex-1 p-ds-page-mobile md:p-ds-page relative">
           <div className="w-full max-w-full">
             <Outlet />
           </div>

@@ -25,6 +25,7 @@ import {
   LogOut,
   User,
   Settings,
+  HardHat,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissoes } from '@/contexts/PermissionsContext'
@@ -35,6 +36,7 @@ import {
 } from '@/components/ui/collapsible'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from './ui/scroll-area'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Sheet,
   SheetContent,
@@ -130,6 +132,12 @@ const menuItems = [
     ],
   },
   {
+    title: 'Controle de EPI',
+    href: '/epi',
+    icon: HardHat,
+    modulo: 'epi',
+  },
+  {
     title: 'Gestão de Localização',
     href: '/localizacao',
     icon: MapPin,
@@ -153,7 +161,7 @@ const menuItems = [
 const MenuContent = ({ onNavigate }: { onNavigate?: () => void }) => {
   const location = useLocation()
   const { user, signOut } = useAuth()
-  const { can, perfilNome } = usePermissoes()
+  const { can, perfilNome, loading: carregandoPermissoes } = usePermissoes()
 
   // Esconde do menu o que o perfil de acesso do usuário não pode visualizar
   const visibleMenuItems = menuItems
@@ -203,7 +211,13 @@ const MenuContent = ({ onNavigate }: { onNavigate?: () => void }) => {
     <div className="flex flex-col h-full">
       <ScrollArea className="flex-1">
         <nav className="p-3 space-y-1">
-          {visibleMenuItems.map((item: any) =>
+          {/* RF-07: enquanto as permissões carregam, mostra skeleton em vez de
+              um menu vazio que faz o usuário parecer sem acesso */}
+          {carregandoPermissoes
+            ? Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="h-9 w-full rounded-md" />
+              ))
+            : visibleMenuItems.map((item: any) =>
             item.subItems ? (
               <Collapsible
                 key={item.title}
@@ -240,8 +254,8 @@ const MenuContent = ({ onNavigate }: { onNavigate?: () => void }) => {
                   <span className="truncate">{item.title}</span>
                 </Button>
               </Link>
-            ),
-          )}
+              ),
+            )}
         </nav>
       </ScrollArea>
       
@@ -260,7 +274,9 @@ const MenuContent = ({ onNavigate }: { onNavigate?: () => void }) => {
               <p className="text-xs text-muted-foreground truncate">
                 {user?.email}
               </p>
-              <p className="text-xs text-primary truncate">{perfilNome}</p>
+              <p className="text-xs text-primary truncate">
+                {carregandoPermissoes ? 'Carregando permissões…' : perfilNome}
+              </p>
             </div>
           </div>
           
@@ -278,7 +294,7 @@ const MenuContent = ({ onNavigate }: { onNavigate?: () => void }) => {
         
         <div className="p-3 pt-0 text-center">
           <p className="text-xs text-muted-foreground">
-            Sistema de Almoxarifado v1.0.0
+            Sistema de Almoxarifado
           </p>
         </div>
       </div>

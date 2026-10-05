@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { 
@@ -20,7 +22,8 @@ import {
   X,
   Ban,
   Download,
-  Copy
+  Copy,
+  Lock,
 } from 'lucide-react'
 import { useRomaneios } from '@/hooks/useRomaneios'
 
@@ -121,10 +124,19 @@ const getStatusBadgeVariant = (status: string) => {
   }
 }
 
+/**
+ * RF-04: documento aprovado é imutável. Editar e excluir só valem enquanto o
+ * romaneio está pendente ou cancelado; depois disso, a correção é por
+ * cancelamento com motivo. A regra também é aplicada por trigger no banco.
+ */
+const documentoEditavel = (status?: string | null) =>
+  status === 'pendente' || status === 'cancelado' || !status
+
 const RomaneiosPage = () => {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('retiradas')
   const [selectedRomaneio, setSelectedRomaneio] = useState<Romaneio | null>(null)
+  const [motivoCancelamento, setMotivoCancelamento] = useState('')
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
   const [statusDevolucoes, setStatusDevolucoes] = useState<Map<string, StatusDevolucao>>(new Map())
   const [loadingStatus, setLoadingStatus] = useState(false)
@@ -323,7 +335,7 @@ const RomaneiosPage = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                
+                {documentoEditavel(romaneio.status) ? (
                   <DropdownMenuItem onClick={(e) => {
                     e.stopPropagation()
                     navigate(`/novo-romaneio?tipo=${romaneio.tipo}&edit=${romaneio.id}`)
@@ -331,6 +343,12 @@ const RomaneiosPage = () => {
                     <Edit className="h-4 w-4 mr-2" />
                     Editar
                   </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem disabled>
+                    <Lock className="h-4 w-4 mr-2" />
+                    Aprovado — somente cancelamento
+                  </DropdownMenuItem>
+                )}
                 
               </DropdownMenuContent>
             </DropdownMenu>
@@ -771,17 +789,19 @@ const RomaneiosPage = () => {
                     Clonar
                   </Button>
                   
-                  {/* Editar */}
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedRomaneio(null)
-                      navigate(`/novo-romaneio?tipo=${selectedRomaneio.tipo}&edit=${selectedRomaneio.id}`)
-                    }}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Editar
-                  </Button>
+                  {/* Editar — bloqueado após aprovação (RF-04) */}
+                  {documentoEditavel(selectedRomaneio.status) && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedRomaneio(null)
+                        navigate(`/novo-romaneio?tipo=${selectedRomaneio.tipo}&edit=${selectedRomaneio.id}`)
+                      }}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar
+                    </Button>
+                  )}
                   
                   {/* Aprovar */}
                   {selectedRomaneio.status === 'pendente' && (
@@ -815,15 +835,30 @@ const RomaneiosPage = () => {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Cancelar Romaneio</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Tem certeza que deseja cancelar o romaneio {selectedRomaneio.numero}? 
-                            Esta ação não pode ser desfeita.
+                            O romaneio {selectedRomaneio.numero} será cancelado. Como o documento
+                            não pode ser editado nem excluído depois de aprovado, o motivo é
+                            obrigatório e fica registrado na auditoria.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
+                        <div className="space-y-2">
+                          <Label htmlFor="motivo-cancelamento">Motivo do cancelamento</Label>
+                          <Textarea
+                            id="motivo-cancelamento"
+                            value={motivoCancelamento}
+                            onChange={(e) => setMotivoCancelamento(e.target.value)}
+                            placeholder="Descreva o que motivou o cancelamento"
+                            className="resize-none"
+                          />
+                        </div>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogCancel onClick={() => setMotivoCancelamento('')}>
+                            Voltar
+                          </AlertDialogCancel>
                           <AlertDialogAction
+                            disabled={motivoCancelamento.trim().length < 5}
                             onClick={async () => {
-                              await cancelRomaneio(selectedRomaneio.id)
+                              await cancelRomaneio(selectedRomaneio.id, motivoCancelamento)
+                              setMotivoCancelamento('')
                               handleRomaneioUpdated()
                             }}
                           >
@@ -834,7 +869,8 @@ const RomaneiosPage = () => {
                     </AlertDialog>
                   )}
                   
-                  {/* Excluir */}
+                  {/* Excluir — indisponível após aprovação (RF-04) */}
+                  {documentoEditavel(selectedRomaneio.status) && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive">
@@ -864,6 +900,7 @@ const RomaneiosPage = () => {
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
+                  )}
                 </div>
               </div>
             </div>

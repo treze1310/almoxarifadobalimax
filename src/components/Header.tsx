@@ -8,6 +8,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
+import { ThemeToggle } from '@/components/ds/ThemeToggle'
+
 export const Header = () => {
   const [searchOpen, setSearchOpen] = useState(false)
 
@@ -65,6 +67,8 @@ export const Header = () => {
               />
             </div>
           </div>
+
+          <ThemeToggle />
         </div>
       </div>
     </header>

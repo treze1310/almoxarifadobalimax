@@ -1,0 +1,130 @@
+# PRD "Melhorias e Redesign" — andamento
+
+Fonte: `PRD — Sistema de Almoxarifado Balimax Melhorias e Redesign.docx` (05/10/2026).
+Atualizado em 05/10/2026.
+
+A ordem segue o roadmap do próprio PRD: **Fase 1 (P0, dados e governança) antes do redesign**,
+"porque um layout novo sobre números errados não recupera a confiança do usuário".
+
+## Fase 1 — P0
+
+| ID | Requisito | Status | Como foi feito / verificado |
+|---|---|---|---|
+| RF-01 | Variações mensais reais; ocultar sem base de comparação | ✅ | Os valores `+2,5% / +8,2% / −12% / +15%` eram literais no código. Agora materiais e movimentações comparam mês atual × anterior com dados reais; **Valor do Estoque** e **Estoque Crítico** não exibem indicador, por não haver histórico. KPIs ficaram clicáveis |
+| RF-02 | Regra única de estoque baixo/zerado | ✅ | Coluna gerada `materiais_equipamentos.situacao_estoque` (`zerado`/`baixo`/`normal`) no banco, consumida pelo KPI, alerta e filtro. Verificado: 3 zerados + 1 no mínimo. A "divergência 3 × 4" era rotulagem: as telas somavam grupos diferentes |
+| RF-03 | Gráfico de compras a partir das NF-e | ✅ já conforme | Já lia `nfe_importacao` com escala automática e tooltip por mês. A barra única é o dado real: das 4 notas (R$ 12.142,84), só uma tem emissão nos últimos 12 meses |
+| RF-04 | Bloquear edição/exclusão após aprovação | ✅ | Triggers em `romaneios` e `solicitacoes`, válidos para **qualquer perfil, inclusive administrador**. Cancelamento exige motivo (mín. 5 caracteres), que é gravado em `observacoes` e na auditoria. No front, Editar/Excluir desaparecem e o menu mostra "Aprovado — somente cancelamento". Transição natural aprovado → retirado → devolvido preservada |
+| RF-05 | Nome do solicitante; nº reservado | ✅ | Nome do solicitante corrigido (a lista imprimia o literal `'Colaborador'`). **Numeração passou a ser global** (`SCO-00001`), reservada por sequência do Postgres ao abrir o formulário — isso também elimina a corrida do método anterior (ler o maior número e somar 1), que podia duplicar número com dois usuários simultâneos. Solicitante avulso **segue permitido**, por decisão de 05/10 |
+| RF-06 | Mascarar CPF na listagem | ✅ | Novo `src/lib/dadosPessoais.ts` com a regra num só lugar. Listagem mostra `***.456.164-**`, telefone e e-mail também mascarados, cargos capitalizados. No detalhe há "Ver CPF completo", que exige `colaboradores.update` e **grava o acesso na trilha de auditoria** (RNF-06) |
+| RF-07 | Toast de login só em autenticação explícita; skeleton do menu | ✅ | O evento `SIGNED_IN` também dispara ao restaurar a sessão — daí o toast a cada recarga. Agora há uma flag ligada apenas pelo `signIn()`. O menu mostra skeleton e "Carregando permissões…" em vez de sumir e exibir "Sem perfil" |
+
+### Itens de consistência resolvidos junto
+
+- **Versão num único lugar**: havia "v1.0.0" no menu e "Versão 0.0.1" no rodapé, ambos fixos.
+  Agora vem do `package.json` via `__APP_VERSION__` (`src/lib/versao.ts`); verificado no bundle: `0.0.29`.
+- **RF-15 parcial**: o botão "Teste Diagnóstico" dos Relatórios só aparece em desenvolvimento.
+- **RF-08 parcial**: o filtro de estoque crítico vive na URL (`?estoque=critico`), o que faz o KPI
+  do Dashboard abrir a lista já filtrada e torna o estado compartilhável.
+- **Código morto**: `src/hooks/useDashboard.ts` não era importado por ninguém e duplicava a regra de
+  estoque — exatamente a fonte dupla que o RF-02 elimina. Removido.
+- **Testes**: 22 passando, incluindo regressões de mascaramento de CPF e da regra de estoque.
+
+### Decisões de 05/10 aplicadas
+
+- **Numeração global** (item 1): `public.proximo_numero_solicitacao()` com sequência própria, exige
+  `solicitacoes.create` e é chamada uma vez ao abrir o formulário. Número de formulário abandonado
+  fica como lacuna — comportamento esperado de numeração reservada. A função antiga
+  `generatePurchaseRequisitionCode` (padrão `SCO-AL-CCCC-NNNN`) foi removida.
+  Verificado: Almoxarife reserva `SCO-00001` e `SCO-00002`; usuário sem perfil é bloqueado.
+- **Módulo EPI** (item 2 — "faça o que achar melhor"): **liguei, em vez de remover.** Já existiam
+  1.140 linhas prontas (`src/pages/epi/EPIGerenciamento.tsx`, `EPIAtribuicaoDialog`, `FichaEPIPDF`,
+  `epiService`) fora de rota e de menu. O motivo de nunca ter funcionado era a **view
+  `epi_com_atribuicoes`, que não existia no banco** — o próprio service tinha um comentário
+  admitindo isso. Criei a view com `security_invoker = true` (sem isso ela rodaria como dona e
+  furaria a RLS), com `status_calculado` (em_dia / vencendo em 30 dias / vencido / sem_validade), e
+  liguei rota `/epi` + item de menu, ambos sob a permissão `epi`. Isso resolve o RF-14 (a matriz não
+  cita mais módulo inexistente) e entrega a base do RF-17.
+  Verificado: Almoxarife lê a view; anônimo não.
+- **Solicitante avulso** (item 3): mantido. Revertida a exigência de colaborador cadastrado e
+  removida a opção `exigirColaborador` que havia ficado sem uso.
+- **RF-14 (resumo do perfil)**: o cabeçalho dizia "16 de 16 módulos liberados" inclusive para o
+  Diretor, que é somente leitura. Agora distingue: "16 de 16 módulos visíveis · somente leitura ·
+  aprova documentos".
+
+
+## Fase 2 — Design system (fundação entregue)
+
+Componentes em `src/components/ds/` e tokens em `src/main.css` + `tailwind.config.ts`.
+
+| Item do PRD | Status | Observação |
+|---|---|---|
+| Token `--primary` (azul Balimax) | ✅ | `#1F4E9C` exato. Era `#007bff` (azul genérico). Verificado no navegador: `rgb(31, 78, 156)` |
+| Token `--radius` | ✅ | 8 px em cards (`--radius`), 6 px em inputs e botões (`--radius-control`) |
+| Escala tipográfica | ✅ | `text-ds-page` (24/600), `text-ds-section` (18/600), `text-ds-body` (14), `text-ds-table` (13). Substitui os 3 tamanhos de título que existiam soltos |
+| Padding de página | ✅ | `p-ds-page-mobile` (16 px) / `md:p-ds-page` (24 px), aplicado no `Layout` — vale para todas as telas de uma vez |
+| Tema claro e escuro | ✅ | `ThemeContext` + `ThemeToggle` no cabeçalho; preferência salva por usuário (claro / escuro / do sistema), com fallback se o `localStorage` estiver bloqueado. Verificado nos dois temas |
+| Status padronizados | ✅ | Mapa central em `src/lib/status.ts` com as 6 cores do PRD, incluindo "cancelado" em cinza riscado. `normalizarStatus()` converte as muitas grafias do banco (`aprovado`, `Aprovada`, `concluida`, `Concluída`, `lancada`, `em_analise`…) para a chave canônica |
+| `StatusBadge` | ✅ | Lê o mapa central; nenhum módulo define cor de status |
+| `PageHeader` | ✅ | Breadcrumb → título → descrição → slot de ações |
+| `DataTable` | ✅ | Busca, filtro por coluna, ordenação, seleção em lote, colunas configuráveis, densidade compacta, exportação CSV, paginação e **estado na URL** |
+| `FilterBar` | ✅ | Entregue dentro do `DataTable` (busca + limpar filtros), em vez de componente separado |
+| `DetailDrawer` | ✅ | Painel lateral com número, status, abas e barra de ações |
+| `KpiCard` | ✅ | Valor, rótulo, variação (oculta quando não há base) e link para a lista filtrada |
+| `EmptyState` / `Skeleton` / `ErrorState` | ✅ | `EstadosPagina.tsx`, com `TableSkeleton` e `CardsSkeleton` no lugar dos spinners |
+| `AppShell` | ⚠️ parcial | O shell atual (Sidebar + Header + Layout) já tem menu responsivo, busca e tema, e a versão agora aparece num único lugar. Falta: menu recolhível com grupos (Operação, Compras, Cadastros, Gestão), notificações e Ctrl+K (RF-12) |
+| `FormLayout` | ❌ | Não feito. Grid de 12 colunas com seções numeradas |
+
+### Desvio: TanStack Table
+
+O PRD especifica `DataTable (TanStack Table)`. **A biblioteca não pôde ser instalada**: o
+`node_modules` deste projeto está com symlinks apontando para o virtual store de **outra pasta**
+(`CURSOR-PROJECTS/.../sistema-de-almoxarifado/node_modules/.pnpm`), e o pnpm exige
+`pnpm install` completo para aceitar uma dependência nova. Um reinstall completo é operação de risco
+(com 3 lockfiles divergentes no repositório) e não cabia fazer sem combinar.
+
+O `DataTable` foi então construído sobre a tabela do shadcn, com a lógica de filtro e ordenação já
+validada no `ColumnFilter`. **A API do componente não depende do motor**, então trocar por TanStack
+depois não exige mexer nas telas que o consomem.
+
+### Importante: o que já mudou de aparência
+
+Tokens, padding de página e tema são globais — então **todas as telas já mudaram de cor e
+espaçamento** com esta entrega. Os componentes novos (`DataTable`, `PageHeader`, `DetailDrawer`…)
+ainda **não foram aplicados** aos módulos: essa é a migração, que vem a seguir.
+
+### Próximo passo da Fase 2
+
+Migrar módulo por módulo, começando pelo que o PRD prioriza: **Romaneios, Solicitações e
+Colaboradores saem de cards para `DataTable` com detalhe em drawer**. Cada módulo migrado deve
+passar a usar `PageHeader`, `StatusBadge` e os estados de página padrão.
+
+## Pendente
+
+### P1 (RF-08 a RF-15)
+Busca/filtros/paginação no servidor em todas as listagens, fluxo de retirada em 3 passos com código
+de barras, ponto de pedido com solicitação automática, importação CSV em lote, paleta de comandos
+(Ctrl+K), conciliação de NF-e item a item, revisão da matriz de perfis, pré-visualização e
+agendamento de relatórios.
+
+### P2 (RF-16 a RF-19)
+Hierarquia de localização com etiqueta QR, inventário cíclico pelo celular, central de
+notificações. **RF-17 (EPI) teve a base entregue** — o módulo está funcional e acessível; o que
+falta dele é a ficha por colaborador com alerta automático de troca.
+
+### Redesign do front-end
+Fundação **entregue** (ver Fase 2 acima). Pendente: migração dos módulos para os componentes novos,
+`AppShell` completo (grupos no menu, notificações, Ctrl+K), `FormLayout` e o assistente de 3 passos
+do fluxo de retirada.
+
+### Requisitos não funcionais
+Já atendidos em sessões anteriores: **RNF-05** (permissões no banco) e **RNF-07** (auditoria).
+**RNF-06** agora cobre CPF, telefone e e-mail em Colaboradores. Pendentes: RNF-01 a RNF-04,
+RNF-08 (lint de tokens), RNF-09 e RNF-10 (observabilidade/Sentry).
+
+## Decisões pendentes
+
+Nenhuma pendente. As três de 05/10 foram respondidas e aplicadas (ver acima).
+
+Fica registrado, para uma rodada futura: a **numeração de romaneios ainda tem dois padrões**
+(`ROM-AL-001-0003` e `ROM-AL-2401031262-0001`), apontado como severidade baixa no PRD. A decisão de
+numeração global valeu para solicitações; se quiser o mesmo para romaneios, é a mesma abordagem.

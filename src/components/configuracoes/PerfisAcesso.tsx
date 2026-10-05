@@ -38,10 +38,28 @@ const MODULOS = Object.entries(MODULOS_SISTEMA) as [
 
 const TODAS_PERMISSOES = Object.keys(PERMISSION_LABELS) as TipoPermissao[]
 
-/** Resumo curto das permissões concedidas, usado no cabeçalho de cada perfil */
+/**
+ * Resumo curto das permissões, usado no cabeçalho de cada perfil.
+ *
+ * RF-14: antes dizia apenas "16 de 16 módulos liberados", o que fazia o perfil
+ * Diretor (somente leitura) parecer ter acesso total. Agora distingue
+ * visualização de escrita.
+ */
+const ACOES_DE_ESCRITA: TipoPermissao[] = ['create', 'update', 'delete', 'manage']
+
 const resumirPermissoes = (permissoes: PermissoesPerfil) => {
-  const modulos = MODULOS.filter(([key]) => permissoes[key]?.read)
-  return `${modulos.length} de ${MODULOS.length} módulos liberados`
+  const visiveis = MODULOS.filter(([key]) => permissoes[key]?.read).length
+  const comEscrita = MODULOS.filter(([key]) =>
+    ACOES_DE_ESCRITA.some((acao) => permissoes[key]?.[acao]),
+  ).length
+  const podeAprovar = MODULOS.some(([key]) => permissoes[key]?.approve)
+
+  if (visiveis === 0) return 'nenhum módulo liberado'
+
+  const partes = [`${visiveis} de ${MODULOS.length} módulos visíveis`]
+  partes.push(comEscrita === 0 ? 'somente leitura' : `edita ${comEscrita}`)
+  if (podeAprovar) partes.push('aprova documentos')
+  return partes.join(' · ')
 }
 
 export const PerfisAcesso = () => {

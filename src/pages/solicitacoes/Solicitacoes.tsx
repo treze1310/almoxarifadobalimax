@@ -487,7 +487,11 @@ const SolicitacoesPage = () => {
           </div>
           <div className="flex items-center gap-2">
             <User className="h-4 w-4 text-muted-foreground" />
-            <span>{solicitacao.colaborador_id ? 'Colaborador' : solicitacao.solicitante_nome || 'N/A'}</span>
+            {/* RF-05: mostrar o nome do solicitante. Antes imprimia o texto
+                genérico "Colaborador" sempre que havia colaborador_id. */}
+            <span className="truncate">
+              {solicitacao.solicitante_nome || 'Não informado'}
+            </span>
           </div>
         </div>
         <div className="mt-2 text-xs text-muted-foreground">

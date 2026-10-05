@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Card,
   CardContent,
@@ -44,7 +44,9 @@ interface DashboardMetrics {
   materiaisAtivos: number
   estoqueTotal: number
   valorTotal: number
-  itensEmFalta: number
+  /** Soma de zerados + no minimo. Vem da coluna situacao_estoque (RF-02) */
+  itensEstoqueCritico: number
+  itensZerados: number
   itensAbaixoMinimo: number
   romaneiosHoje: number
   solicitacoesPendentes: number
@@ -52,6 +54,12 @@ interface DashboardMetrics {
   empresasAtivas: number
   valorMovimentado30d: number
   percentualOcupacao: number
+  /**
+   * Variacoes calculadas sobre o historico real (RF-01). `null` significa
+   * "sem base de comparacao" e o indicador nao e exibido.
+   */
+  variacaoMateriais: number | null
+  variacaoMovimentacoes: number | null
 }
 
 interface RecentActivity {
@@ -64,12 +72,14 @@ interface RecentActivity {
 }
 
 const DashboardPage = () => {
+  const navigate = useNavigate()
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     totalMateriais: 0,
     materiaisAtivos: 0,
     estoqueTotal: 0,
     valorTotal: 0,
-    itensEmFalta: 0,
+    itensEstoqueCritico: 0,
+    itensZerados: 0,
     itensAbaixoMinimo: 0,
     romaneiosHoje: 0,
     solicitacoesPendentes: 0,
@@ -77,6 +87,8 @@ const DashboardPage = () => {
     empresasAtivas: 0,
     valorMovimentado30d: 0,
     percentualOcupacao: 0,
+    variacaoMateriais: null,
+    variacaoMovimentacoes: null,
   })
   
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
@@ -87,6 +99,11 @@ const DashboardPage = () => {
     try {
       setLoading(true)
 
+      // Limites de mês usados nas comparações (RF-01)
+      const agora = new Date()
+      const inicioMesAtual = new Date(agora.getFullYear(), agora.getMonth(), 1)
+      const inicioMesAnterior = new Date(agora.getFullYear(), agora.getMonth() - 1, 1)
+
       // Buscar dados em paralelo para melhor performance
       const [
         materiaisResult,
@@ -94,12 +111,14 @@ const DashboardPage = () => {
         solicitacoesResult,
         colaboradoresResult,
         empresasResult,
-        movimentacaoResult
+        movimentacaoResult,
+        movMesAtualResult,
+        movMesAnteriorResult
       ] = await Promise.all([
-        // Materiais e estoque
+        // Materiais e estoque. situacao_estoque e coluna gerada no banco (RF-02)
         supabase
           .from('materiais_equipamentos')
-          .select('estoque_atual, estoque_minimo, valor_unitario, ativo'),
+          .select('estoque_atual, estoque_minimo, valor_unitario, ativo, situacao_estoque, created_at'),
         
         // Romaneios de hoje
         supabase
@@ -129,7 +148,19 @@ const DashboardPage = () => {
         supabase
           .from('movimentacao_estoque')
           .select('valor_unitario, quantidade, tipo_movimentacao, created_at')
-          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+
+        // RF-01: base de comparação real — movimentações do mês atual e do anterior
+        supabase
+          .from('movimentacao_estoque')
+          .select('id', { count: 'exact', head: true })
+          .gte('created_at', inicioMesAtual.toISOString()),
+
+        supabase
+          .from('movimentacao_estoque')
+          .select('id', { count: 'exact', head: true })
+          .gte('created_at', inicioMesAnterior.toISOString())
+          .lt('created_at', inicioMesAtual.toISOString())
       ])
 
       // Processar dados dos materiais
@@ -138,25 +169,40 @@ const DashboardPage = () => {
       
       let estoqueTotal = 0
       let valorTotal = 0
-      let itensEmFalta = 0
+      let itensZerados = 0
       let itensAbaixoMinimo = 0
+      let materiaisAteMesAnterior = 0
 
-      materiais.forEach(material => {
+      materiais.forEach((material: any) => {
+        if (material.created_at && new Date(material.created_at) < inicioMesAtual) {
+          materiaisAteMesAnterior++
+        }
+
         if (material.ativo) {
           const estoque = material.estoque_atual || 0
           const valor = material.valor_unitario || 0
-          const minimo = material.estoque_minimo || 0
-          
+
           estoqueTotal += estoque
           valorTotal += estoque * valor
-          
-          if (estoque === 0) {
-            itensEmFalta++
-          } else if (estoque <= minimo) {
-            itensAbaixoMinimo++
-          }
+
+          // RF-02: classificação vem do banco, não de regra local
+          if (material.situacao_estoque === 'zerado') itensZerados++
+          else if (material.situacao_estoque === 'baixo') itensAbaixoMinimo++
         }
       })
+
+      const itensEstoqueCritico = itensZerados + itensAbaixoMinimo
+
+      // RF-01: variação só existe quando há base de comparação real
+      const movMesAtual = movMesAtualResult.count ?? 0
+      const movMesAnterior = movMesAnteriorResult.count ?? 0
+      const variacaoMovimentacoes =
+        movMesAnterior > 0 ? ((movMesAtual - movMesAnterior) / movMesAnterior) * 100 : null
+
+      const variacaoMateriais =
+        materiaisAteMesAnterior > 0
+          ? ((materiais.length - materiaisAteMesAnterior) / materiaisAteMesAnterior) * 100
+          : null
 
       // Processar outros dados
       const romaneiosHoje = romaneiosHojeResult.data?.length || 0
@@ -182,7 +228,8 @@ const DashboardPage = () => {
         materiaisAtivos,
         estoqueTotal,
         valorTotal,
-        itensEmFalta,
+        itensEstoqueCritico,
+        itensZerados,
         itensAbaixoMinimo,
         romaneiosHoje,
         solicitacoesPendentes,
@@ -190,6 +237,8 @@ const DashboardPage = () => {
         empresasAtivas,
         valorMovimentado30d,
         percentualOcupacao: Math.min(percentualOcupacao, 100),
+        variacaoMateriais,
+        variacaoMovimentacoes,
       })
 
       // Buscar atividades recentes
@@ -287,6 +336,7 @@ const DashboardPage = () => {
     },
   ]
 
+  // RF-01: `variacao` nulo = sem base de comparação, e o indicador não aparece.
   const mainCards = [
     {
       title: 'Total de Materiais',
@@ -295,8 +345,8 @@ const DashboardPage = () => {
       icon: Package,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
-      trend: '+2.5%',
-      trendUp: true,
+      variacao: metrics.variacaoMateriais,
+      link: '/materiais-equipamentos',
     },
     {
       title: 'Valor do Estoque',
@@ -305,18 +355,18 @@ const DashboardPage = () => {
       icon: TrendingUp,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
-      trend: '+8.2%',
-      trendUp: true,
+      variacao: null,
+      link: '/materiais-equipamentos',
     },
     {
-      title: 'Itens em Falta',
-      value: loading ? '...' : metrics.itensEmFalta.toString(),
-      subtitle: `${metrics.itensAbaixoMinimo} abaixo do mínimo`,
+      title: 'Estoque Crítico',
+      value: loading ? '...' : metrics.itensEstoqueCritico.toString(),
+      subtitle: `${metrics.itensZerados} zerados · ${metrics.itensAbaixoMinimo} no mínimo`,
       icon: PackageX,
       color: 'text-red-600',
       bgColor: 'bg-red-50',
-      trend: '-12%',
-      trendUp: false,
+      variacao: null,
+      link: '/materiais-equipamentos?estoque=critico',
     },
     {
       title: 'Movimentações Hoje',
@@ -325,8 +375,8 @@ const DashboardPage = () => {
       icon: Clock,
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-50',
-      trend: '+15%',
-      trendUp: true,
+      variacao: metrics.variacaoMovimentacoes,
+      link: '/romaneios',
     },
   ]
 
@@ -392,7 +442,11 @@ const DashboardPage = () => {
       {/* Cards Principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {mainCards.map((card) => (
-          <Card key={card.title} className="relative overflow-hidden">
+          <Card
+            key={card.title}
+            className="relative overflow-hidden cursor-pointer transition-colors hover:bg-muted/40"
+            onClick={() => navigate(card.link)}
+          >
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-2">
@@ -408,24 +462,26 @@ const DashboardPage = () => {
                   <card.icon className={`h-6 w-6 ${card.color}`} />
                 </div>
               </div>
-              
-              <div className="mt-4 flex items-center space-x-2">
-                {card.trendUp ? (
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                ) : (
-                  <TrendingDown className="h-4 w-4 text-red-500" />
-                )}
-                <span
-                  className={`text-sm font-medium ${
-                    card.trendUp ? 'text-green-600' : 'text-red-600'
-                  }`}
-                >
-                  {card.trend}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  vs. mês anterior
-                </span>
-              </div>
+
+              {/* RF-01: sem base de comparação, nenhum indicador é inventado */}
+              {card.variacao !== null && (
+                <div className="mt-4 flex items-center space-x-2">
+                  {card.variacao >= 0 ? (
+                    <TrendingUp className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <TrendingDown className="h-4 w-4 text-red-500" />
+                  )}
+                  <span
+                    className={`text-sm font-medium ${
+                      card.variacao >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}
+                  >
+                    {card.variacao >= 0 ? '+' : ''}
+                    {card.variacao.toFixed(1)}%
+                  </span>
+                  <span className="text-xs text-muted-foreground">vs. mês anterior</span>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}

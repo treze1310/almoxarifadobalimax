@@ -646,14 +646,17 @@ const RelatoriosPage = () => {
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold">Relatórios</h1>
             <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleTestReport}
-            disabled={isGenerating}
-          >
-            Teste Diagnóstico
-          </Button>
+          {/* RF-15: ferramenta de diagnostico nao aparece em producao */}
+          {import.meta.env.DEV && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTestReport}
+              disabled={isGenerating}
+            >
+              Teste Diagnóstico
+            </Button>
+          )}
           <Filter className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">
             {REPORT_CONFIGS.length} relatórios disponíveis

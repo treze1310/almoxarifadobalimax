@@ -30,8 +30,10 @@ body {
     --popover: 0 0% 100%; /* #ffffff */
     --popover-foreground: 210 10% 15%; /* #212529 */
 
-    --primary: 211 100% 50%; /* #007bff */
-    --primary-foreground: 0 0% 100%; /* #ffffff */
+    /* Azul Balimax, extraído do logo: #1F4E9C exato em HSL */
+    --primary: 217.4 66.8% 36.7%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 217.4 66.8% 30%;
 
     --secondary: 208 7% 46%; /* #6c757d */
     --secondary-foreground: 0 0% 100%; /* #ffffff */
@@ -50,13 +52,24 @@ body {
 
     --border: 210 16% 91%; /* #dee2e6 */
     --input: 210 16% 91%; /* #dee2e6 */
-    --ring: 211 100% 50%; /* #007bff */
+    --ring: 217.4 66.8% 36.7%;
 
+    /* Raio: 8px em cards, 6px em inputs e botões (PRD) */
     --radius: 0.5rem;
+    --radius-control: 0.375rem;
+
+    /* Status do sistema — cor fixa por status, em todos os módulos (PRD).
+       Nenhum componente deve definir cor de status localmente. */
+    --status-rascunho: 215 14% 52%;
+    --status-pendente: 38 92% 50%;
+    --status-aprovado: 217.4 66.8% 36.7%;
+    --status-concluido: 142 71% 35%;
+    --status-rejeitado: 354 70% 54%;
+    --status-cancelado: 215 14% 52%;
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 210 10% 15%;
-    --sidebar-primary: 211 100% 50%;
+    --sidebar-primary: 217.4 66.8% 36.7%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 211 100% 97%;
     --sidebar-accent-foreground: 211 100% 50%;
@@ -80,8 +93,16 @@ body {
     --popover: 210 10% 15%;
     --popover-foreground: 210 17% 98%;
 
-    --primary: 211 100% 50%;
+    --primary: 217 72% 58%;
     --primary-foreground: 0 0% 100%;
+    --primary-hover: 217 72% 64%;
+
+    --status-rascunho: 215 16% 65%;
+    --status-pendente: 38 92% 60%;
+    --status-aprovado: 217 72% 58%;
+    --status-concluido: 142 60% 48%;
+    --status-rejeitado: 354 75% 62%;
+    --status-cancelado: 215 16% 65%;
 
     --secondary: 208 7% 46%;
     --secondary-foreground: 0 0% 100%;

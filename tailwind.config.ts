@@ -29,7 +29,30 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
+      // Escala tipográfica do design system (PRD): título de página 24/600,
+      // seção 18/600, corpo 14, tabela 13. Substitui os 3 tamanhos de título
+      // que existiam espalhados pelos módulos.
+      fontSize: {
+        'ds-page': ['1.5rem', { lineHeight: '2rem', fontWeight: '600' }],
+        'ds-section': ['1.125rem', { lineHeight: '1.75rem', fontWeight: '600' }],
+        'ds-body': ['0.875rem', { lineHeight: '1.375rem' }],
+        'ds-table': ['0.8125rem', { lineHeight: '1.25rem' }],
+      },
+      // Padding de página: 24px desktop / 16px mobile
+      spacing: {
+        'ds-page': '1.5rem',
+        'ds-page-mobile': '1rem',
+      },
       colors: {
+        // Status com cor fixa no sistema inteiro (PRD)
+        status: {
+          rascunho: 'hsl(var(--status-rascunho))',
+          pendente: 'hsl(var(--status-pendente))',
+          aprovado: 'hsl(var(--status-aprovado))',
+          concluido: 'hsl(var(--status-concluido))',
+          rejeitado: 'hsl(var(--status-rejeitado))',
+          cancelado: 'hsl(var(--status-cancelado))',
+        },
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',

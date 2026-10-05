@@ -9,6 +9,7 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import RequirePermission from '@/components/RequirePermission'
 import { PermissionsProvider } from '@/contexts/PermissionsContext'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 import Layout from './components/Layout'
 import NotFound from './pages/NotFound'
 import LoginPage from './pages/Login'
@@ -35,6 +36,7 @@ const MapaPage = lazy(() => import('./pages/localizacao/Mapa'))
 const LocalizacaoCadastroPage = lazy(() => import('./pages/cadastros/Localizacao'))
 const RelatoriosPage = lazy(() => import('./pages/relatorios/Relatorios'))
 const ConfiguracoesPage = lazy(() => import('./pages/configuracoes/Configuracoes'))
+const EPIPage = lazy(() => import('./pages/epi/EPIGerenciamento'))
 
 const PageFallback = () => (
   <div className="flex items-center justify-center h-[60vh]">
@@ -46,6 +48,7 @@ const App = () => (
   <BrowserRouter basename="/sistema">
     <AuthProvider>
       <PermissionsProvider>
+      <ThemeProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -95,6 +98,9 @@ const App = () => (
           <Route path="localizacao" element={<RequirePermission modulo="localizacao" acao="read"><LocalizacaoPage /></RequirePermission>} />
           <Route path="localizacao/mapa" element={<RequirePermission modulo="localizacao" acao="read"><MapaPage /></RequirePermission>} />
 
+          {/* 🦺 Controle de EPI */}
+          <Route path="epi" element={<RequirePermission modulo="epi" acao="read"><EPIPage /></RequirePermission>} />
+
           {/* 📊 Relatórios */}
           <Route path="relatorios" element={<RequirePermission modulo="relatorios" acao="read"><RelatoriosPage /></RequirePermission>} />
 
@@ -115,6 +121,7 @@ const App = () => (
         </Suspense>
         </ErrorBoundary>
       </TooltipProvider>
+      </ThemeProvider>
       </PermissionsProvider>
     </AuthProvider>
   </BrowserRouter>

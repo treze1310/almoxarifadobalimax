@@ -30,6 +30,8 @@ const ROTULOS: Record<string, string> = {
   'usuario.status_alterado': 'Status do usuário alterado',
   'perfil.permissoes_alteradas': 'Permissões do perfil alteradas',
   'seguranca.acesso_negado': 'Acesso negado',
+  'colaborador.cpf_consultado': 'CPF completo consultado',
+  'romaneio.cancelar': 'Romaneio cancelado',
 }
 
 const destrutiva = (acao: string) =>

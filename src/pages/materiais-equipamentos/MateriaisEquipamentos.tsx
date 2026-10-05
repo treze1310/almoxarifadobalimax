@@ -52,6 +52,7 @@ import CentroCustoLabel from '@/components/materiais-equipamentos/CentroCustoLab
 import { useMateriaisEquipamentos } from '@/hooks/useMateriaisEquipamentos'
 import { useCenteredDialog } from '@/hooks/useCenteredDialog'
 import { usePermissoes } from '@/contexts/PermissionsContext'
+import { useSearchParams } from 'react-router-dom'
 
 import type { MaterialEquipamentoFormData } from '@/lib/validations'
 
@@ -197,7 +198,10 @@ const MateriaisEquipamentosPage = () => {
   const [search, setSearch] = useState('')
   const [showInactive, setShowInactive] = useState(false)
   const [filtroCalibracaoVencida, setFiltroCalibracaoVencida] = useState(false)
-  const [filtroEstoqueBaixo, setFiltroEstoqueBaixo] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [filtroEstoqueBaixo, setFiltroEstoqueBaixo] = useState(
+    searchParams.get('estoque') === 'critico'
+  )
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingMaterial, setEditingMaterial] = useState<any>(null)
   const [deletingMaterial, setDeletingMaterial] = useState<any>(null)
@@ -248,17 +252,26 @@ const MateriaisEquipamentosPage = () => {
   const createDialogPosition = useCenteredDialog(isCreateDialogOpen)
   const editDialogPosition = useCenteredDialog(!!editingMaterial)
 
+  // Mantém o filtro de estoque crítico refletido na URL, para o link do
+  // Dashboard funcionar e o estado ser compartilhável (RF-08).
+  useEffect(() => {
+    const atual = searchParams.get('estoque') === 'critico'
+    if (atual === filtroEstoqueBaixo) return
+    const novos = new URLSearchParams(searchParams)
+    if (filtroEstoqueBaixo) novos.set('estoque', 'critico')
+    else novos.delete('estoque')
+    setSearchParams(novos, { replace: true })
+  }, [filtroEstoqueBaixo, searchParams, setSearchParams])
+
   // Fetch data with relationships
   React.useEffect(() => {
     fetchMateriais({ includeInactive: showInactive })
   }, [fetchMateriais, showInactive])
 
-  // Estoque baixo (<= mínimo) ou zerado
-  const isEstoqueBaixoOuZerado = (material: any) => {
-    const estoque = material.estoque_atual || 0
-    const minimo = material.estoque_minimo || 0
-    return estoque === 0 || estoque <= minimo
-  }
+  // RF-02: a classificação vem da coluna gerada `situacao_estoque`, calculada no
+  // banco. O Dashboard, este alerta e este filtro leem a mesma fonte.
+  const isEstoqueBaixoOuZerado = (material: any) =>
+    material.situacao_estoque === 'zerado' || material.situacao_estoque === 'baixo'
 
   const filteredMateriais = materiaisEquipamentos.filter(material => {
     const matchesSearch = search === '' ||

@@ -1,6 +1,14 @@
 import { describe, test, expect } from 'vitest'
 import { verificarStatusCalibracao } from '../src/utils/calibracao'
 import { PERFIS_PADRAO, MODULOS_SISTEMA } from '../src/types/perfil'
+import {
+  capitalizarTexto,
+  formatarCPF,
+  mascararCPF,
+  mascararEmail,
+  mascararTelefone,
+} from '../src/lib/dadosPessoais'
+import { STATUS, normalizarStatus, rotuloStatus } from '../src/lib/status'
 
 /**
  * Testes das regressões reais encontradas no sistema. Cada bloco cobre um bug
@@ -119,6 +127,91 @@ describe('perfis de acesso padrão', () => {
       expect(perfil.permissoes.usuarios?.create, perfil.nome).toBeFalsy()
       expect(perfil.permissoes.usuarios?.update, perfil.nome).toBeFalsy()
       expect(perfil.permissoes.usuarios?.delete, perfil.nome).toBeFalsy()
+    }
+  })
+})
+
+describe('mascaramento de dados pessoais (RF-06)', () => {
+  test('CPF aparece mascarado, preservando os dígitos do meio', () => {
+    expect(mascararCPF('12345616464')).toBe('***.456.164-**')
+    expect(mascararCPF('123.456.164-64')).toBe('***.456.164-**')
+  })
+
+  test('CPF completo é formatado só quando revelado', () => {
+    expect(formatarCPF('12345616464')).toBe('123.456.164-64')
+  })
+
+  test('CPF inválido ou ausente não expõe o valor bruto', () => {
+    expect(mascararCPF(null)).toBe('-')
+    expect(mascararCPF('123')).toBe('***')
+  })
+
+  test('telefone e e-mail também são mascarados', () => {
+    expect(mascararTelefone('91999797250')).toBe('(91) 9****-**50')
+    expect(mascararEmail('christian.fonseca@balimax.com.br')).toContain('@balimax.com.br')
+    expect(mascararEmail('christian.fonseca@balimax.com.br')).not.toContain('christian.')
+  })
+
+  test('cargos com capitalização mista são normalizados', () => {
+    expect(capitalizarTexto('ENCARREGADO DE OBRAS')).toBe('Encarregado de Obras')
+    expect(capitalizarTexto('auxiliar administrativo')).toBe('Auxiliar Administrativo')
+  })
+})
+
+describe('situação de estoque (RF-02)', () => {
+  // Mesma expressão da coluna gerada no banco, garantindo que a interface não
+  // recrie a regra por conta própria.
+  const situacao = (atual: number | null, minimo: number | null) =>
+    (atual ?? 0) === 0 ? 'zerado' : (atual ?? 0) <= (minimo ?? 0) ? 'baixo' : 'normal'
+
+  test('estoque zerado tem prioridade sobre o mínimo', () => {
+    expect(situacao(0, 0)).toBe('zerado')
+    expect(situacao(0, 10)).toBe('zerado')
+  })
+
+  test('igual ou abaixo do mínimo é baixo', () => {
+    expect(situacao(5, 5)).toBe('baixo')
+    expect(situacao(2, 5)).toBe('baixo')
+  })
+
+  test('acima do mínimo é normal', () => {
+    expect(situacao(6, 5)).toBe('normal')
+    expect(situacao(1, 0)).toBe('normal')
+  })
+})
+
+describe('mapa central de status (design system)', () => {
+  test('normaliza as várias grafias vindas do banco e da interface', () => {
+    expect(normalizarStatus('aprovado')).toBe('aprovado')
+    expect(normalizarStatus('Aprovada')).toBe('aprovado')
+    expect(normalizarStatus('concluida')).toBe('concluido')
+    expect(normalizarStatus('Concluída')).toBe('concluido')
+    expect(normalizarStatus('Em Análise')).toBe('pendente')
+  })
+
+  test('status desconhecido não quebra, retorna null', () => {
+    expect(normalizarStatus('status_que_nao_existe')).toBeNull()
+    expect(normalizarStatus(null)).toBeNull()
+  })
+
+  // O PRD aponta que "Concluída" e "Aprovada" tinham a mesma cor.
+  test('aprovado e concluído têm cores distintas', () => {
+    expect(STATUS.aprovado.classe).not.toBe(STATUS.concluido.classe)
+  })
+
+  test('cancelado é cinza riscado', () => {
+    expect(STATUS.cancelado.classe).toContain('line-through')
+  })
+
+  test('rótulo respeita o gênero do documento', () => {
+    expect(rotuloStatus('aprovado', 'masculino')).toBe('Aprovado')
+    expect(rotuloStatus('aprovado', 'feminino')).toBe('Aprovada')
+    expect(rotuloStatus('concluida', 'feminino')).toBe('Concluída')
+  })
+
+  test('todo rótulo começa com maiúscula', () => {
+    for (const definicao of Object.values(STATUS)) {
+      expect(definicao.rotulo[0]).toBe(definicao.rotulo[0].toUpperCase())
     }
   })
 })

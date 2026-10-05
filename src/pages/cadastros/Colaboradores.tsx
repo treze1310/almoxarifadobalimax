@@ -26,6 +26,15 @@ import { Separator } from '@/components/ui/separator'
 import { useSupabaseTable } from '@/hooks/useSupabase'
 import { ColaboradorForm } from '@/components/colaboradores/ColaboradorForm'
 import { type ColaboradorFormData } from '@/lib/validations'
+import {
+  capitalizarTexto,
+  formatarCPF,
+  mascararCPF,
+  mascararEmail,
+  mascararTelefone,
+} from '@/lib/dadosPessoais'
+import { usePermissoes } from '@/contexts/PermissionsContext'
+import { registrarAuditoria } from '@/services/auditoriaService'
 import { generateFichaEPIPDF } from '@/components/colaboradores/FichaEPIPDF'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
@@ -85,6 +94,10 @@ const ColaboradoresPage = () => {
   const [loadingEpis, setLoadingEpis] = useState(false)
   const [episRomaneio, setEpisRomaneio] = useState<EPIVinculadoRomaneio[]>([])
   const [isEditing, setIsEditing] = useState(false)
+  // RF-06 / RNF-06: CPF completo exige permissão e o acesso é auditado
+  const [cpfRevelado, setCpfRevelado] = useState(false)
+  const { can } = usePermissoes()
+  const podeVerCpf = can('colaboradores', 'update')
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deletingColaborador, setDeletingColaborador] = useState<ColaboradorDetalhado | null>(null)
@@ -256,6 +269,20 @@ const ColaboradoresPage = () => {
     }
   }
 
+  useEffect(() => {
+    setCpfRevelado(false)
+  }, [selectedColaborador?.id])
+
+  const revelarCpf = async (colaborador: { id: string; nome: string }) => {
+    setCpfRevelado(true)
+    await registrarAuditoria({
+      acao: 'colaborador.cpf_consultado',
+      tabela: 'colaboradores',
+      registroId: colaborador.id,
+      dadosNovos: { nome: colaborador.nome },
+    })
+  }
+
   const handleEdit = () => {
     setIsEditing(true)
   }
@@ -418,11 +445,7 @@ const ColaboradoresPage = () => {
     return ativo ? 'default' : 'destructive'
   }
 
-  const formatCPF = (cpf: string | null) => {
-    if (!cpf) return '-'
-    const numbers = cpf.replace(/\D/g, '')
-    return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
-  }
+  // RF-06: a formatação e o mascaramento vivem em src/lib/dadosPessoais.ts
 
   const getInitials = (nome: string) => {
     const names = nome.split(' ')
@@ -507,7 +530,7 @@ const ColaboradoresPage = () => {
                       {colaborador.cargo && (
                   <div className="flex items-center text-sm">
                     <Briefcase className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>{colaborador.cargo}</span>
+                    <span>{capitalizarTexto(colaborador.cargo)}</span>
                   </div>
                       )}
                       {colaborador.setor && (
@@ -519,19 +542,21 @@ const ColaboradoresPage = () => {
                 {colaborador.email && (
                   <div className="flex items-center text-sm">
                     <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span className="truncate">{colaborador.email}</span>
+                    <span className="truncate">{mascararEmail(colaborador.email)}</span>
                     </div>
                 )}
                 {colaborador.cpf && (
                   <div className="flex items-center text-sm">
                     <IdCard className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>{formatCPF(colaborador.cpf)}</span>
+                    <span title="CPF mascarado — veja o completo no detalhe">
+                      {mascararCPF(colaborador.cpf)}
+                    </span>
                         </div>
                 )}
                 {colaborador.telefone && (
                   <div className="flex items-center text-sm">
                     <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>{colaborador.telefone}</span>
+                    <span>{mascararTelefone(colaborador.telefone)}</span>
                       </div>
                 )}
               </CardContent>
@@ -772,8 +797,25 @@ const ColaboradoresPage = () => {
                           <div>
                             <p className="text-sm font-medium">CPF</p>
                             <p className="text-sm text-muted-foreground">
-                              {formatCPF(selectedColaborador.cpf)}
+                              {cpfRevelado
+                                ? formatarCPF(selectedColaborador.cpf)
+                                : mascararCPF(selectedColaborador.cpf)}
                             </p>
+                            {!cpfRevelado && selectedColaborador.cpf && podeVerCpf && (
+                              <Button
+                                variant="link"
+                                size="sm"
+                                className="h-auto p-0 text-xs"
+                                onClick={() => revelarCpf(selectedColaborador)}
+                              >
+                                Ver CPF completo
+                              </Button>
+                            )}
+                            {!podeVerCpf && (
+                              <p className="text-xs text-muted-foreground">
+                                Seu perfil não permite ver o CPF completo
+                              </p>
+                            )}
                           </div>
                         </div>
 
@@ -823,7 +865,7 @@ const ColaboradoresPage = () => {
                           <div>
                             <p className="text-sm font-medium">Cargo</p>
                             <p className="text-sm text-muted-foreground">
-                              {selectedColaborador.cargo || 'Não informado'}
+                              {capitalizarTexto(selectedColaborador.cargo)}
                             </p>
                           </div>
                         </div>

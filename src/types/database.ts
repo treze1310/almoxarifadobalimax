@@ -437,6 +437,8 @@ export type Database = {
           descricao: string | null
           estoque_atual: number | null
           estoque_minimo: number | null
+          /** Coluna gerada no banco (RF-02): 'zerado' | 'baixo' | 'normal' */
+          situacao_estoque: 'zerado' | 'baixo' | 'normal' | null
           fornecedor_id: string | null
           foto_url: string | null
           frequencia_calibracao_meses: number | null

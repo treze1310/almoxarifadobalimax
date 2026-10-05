@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { registrarAuditoria } from '@/services/auditoriaService'
 import { useToast } from '@/components/ui/use-toast'
 import { estoqueService } from '@/services/estoqueService'
 import { devolucaoService } from '@/services/devolucaoService'
@@ -333,15 +334,44 @@ export function useRomaneios() {
     }
   }, [toast, fetchRomaneios])
 
-  const cancelRomaneio = useCallback(async (id: string) => {
+  /**
+   * RF-04: cancelar exige motivo. O banco rejeita o cancelamento de um romaneio
+   * aprovado sem justificativa, e o motivo fica registrado em `observacoes`
+   * junto com a trilha de auditoria.
+   */
+  const cancelRomaneio = useCallback(async (id: string, motivo: string) => {
     setLoading(true)
     try {
+      if (!motivo?.trim()) {
+        throw new Error('Informe o motivo do cancelamento.')
+      }
+
+      const { data: atual } = await supabase
+        .from('romaneios')
+        .select('numero, observacoes, status')
+        .eq('id', id)
+        .maybeSingle()
+
+      const historico = atual?.observacoes ? `${atual.observacoes}
+
+` : ''
       const { error } = await supabase
         .from('romaneios')
-        .update({ status: 'cancelado' })
+        .update({
+          status: 'cancelado',
+          observacoes: `${historico}[Cancelado] ${motivo.trim()}`,
+        })
         .eq('id', id)
 
       if (error) throw error
+
+      await registrarAuditoria({
+        acao: 'romaneio.cancelar',
+        tabela: 'romaneios',
+        registroId: id,
+        dadosAnteriores: { status: atual?.status },
+        dadosNovos: { numero: atual?.numero, status: 'cancelado', motivo: motivo.trim() },
+      })
 
       toast({
         title: 'Sucesso',

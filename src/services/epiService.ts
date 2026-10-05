@@ -5,9 +5,9 @@ export type EPIAtribuicao = Tables<'epi_atribuicoes'>
 export type EPIAtribuicaoInsert = TablesInsert<'epi_atribuicoes'>
 export type EPIAtribuicaoUpdate = TablesUpdate<'epi_atribuicoes'>
 
-// NOTE: depends on the DB view `epi_com_atribuicoes`, which does NOT exist in the
-// current Supabase project. This type describes the expected shape so the code
-// compiles; the view must be created for these queries to work at runtime.
+// Espelha a view `public.epi_com_atribuicoes` (criada na migração
+// rf17_view_epi_com_atribuicoes). `status_calculado` vem do banco: em_dia,
+// vencendo (30 dias), vencido ou sem_validade.
 export interface EPIComAtribuicao {
   atribuicao_id: string
   colaborador_id: string | null

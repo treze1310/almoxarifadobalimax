@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/use-toast'
@@ -39,6 +39,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
 
+  /**
+   * RF-07: o toast de boas-vindas só deve aparecer quando o usuário realmente
+   * faz login. O evento SIGNED_IN também dispara ao restaurar a sessão a cada
+   * recarga de página, e era por isso que o aviso reaparecia sozinho.
+   */
+  const loginExplicito = useRef(false)
+
   useEffect(() => {
     // Limpar qualquer sessão local antiga
     localStorage.removeItem('local_user_session')
@@ -59,7 +66,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(session?.user ?? null)
         setLoading(false)
 
-        if (event === 'SIGNED_IN') {
+        if (event === 'SIGNED_IN' && loginExplicito.current) {
+          loginExplicito.current = false
           toast({
             title: 'Login realizado com sucesso!',
             description: 'Bem-vindo ao sistema.',
@@ -109,6 +117,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true)
+      loginExplicito.current = true
 
       // Login via Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -127,10 +136,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
           errorMessage = 'Muitas tentativas. Tente novamente em alguns minutos.'
         }
 
+        loginExplicito.current = false
         return { error: errorMessage }
       }
 
       if (!data.user) {
+        loginExplicito.current = false
         return { error: 'Usuário não encontrado' }
       }
 

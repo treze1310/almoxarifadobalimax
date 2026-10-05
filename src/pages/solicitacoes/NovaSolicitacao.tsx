@@ -30,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/use-toast'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -37,7 +38,6 @@ import {
   PrazoEntregaOptions,
 } from '@/types'
 import { useEffect, useState } from 'react'
-import { generatePurchaseRequisitionCode } from '@/lib/codeGenerator'
 import { CentroCustoSelector } from '@/components/romaneios/CentroCustoSelector'
 import ResponsavelAutocomplete from '@/components/forms/ResponsavelAutocomplete'
 import { ComboboxWithCustom, type ComboboxOption, type CustomItem } from '@/components/ui/combobox-with-custom'
@@ -90,11 +90,12 @@ const requestSchema = z
   })
   .refine(
     (data) => {
-      // Pelo menos um dos campos de solicitante deve estar preenchido
+      // Solicitante avulso é permitido: pode ser alguém ainda não cadastrado
+      // como colaborador. A listagem mostra o nome informado (RF-05).
       return !!data.colaborador_id || !!data.solicitante_nome
     },
     {
-      message: 'Solicitante é obrigatório.',
+      message: 'Informe o solicitante.',
       path: ['solicitante_nome'],
     },
   )
@@ -267,25 +268,35 @@ const NovaSolicitacaoPage = () => {
     }
   }, [fetchedSolicitacao, isEditMode, form])
 
+  /**
+   * RF-05: o número é reservado uma única vez, ao abrir o formulário. A
+   * numeração passou a ser global (SCO-00001), por isso não depende mais do
+   * centro de custo. Se o formulário for abandonado, aquele número fica como
+   * lacuna — comportamento esperado de numeração reservada.
+   */
   useEffect(() => {
-    const generate = async () => {
-      if (centroCustoDestinoId && !isEditMode) { // Só gerar novo código se não for edição e tiver centro de custo destino
-        setIsGeneratingCode(true)
-        setGeneratedCode(null)
-        try {
-          // Gerar código usando a nova função específica para requisições de compra
-          const code = await generatePurchaseRequisitionCode(centroCustoDestinoId)
-          setGeneratedCode(code)
-        } catch (error) {
-          console.error('Failed to generate code', error)
-          setGeneratedCode('Falha ao gerar código')
-        } finally {
-          setIsGeneratingCode(false)
-        }
+    if (isEditMode) return
+
+    let cancelado = false
+    const reservar = async () => {
+      setIsGeneratingCode(true)
+      try {
+        const { data, error } = await supabase.rpc('proximo_numero_solicitacao')
+        if (error) throw error
+        if (!cancelado) setGeneratedCode(data as unknown as string)
+      } catch (error) {
+        console.error('Falha ao reservar o número da solicitação', error)
+        if (!cancelado) setGeneratedCode('Falha ao gerar código')
+      } finally {
+        if (!cancelado) setIsGeneratingCode(false)
       }
     }
-    generate()
-  }, [centroCustoDestinoId, isEditMode])
+    reservar()
+
+    return () => {
+      cancelado = true
+    }
+  }, [isEditMode])
 
   const onSubmit = async (data: RequestFormValues) => {
     if (!generatedCode || generatedCode.includes('Falha')) {
@@ -349,7 +360,13 @@ const NovaSolicitacaoPage = () => {
                   {isGeneratingCode ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <span className="font-mono">{generatedCode || '...'}</span>
+                    <span className="font-mono">
+                      {generatedCode || (
+                        <span className="text-xs font-sans text-muted-foreground">
+                          Reservando…
+                        </span>
+                      )}
+                    </span>
                   )}
               </div>
             </div>
