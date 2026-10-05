@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PerfilAcesso, PerfilFormData } from '@/types/perfil'
+import { registrarAuditoria } from '@/services/auditoriaService'
 
 export function usePerfisAcesso() {
   const [perfis, setPerfis] = useState<PerfilAcesso[]>([])
@@ -74,6 +75,13 @@ export function usePerfisAcesso() {
         .single()
 
       if (error) throw error
+
+      await registrarAuditoria({
+        acao: 'perfil.permissoes_alteradas',
+        tabela: 'perfis_acesso',
+        registroId: id,
+        dadosNovos: { nome: perfilData.nome, permissoes: perfilData.permissoes }
+      })
 
       await fetchPerfis()
       return { data, error: null }

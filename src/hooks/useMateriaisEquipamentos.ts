@@ -4,6 +4,7 @@ import { useToast } from '@/components/ui/use-toast'
 import type { Tables } from '@/types/database'
 import type { MaterialEquipamentoFormData } from '@/lib/validations'
 import { materialDependencyService } from '@/services/materialDependencyService'
+import { registrarAuditoria } from '@/services/auditoriaService'
 
 type MaterialEquipamento = Tables<'materiais_equipamentos'> & {
   marcas?: { nome: string } | null
@@ -187,6 +188,13 @@ export function useMateriaisEquipamentos() {
         })
       }
 
+      await registrarAuditoria({
+        acao: 'material.criar',
+        tabela: 'materiais_equipamentos',
+        registroId: data.id,
+        dadosNovos: { codigo: data.codigo, nome: materialData.nome, tipo: materialData.tipo }
+      })
+
       toast({
         title: 'Sucesso',
         description: `${materialData.tipo === 'material' ? 'Material' : 'Equipamento'} "${materialData.nome}" cadastrado com sucesso!`,
@@ -285,6 +293,12 @@ export function useMateriaisEquipamentos() {
 
   const deleteMaterial = useCallback(async (id: string) => {
     try {
+      await registrarAuditoria({
+        acao: 'material.excluir',
+        tabela: 'materiais_equipamentos',
+        registroId: id
+      })
+
       // Verificar se há movimentações relacionadas
       const { data: movimentacoes } = await supabase
         .from('movimentacao_estoque')
@@ -346,6 +360,19 @@ export function useMateriaisEquipamentos() {
     usuario_id?: string
   }) => {
     try {
+      await registrarAuditoria({
+        acao: 'estoque.movimentar',
+        tabela: 'movimentacao_estoque',
+        registroId: movimentacao.material_equipamento_id,
+        dadosNovos: {
+          tipo: movimentacao.tipo_movimentacao,
+          quantidade: movimentacao.quantidade,
+          de: movimentacao.quantidade_anterior,
+          para: movimentacao.quantidade_atual,
+          motivo: movimentacao.motivo
+        }
+      })
+
       const { error } = await supabase
         .from('movimentacao_estoque')
         .insert({

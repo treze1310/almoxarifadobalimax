@@ -11,6 +11,14 @@ interface AuthContextType {
   signOut: () => Promise<void>
 }
 
+/**
+ * Encerra a sessao apos este tempo sem interacao do usuario. Protege o caso de
+ * computador compartilhado no almoxarifado, onde a sessao ficava aberta
+ * indefinidamente (persistSession + autoRefreshToken).
+ */
+const INATIVIDADE_MAXIMA_MS = 30 * 60 * 1000
+const EVENTOS_DE_ATIVIDADE = ['mousedown', 'keydown', 'touchstart', 'scroll', 'visibilitychange']
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function useAuth() {
@@ -67,6 +75,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     return () => subscription.unsubscribe()
   }, [toast])
+
+  // Logout automatico por inatividade
+  useEffect(() => {
+    if (!user) return
+
+    let timer: number
+
+    const encerrarPorInatividade = async () => {
+      await supabase.auth.signOut()
+      toast({
+        title: 'Sessão encerrada',
+        description: 'Você ficou 30 minutos sem atividade. Entre novamente para continuar.',
+      })
+    }
+
+    const reagendar = () => {
+      window.clearTimeout(timer)
+      timer = window.setTimeout(encerrarPorInatividade, INATIVIDADE_MAXIMA_MS)
+    }
+
+    reagendar()
+    EVENTOS_DE_ATIVIDADE.forEach((evento) =>
+      window.addEventListener(evento, reagendar, { passive: true }),
+    )
+
+    return () => {
+      window.clearTimeout(timer)
+      EVENTOS_DE_ATIVIDADE.forEach((evento) => window.removeEventListener(evento, reagendar))
+    }
+  }, [user, toast])
 
   const signIn = async (email: string, password: string) => {
     try {

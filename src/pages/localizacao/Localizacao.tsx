@@ -99,7 +99,7 @@ const LocalizacaoPage = () => {
           
           // Aplicar contagens reais retornadas pela função
           contagens?.forEach((item: { localizacao_id: string; count: number }) => {
-            if (item.localizacao_id && counts.hasOwnProperty(item.localizacao_id)) {
+            if (item.localizacao_id && Object.prototype.hasOwnProperty.call(counts, item.localizacao_id)) {
               counts[item.localizacao_id] = Number(item.count)
             }
           })

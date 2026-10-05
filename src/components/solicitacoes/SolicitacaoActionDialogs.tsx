@@ -35,6 +35,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Check, X, Ban, Trash2 } from 'lucide-react'
+import { usePermissoes } from '@/contexts/PermissionsContext'
 
 const rejectSchema = z.object({
   reason: z.string().min(10, 'O motivo deve ter pelo menos 10 caracteres'),
@@ -63,6 +64,13 @@ export default function SolicitacaoActionDialogs({
   onDelete,
   onConclude
 }: SolicitacaoActionDialogsProps) {
+  const { can } = usePermissoes()
+  // Aprovar/rejeitar exigem permissao de aprovacao; concluir e cancelar fazem
+  // parte do atendimento da solicitacao; excluir e uma acao destrutiva.
+  const podeAprovar = can('solicitacoes', 'approve')
+  const podeAtender = can('solicitacoes', 'update')
+  const podeExcluir = can('solicitacoes', 'delete')
+
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -133,7 +141,7 @@ export default function SolicitacaoActionDialogs({
   return (
     <div className="flex flex-wrap gap-2">
       {/* Aprovar */}
-      {status === 'Pendente' && (
+      {status === 'Pendente' && podeAprovar && (
         <Button
           onClick={handleApprove}
           disabled={isSubmitting}
@@ -144,7 +152,7 @@ export default function SolicitacaoActionDialogs({
       )}
 
       {/* Rejeitar */}
-      {status === 'Pendente' && (
+      {status === 'Pendente' && podeAprovar && (
         <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="destructive">
@@ -197,7 +205,7 @@ export default function SolicitacaoActionDialogs({
       )}
 
       {/* Concluir */}
-      {status === 'Aprovada' && (
+      {status === 'Aprovada' && podeAtender && (
         <Button
           onClick={handleConclude}
           disabled={isSubmitting}
@@ -208,7 +216,7 @@ export default function SolicitacaoActionDialogs({
       )}
 
       {/* Cancelar */}
-      {(status === 'Pendente' || status === 'Aprovada') && (
+      {(status === 'Pendente' || status === 'Aprovada') && podeAtender && (
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="outline">
@@ -238,6 +246,7 @@ export default function SolicitacaoActionDialogs({
       )}
 
       {/* Excluir */}
+      {podeExcluir && (
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button variant="destructive">
@@ -265,6 +274,7 @@ export default function SolicitacaoActionDialogs({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      )}
     </div>
   )
 }

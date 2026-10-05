@@ -5,15 +5,20 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ImageUpload } from '@/components/ui/image-upload'
-import { Building2, Save, Loader2 } from 'lucide-react'
+import { Building2, Save, Loader2, ShieldCheck, Users, ScrollText } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { companyService } from '@/services/companyService'
 import { useToast } from '@/components/ui/use-toast'
+import { PerfisAcesso } from '@/components/configuracoes/PerfisAcesso'
+import { UsuariosAdmin } from '@/components/configuracoes/UsuariosAdmin'
+import { TrilhaAuditoria } from '@/components/configuracoes/TrilhaAuditoria'
+import { usePermissoes } from '@/contexts/PermissionsContext'
 import type { Tables } from '@/types/database'
 
 type Empresa = Tables<'empresas'>
 
 const ConfiguracoesPage = () => {
+  const { isAdmin, can } = usePermissoes()
   const { toast } = useToast()
   const [empresa, setEmpresa] = useState<Empresa | null>(null)
   const [loading, setLoading] = useState(true)
@@ -111,6 +116,22 @@ const ConfiguracoesPage = () => {
             <Building2 className="h-4 w-4 mr-2" />
             Empresa
           </TabsTrigger>
+          <TabsTrigger value="perfis">
+            <ShieldCheck className="h-4 w-4 mr-2" />
+            Perfis de Acesso
+          </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="usuarios">
+              <Users className="h-4 w-4 mr-2" />
+              Usuários
+            </TabsTrigger>
+          )}
+          {can('usuarios', 'read') && (
+            <TabsTrigger value="auditoria">
+              <ScrollText className="h-4 w-4 mr-2" />
+              Auditoria
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="empresa">
@@ -207,6 +228,22 @@ const ConfiguracoesPage = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="perfis">
+          <PerfisAcesso />
+        </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="usuarios">
+            <UsuariosAdmin />
+          </TabsContent>
+        )}
+
+        {can('usuarios', 'read') && (
+          <TabsContent value="auditoria">
+            <TrilhaAuditoria />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   )

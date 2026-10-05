@@ -29,7 +29,6 @@ import { type ColaboradorFormData } from '@/lib/validations'
 import { generateFichaEPIPDF } from '@/components/colaboradores/FichaEPIPDF'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
-import { useCenteredDialog } from '@/hooks/useCenteredDialog'
 import { supabase } from '@/lib/supabase'
 import { fetchRomaneiosRetiradaDoColaborador } from '@/services/colaboradorEpiRomaneiosService'
 import { formatDate, formatDateTime } from '@/lib/utils'
@@ -92,34 +91,6 @@ const ColaboradoresPage = () => {
   const [deleteDialogPosition, setDeleteDialogPosition] = useState({ top: '50vh', left: '50vw' })
   const [showStatusDialog, setShowStatusDialog] = useState(false)
   const [statusDialogPosition, setStatusDialogPosition] = useState({ top: '50vh', left: '50vw' })
-
-  // Hooks para centralização inteligente dos dialogs
-  const createDialogPosition = useCenteredDialog(isCreateDialogOpen)
-  const detailsDialogPosition = useCenteredDialog(showDetailsDialog)
-
-  // Recalcular posição do diálogo de detalhes após mudanças de status
-  useEffect(() => {
-    if (showDetailsDialog && selectedColaborador) {
-      // Pequeno delay para permitir que o DOM se atualize
-      setTimeout(() => {
-        const viewportHeight = window.innerHeight
-        const viewportWidth = window.innerWidth
-        const scrollTop = window.pageYOffset || document.documentElement.scrollTop
-        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
-        
-        const centerY = scrollTop + (viewportHeight / 2)
-        const centerX = scrollLeft + (viewportWidth / 2)
-        
-        // Forçar atualização da posição via evento customizado
-        const detailsDialog = document.querySelector('[aria-describedby="colaborador-details-description"]')
-        if (detailsDialog && detailsDialog instanceof HTMLElement) {
-          detailsDialog.style.top = `${centerY}px`
-          detailsDialog.style.left = `${centerX}px`
-          detailsDialog.style.transform = 'translate(-50%, -50%)'
-        }
-      }, 200)
-    }
-  }, [selectedColaborador?.ativo])
 
   // Calcular posição central da viewport atual quando abre dialog de exclusão
   useEffect(() => {
@@ -592,12 +563,7 @@ const ColaboradoresPage = () => {
       {/* Create Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent 
-          className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto fixed"
-          style={{
-            top: createDialogPosition.top,
-            left: createDialogPosition.left,
-            transform: createDialogPosition.transform
-          }}
+          className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto"
         >
           <DialogHeader>
             <DialogTitle>Novo Colaborador</DialogTitle>
@@ -616,13 +582,8 @@ const ColaboradoresPage = () => {
         setIsEditing(false)
       }}>
         <DialogContent 
-          className="max-w-4xl max-h-[90vh] overflow-y-auto fixed" 
+          className="max-w-4xl max-h-[90vh] overflow-y-auto" 
           aria-describedby="colaborador-details-description"
-          style={{
-            top: detailsDialogPosition.top,
-            left: detailsDialogPosition.left,
-            transform: detailsDialogPosition.transform
-          }}
         >
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">

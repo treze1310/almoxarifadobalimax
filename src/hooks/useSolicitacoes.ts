@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { usePermissoes } from '@/contexts/PermissionsContext'
+import { registrarAuditoria } from '@/services/auditoriaService'
 import { SolicitacaoCompra } from '@/types'
 import { useToast } from '@/components/ui/use-toast'
 
@@ -17,7 +19,19 @@ interface UseSolicitacoesReturn {
   concludeSolicitacao: (id: string) => Promise<void>
 }
 
+/**
+ * O banco grava o status sem acentos ("concluida"), conforme a constraint
+ * solicitacoes_status_check; a interface usa o rotulo acentuado ("Concluída").
+ * Normalizar antes de gravar evita violar a constraint.
+ */
+const statusParaBanco = (status: string) =>
+  status
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+
 export const useSolicitacoes = (): UseSolicitacoesReturn => {
+  const { usuario } = usePermissoes()
   const [solicitacoes, setSolicitacoes] = useState<SolicitacaoCompra[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -125,7 +139,7 @@ export const useSolicitacoes = (): UseSolicitacoesReturn => {
           centro_custo_id: solicitacao.centroCustoOrigemId,
           colaborador_id: colaboradorId,
           tipo: 'compra',
-          status: solicitacao.status.toLowerCase(),
+          status: statusParaBanco(solicitacao.status),
           descricao: 'Solicitação de compra'
         })
         .select()
@@ -176,7 +190,7 @@ export const useSolicitacoes = (): UseSolicitacoesReturn => {
           ...(updates.data && { data_solicitacao: updates.data.toISOString() }),
           ...(updates.centroCustoOrigemId && { centro_custo_id: updates.centroCustoOrigemId }),
           ...(updates.colaborador_id !== undefined && { colaborador_id: updates.colaborador_id }),
-          ...(updates.status && { status: updates.status.toLowerCase() }),
+          ...(updates.status && { status: statusParaBanco(updates.status) }),
           ...(updates.rejectionReason !== undefined && { observacoes_aprovacao: updates.rejectionReason }),
           ...(updates.approverId && { aprovado_por: updates.approverId }),
           ...(updates.approvalTimestamp && { data_aprovacao: updates.approvalTimestamp.toISOString() })
@@ -229,6 +243,12 @@ export const useSolicitacoes = (): UseSolicitacoesReturn => {
 
       if (error) throw error
 
+      await registrarAuditoria({
+        acao: 'solicitacao.excluir',
+        tabela: 'solicitacoes',
+        dadosAnteriores: { numero: id }
+      })
+
       toast({
         title: 'Solicitação excluída',
         description: 'A solicitação foi excluída permanentemente.'
@@ -250,15 +270,24 @@ export const useSolicitacoes = (): UseSolicitacoesReturn => {
     await updateSolicitacao(id, {
       status: 'Aprovada',
       approvalTimestamp: new Date(),
-      // TODO: Pegar o ID do usuário atual quando implementar autenticação
-      approverId: '328cc4e1-6f02-4a50-934d-c4fc90ae18e9' // UUID temporário válido
+      approverId: usuario?.id
     })
-  }, [updateSolicitacao])
+    await registrarAuditoria({
+      acao: 'solicitacao.aprovar',
+      tabela: 'solicitacoes',
+      dadosNovos: { numero: id, status: 'aprovada' }
+    })
+  }, [updateSolicitacao, usuario])
 
   const rejectSolicitacao = useCallback(async (id: string, reason: string) => {
     await updateSolicitacao(id, {
       status: 'Rejeitada',
       rejectionReason: reason
+    })
+    await registrarAuditoria({
+      acao: 'solicitacao.rejeitar',
+      tabela: 'solicitacoes',
+      dadosNovos: { numero: id, status: 'rejeitada', motivo: reason }
     })
   }, [updateSolicitacao])
 
@@ -266,14 +295,23 @@ export const useSolicitacoes = (): UseSolicitacoesReturn => {
     await updateSolicitacao(id, {
       status: 'Cancelada',
       cancellationTimestamp: new Date(),
-      // TODO: Pegar o ID do usuário atual quando implementar autenticação
-      cancellerId: '328cc4e1-6f02-4a50-934d-c4fc90ae18e9' // UUID temporário válido
+      cancellerId: usuario?.id
     })
-  }, [updateSolicitacao])
+    await registrarAuditoria({
+      acao: 'solicitacao.cancelar',
+      tabela: 'solicitacoes',
+      dadosNovos: { numero: id, status: 'cancelada' }
+    })
+  }, [updateSolicitacao, usuario])
 
   const concludeSolicitacao = useCallback(async (id: string) => {
     await updateSolicitacao(id, {
       status: 'Concluída'
+    })
+    await registrarAuditoria({
+      acao: 'solicitacao.concluir',
+      tabela: 'solicitacoes',
+      dadosNovos: { numero: id, status: 'concluida' }
     })
   }, [updateSolicitacao])
 

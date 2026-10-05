@@ -6,12 +6,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Performance optimizations for scroll-linked effects */
-* {
-  /* Enable hardware acceleration for transforms */
-  transform-style: preserve-3d;
-}
-
 html {
   /* Improve scroll performance */
   scroll-behavior: smooth;

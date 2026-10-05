@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { PlusCircle, MoreHorizontal, Edit, Trash2, Search, Package, Wrench, Tag, Eye, RefreshCw, Settings, AlertTriangle } from 'lucide-react'
+import { PlusCircle, MoreHorizontal, Edit, Trash2, Search, Package, Wrench, Tag, Eye, RefreshCw, Settings, AlertTriangle, Copy } from 'lucide-react'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { verificarStatusCalibracao } from '@/utils/calibracao'
 import {
@@ -42,6 +42,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
+import { ColumnFilter, type SortDirection } from '@/components/ui/column-filter'
 
 import { MaterialEquipamentoForm } from '@/components/materiais-equipamentos/MaterialEquipamentoForm'
 import { MaterialEquipamentoDialog } from '@/components/materiais-equipamentos/MaterialEquipamentoDialog'
@@ -50,8 +51,130 @@ import { MaterialDependenciesDialog } from '@/components/materiais-equipamentos/
 import CentroCustoLabel from '@/components/materiais-equipamentos/CentroCustoLabel'
 import { useMateriaisEquipamentos } from '@/hooks/useMateriaisEquipamentos'
 import { useCenteredDialog } from '@/hooks/useCenteredDialog'
+import { usePermissoes } from '@/contexts/PermissionsContext'
 
 import type { MaterialEquipamentoFormData } from '@/lib/validations'
+
+// ---------------------------------------------------------------------------
+// Configuração dos filtros por coluna (estilo planilha)
+// ---------------------------------------------------------------------------
+
+type ColumnKey =
+  | 'codigo'
+  | 'tipo'
+  | 'categoria'
+  | 'localizacao'
+  | 'marca'
+  | 'centroCusto'
+  | 'estoque'
+  | 'valor'
+  | 'calibracao'
+  | 'status'
+
+const COLUMN_KEYS: ColumnKey[] = [
+  'codigo',
+  'tipo',
+  'categoria',
+  'localizacao',
+  'marca',
+  'centroCusto',
+  'estoque',
+  'valor',
+  'calibracao',
+  'status',
+]
+
+const emptyColumnFilters = () =>
+  COLUMN_KEYS.reduce((acc, key) => {
+    acc[key] = []
+    return acc
+  }, {} as Record<ColumnKey, string[]>)
+
+const brl = (value: number | null | undefined) =>
+  value === null || value === undefined || value === 0
+    ? '-'
+    : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+
+const statusLabels: Record<string, string> = {
+  ativo: 'Ativo',
+  inativo: 'Inativo',
+  manutencao: 'Manutenção',
+  descartado: 'Descartado',
+}
+
+const situacaoEstoque = (material: any) => {
+  const estoque = material.estoque_atual || 0
+  const minimo = material.estoque_minimo || 0
+  if (estoque === 0) return 'Zerado'
+  if (estoque <= minimo) return 'Baixo'
+  return 'Normal'
+}
+
+const COLUMN_CONFIG: Record<
+  ColumnKey,
+  { label: string; value: (material: any) => string; sortValue?: (material: any) => string | number }
+> = {
+  codigo: {
+    label: 'Item',
+    value: (m) => m.codigo || '-',
+  },
+  tipo: {
+    label: 'Tipo',
+    value: (m) => m.tipo || '-',
+  },
+  categoria: {
+    label: 'Categoria',
+    value: (m) => m.categoria || 'Sem categoria',
+  },
+  localizacao: {
+    label: 'Localização',
+    value: (m) => m.localizacao?.nome || 'Não definida',
+  },
+  marca: {
+    label: 'Marca',
+    value: (m) => m.marcas?.nome || 'Sem marca',
+  },
+  centroCusto: {
+    label: 'Centro de Custo',
+    value: (m) => m.centros_custo?.codigo || 'Sem centro de custo',
+  },
+  estoque: {
+    label: 'Estoque',
+    value: situacaoEstoque,
+    sortValue: (m) => m.estoque_atual || 0,
+  },
+  valor: {
+    label: 'Valor',
+    value: (m) => brl(m.valor_unitario),
+    sortValue: (m) => m.valor_unitario || 0,
+  },
+  calibracao: {
+    label: 'Calibração',
+    value: (m) => {
+      const status = verificarStatusCalibracao(
+        m.requer_calibracao,
+        m.proxima_calibracao,
+        m.frequencia_calibracao_meses
+      )
+      switch (status.status) {
+        case 'nao_requer':
+          return 'Não requer'
+        case 'em_dia':
+          return 'Em dia'
+        case 'proxima_vencimento':
+          return 'Próxima do vencimento'
+        case 'vencida':
+          return 'Vencida'
+        default:
+          return 'Sem data'
+      }
+    },
+  },
+  status: {
+    label: 'Status',
+    value: (m) => statusLabels[m.status] || m.status || '-',
+  },
+}
 
 const MateriaisEquipamentosPage = () => {
   const { 
@@ -64,6 +187,12 @@ const MateriaisEquipamentosPage = () => {
     checkMaterialDependencies,
     deleteMaterialWithDependencies
   } = useMateriaisEquipamentos()
+
+  const { can } = usePermissoes()
+  const podeCriar = can('materiais', 'create')
+  const podeEditar = can('materiais', 'update')
+  const podeExcluir = can('materiais', 'delete')
+  const podeMovimentar = can('estoque', 'update')
   
   const [search, setSearch] = useState('')
   const [showInactive, setShowInactive] = useState(false)
@@ -73,14 +202,30 @@ const MateriaisEquipamentosPage = () => {
   const [editingMaterial, setEditingMaterial] = useState<any>(null)
   const [deletingMaterial, setDeletingMaterial] = useState<any>(null)
   const [movimentacaoMaterial, setMovimentacaoMaterial] = useState<any>(null)
+  const [cloningMaterial, setCloningMaterial] = useState<any>(null)
   const [dependenciesDialogOpen, setDependenciesDialogOpen] = useState(false)
   const [materialWithDependencies, setMaterialWithDependencies] = useState<any>(null)
   const [dialogPosition, setDialogPosition] = useState({ top: '50vh', left: '50vw' })
+  const [columnFilters, setColumnFilters] = useState<Record<ColumnKey, string[]>>(
+    () => emptyColumnFilters()
+  )
+  const [sort, setSort] = useState<{ column: ColumnKey; direction: SortDirection }>({
+    column: 'codigo',
+    direction: null,
+  })
+
+  const setColumnFilter = (column: ColumnKey) => (values: string[]) =>
+    setColumnFilters((prev) => ({ ...prev, [column]: values }))
+
+  const setColumnSort = (column: ColumnKey) => (direction: SortDirection) =>
+    setSort({ column, direction })
+
+  const hasColumnFilters = COLUMN_KEYS.some((key) => columnFilters[key].length > 0)
 
   // Calcular posição central da viewport atual quando abre qualquer dialog
   useEffect(() => {
     const updateDialogPosition = () => {
-      if (isCreateDialogOpen || editingMaterial || deletingMaterial || movimentacaoMaterial) {
+      if (isCreateDialogOpen || editingMaterial || deletingMaterial || movimentacaoMaterial || cloningMaterial) {
         const viewportHeight = window.innerHeight
         const viewportWidth = window.innerWidth
         const scrollTop = window.pageYOffset || document.documentElement.scrollTop
@@ -97,7 +242,7 @@ const MateriaisEquipamentosPage = () => {
     }
 
     updateDialogPosition()
-  }, [isCreateDialogOpen, editingMaterial, deletingMaterial, movimentacaoMaterial])
+  }, [isCreateDialogOpen, editingMaterial, deletingMaterial, movimentacaoMaterial, cloningMaterial])
 
   // Hook para centralização inteligente dos dialogs
   const createDialogPosition = useCenteredDialog(isCreateDialogOpen)
@@ -142,8 +287,47 @@ const MateriaisEquipamentosPage = () => {
     // Filtro para estoque baixo/zerado
     const matchesEstoqueBaixo = !filtroEstoqueBaixo || isEstoqueBaixoOuZerado(material)
 
-    return matchesSearch && matchesAtivo && matchesCalibracaoVencida && matchesEstoqueBaixo
+    // Filtros por coluna (estilo planilha)
+    const matchesColumns = COLUMN_KEYS.every((key) => {
+      const selected = columnFilters[key]
+      if (selected.length === 0) return true
+      return selected.includes(COLUMN_CONFIG[key].value(material))
+    })
+
+    return (
+      matchesSearch &&
+      matchesAtivo &&
+      matchesCalibracaoVencida &&
+      matchesEstoqueBaixo &&
+      matchesColumns
+    )
   })
+
+  // Ordenação pela coluna escolhida no filtro
+  const sortedMateriais = React.useMemo(() => {
+    if (!sort.direction) return filteredMateriais
+    const { sortValue, value } = COLUMN_CONFIG[sort.column]
+    const factor = sort.direction === 'asc' ? 1 : -1
+    return [...filteredMateriais].sort((a, b) => {
+      const va = sortValue ? sortValue(a) : value(a)
+      const vb = sortValue ? sortValue(b) : value(b)
+      if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * factor
+      return String(va).localeCompare(String(vb), 'pt-BR') * factor
+    })
+  }, [filteredMateriais, sort])
+
+  // Opções disponíveis em cada coluna (valores distintos dos itens visíveis)
+  const columnOptions = React.useMemo(() => {
+    const base = materiaisEquipamentos.filter((material) =>
+      showInactive ? material.ativo === false : material.ativo !== false
+    )
+    return COLUMN_KEYS.reduce((acc, key) => {
+      const values = new Set<string>()
+      base.forEach((material) => values.add(COLUMN_CONFIG[key].value(material)))
+      acc[key] = Array.from(values).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      return acc
+    }, {} as Record<ColumnKey, string[]>)
+  }, [materiaisEquipamentos, showInactive])
 
   // Contar itens com estoque baixo ou zerado (apenas ativos)
   const itensEstoqueBaixo = materiaisEquipamentos.filter(
@@ -166,6 +350,29 @@ const MateriaisEquipamentosPage = () => {
     const result = await createMaterial(data)
     if (result.error === null) {
       setIsCreateDialogOpen(false)
+    }
+  }
+
+  // Clonar: abre o formulário de criação pré-preenchido com os dados do item
+  const handleCloneClick = (material: any) => {
+    const { id, codigo, created_at, updated_at, ...rest } = material
+    setCloningMaterial({
+      ...rest,
+      nome: `${material.nome} (Cópia)`,
+      numero_serie: '',
+      estoque_atual: 0,
+    })
+  }
+
+  const handleCloneSubmit = async (data: MaterialEquipamentoFormData) => {
+    const payload = { ...data }
+    // O formulário só gera código automático em cadastros sem dados iniciais
+    if (!payload.codigo) {
+      payload.codigo = String(Math.floor(Math.random() * 90000) + 10000)
+    }
+    const result = await createMaterial(payload)
+    if (result.error === null) {
+      setCloningMaterial(null)
     }
   }
 
@@ -271,11 +478,13 @@ const MateriaisEquipamentosPage = () => {
             <span className="hidden sm:inline">Atualizar</span>
             <span className="sm:hidden">🔄</span>
           </Button>
+          {podeCriar && (
           <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="flex-1 sm:flex-none">
             <PlusCircle className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Novo Item</span>
             <span className="sm:hidden">Adicionar</span>
           </Button>
+          )}
         </div>
       </div>
 
@@ -348,9 +557,24 @@ const MateriaisEquipamentosPage = () => {
               </label>
             </div>
           </div>
-          <Badge variant="secondary" className="self-start sm:self-auto">
-            {filteredMateriais.length} item{filteredMateriais.length !== 1 ? 's' : ''}
-          </Badge>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            {(hasColumnFilters || sort.direction) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setColumnFilters(emptyColumnFilters())
+                  setSort({ column: 'codigo', direction: null })
+                }}
+              >
+                Limpar filtros de coluna
+              </Button>
+            )}
+            <Badge variant="secondary">
+              {sortedMateriais.length} item{sortedMateriais.length !== 1 ? 's' : ''}
+            </Badge>
+          </div>
         </div>
       </div>
 
@@ -377,13 +601,13 @@ const MateriaisEquipamentosPage = () => {
 
       {/* 📱 MOBILE: Cards layout */}
       <div className="lg:hidden space-y-3">
-        {filteredMateriais.length > 0 ? (
-          filteredMateriais.map((material) => (
+        {sortedMateriais.length > 0 ? (
+          sortedMateriais.map((material) => (
             <ContextMenu key={material.id}>
               <ContextMenuTrigger asChild>
                 <div 
                   className="border rounded-lg p-4 space-y-3 cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => setEditingMaterial(material)}
+                  onClick={() => podeEditar && setEditingMaterial(material)}
                 >
                   {/* 📱 Header do card */}
                   <div className="flex items-start justify-between">
@@ -414,21 +638,33 @@ const MateriaisEquipamentosPage = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setEditingMaterial(material)}>
-                            <Edit className="mr-2 h-3 w-3" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setMovimentacaoMaterial(material)}>
-                            <Package className="mr-2 h-3 w-3" />
-                            Movimentar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => setDeletingMaterial(material)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-3 w-3" />
-                            Excluir
-                          </DropdownMenuItem>
+                          {podeEditar && (
+                            <DropdownMenuItem onClick={() => setEditingMaterial(material)}>
+                              <Edit className="mr-2 h-3 w-3" />
+                              Editar
+                            </DropdownMenuItem>
+                          )}
+                          {podeCriar && (
+                            <DropdownMenuItem onClick={() => handleCloneClick(material)}>
+                              <Copy className="mr-2 h-3 w-3" />
+                              Clonar
+                            </DropdownMenuItem>
+                          )}
+                          {podeMovimentar && (
+                            <DropdownMenuItem onClick={() => setMovimentacaoMaterial(material)}>
+                              <Package className="mr-2 h-3 w-3" />
+                              Movimentar
+                            </DropdownMenuItem>
+                          )}
+                          {podeExcluir && (
+                            <DropdownMenuItem 
+                              onClick={() => setDeletingMaterial(material)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-3 w-3" />
+                              Excluir
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -483,7 +719,9 @@ const MateriaisEquipamentosPage = () => {
                             materialId={material.id}
                             centroCusto={{
                               codigo: material.centros_custo.codigo,
-                              nome: (material.centros_custo as any).nome,
+                              nome:
+                                (material.centros_custo as any).empresas?.nome ||
+                                material.centros_custo.descricao,
                             }}
                           />
                         </div>
@@ -493,21 +731,33 @@ const MateriaisEquipamentosPage = () => {
                 </div>
               </ContextMenuTrigger>
               <ContextMenuContent>
-                <ContextMenuItem onClick={() => setEditingMaterial(material)}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Editar
-                </ContextMenuItem>
-                <ContextMenuItem onClick={() => setMovimentacaoMaterial(material)}>
-                  <Package className="mr-2 h-4 w-4" />
-                  Movimentar Estoque
-                </ContextMenuItem>
-                <ContextMenuItem 
-                  onClick={() => setDeletingMaterial(material)}
-                  className="text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Excluir
-                </ContextMenuItem>
+                {podeEditar && (
+                  <ContextMenuItem onClick={() => setEditingMaterial(material)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Editar
+                  </ContextMenuItem>
+                )}
+                {podeCriar && (
+                  <ContextMenuItem onClick={() => handleCloneClick(material)}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Clonar
+                  </ContextMenuItem>
+                )}
+                {podeMovimentar && (
+                  <ContextMenuItem onClick={() => setMovimentacaoMaterial(material)}>
+                    <Package className="mr-2 h-4 w-4" />
+                    Movimentar Estoque
+                  </ContextMenuItem>
+                )}
+                {podeExcluir && (
+                  <ContextMenuItem 
+                    onClick={() => setDeletingMaterial(material)}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir
+                  </ContextMenuItem>
+                )}
               </ContextMenuContent>
             </ContextMenu>
           ))
@@ -524,25 +774,142 @@ const MateriaisEquipamentosPage = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Item</TableHead>
-              <TableHead>Tipo/Categoria</TableHead>
-              <TableHead>Localização</TableHead>
-              <TableHead>Marca/Modelo</TableHead>
-              <TableHead>Centro de Custo</TableHead>
-              <TableHead>Estoque</TableHead>
-              <TableHead>Valor</TableHead>
-              <TableHead>Calibração</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>
+                <div className="flex items-center gap-1">
+                  <span>Item</span>
+                  <ColumnFilter
+                    title="Item"
+                    options={columnOptions.codigo}
+                    selected={columnFilters.codigo}
+                    onSelectedChange={setColumnFilter('codigo')}
+                    sortDirection={sort.column === 'codigo' ? sort.direction : null}
+                    onSortChange={setColumnSort('codigo')}
+                  />
+                </div>
+              </TableHead>
+              <TableHead>
+                <div className="flex items-center gap-1">
+                  <span>Tipo/Categoria</span>
+                  <ColumnFilter
+                    title="Tipo"
+                    options={columnOptions.tipo}
+                    selected={columnFilters.tipo}
+                    onSelectedChange={setColumnFilter('tipo')}
+                    sortDirection={sort.column === 'tipo' ? sort.direction : null}
+                    onSortChange={setColumnSort('tipo')}
+                  />
+                  <ColumnFilter
+                    title="Categoria"
+                    options={columnOptions.categoria}
+                    selected={columnFilters.categoria}
+                    onSelectedChange={setColumnFilter('categoria')}
+                    sortDirection={sort.column === 'categoria' ? sort.direction : null}
+                    onSortChange={setColumnSort('categoria')}
+                  />
+                </div>
+              </TableHead>
+              <TableHead>
+                <div className="flex items-center gap-1">
+                  <span>Localização</span>
+                  <ColumnFilter
+                    title="Localização"
+                    options={columnOptions.localizacao}
+                    selected={columnFilters.localizacao}
+                    onSelectedChange={setColumnFilter('localizacao')}
+                    sortDirection={sort.column === 'localizacao' ? sort.direction : null}
+                    onSortChange={setColumnSort('localizacao')}
+                  />
+                </div>
+              </TableHead>
+              <TableHead>
+                <div className="flex items-center gap-1">
+                  <span>Marca/Modelo</span>
+                  <ColumnFilter
+                    title="Marca"
+                    options={columnOptions.marca}
+                    selected={columnFilters.marca}
+                    onSelectedChange={setColumnFilter('marca')}
+                    sortDirection={sort.column === 'marca' ? sort.direction : null}
+                    onSortChange={setColumnSort('marca')}
+                  />
+                </div>
+              </TableHead>
+              <TableHead>
+                <div className="flex items-center gap-1">
+                  <span>Centro de Custo</span>
+                  <ColumnFilter
+                    title="Centro de Custo"
+                    options={columnOptions.centroCusto}
+                    selected={columnFilters.centroCusto}
+                    onSelectedChange={setColumnFilter('centroCusto')}
+                    sortDirection={sort.column === 'centroCusto' ? sort.direction : null}
+                    onSortChange={setColumnSort('centroCusto')}
+                  />
+                </div>
+              </TableHead>
+              <TableHead>
+                <div className="flex items-center gap-1">
+                  <span>Estoque</span>
+                  <ColumnFilter
+                    title="Estoque"
+                    options={columnOptions.estoque}
+                    selected={columnFilters.estoque}
+                    onSelectedChange={setColumnFilter('estoque')}
+                    sortDirection={sort.column === 'estoque' ? sort.direction : null}
+                    onSortChange={setColumnSort('estoque')}
+                  />
+                </div>
+              </TableHead>
+              <TableHead>
+                <div className="flex items-center gap-1">
+                  <span>Valor</span>
+                  <ColumnFilter
+                    title="Valor"
+                    options={columnOptions.valor}
+                    selected={columnFilters.valor}
+                    onSelectedChange={setColumnFilter('valor')}
+                    sortDirection={sort.column === 'valor' ? sort.direction : null}
+                    onSortChange={setColumnSort('valor')}
+                  />
+                </div>
+              </TableHead>
+              <TableHead>
+                <div className="flex items-center gap-1">
+                  <span>Calibração</span>
+                  <ColumnFilter
+                    title="Calibração"
+                    options={columnOptions.calibracao}
+                    selected={columnFilters.calibracao}
+                    onSelectedChange={setColumnFilter('calibracao')}
+                    sortDirection={sort.column === 'calibracao' ? sort.direction : null}
+                    onSortChange={setColumnSort('calibracao')}
+                  />
+                </div>
+              </TableHead>
+              <TableHead>
+                <div className="flex items-center gap-1">
+                  <span>Status</span>
+                  <ColumnFilter
+                    title="Status"
+                    options={columnOptions.status}
+                    selected={columnFilters.status}
+                    onSelectedChange={setColumnFilter('status')}
+                    sortDirection={sort.column === 'status' ? sort.direction : null}
+                    onSortChange={setColumnSort('status')}
+                  />
+                </div>
+              </TableHead>
+              <TableHead className="w-[120px] text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredMateriais.length > 0 ? (
-              filteredMateriais.map((material) => (
+            {sortedMateriais.length > 0 ? (
+              sortedMateriais.map((material) => (
                 <ContextMenu key={material.id}>
                   <ContextMenuTrigger asChild>
                     <TableRow 
                       className="cursor-pointer hover:bg-muted/50 transition-colors h-12"
-                      onClick={() => setEditingMaterial(material)}
+                      onClick={() => podeEditar && setEditingMaterial(material)}
                     >
                   <TableCell className="py-2">
                     <div className="flex items-center space-x-2">
@@ -646,22 +1013,78 @@ const MateriaisEquipamentosPage = () => {
                           {getStatusLabel(material.status)}
                         </Badge>
                       </TableCell>
+                      <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          {podeEditar && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              title="Editar"
+                              aria-label="Editar"
+                              onClick={() => setEditingMaterial(material)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {podeCriar && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              title="Clonar"
+                              aria-label="Clonar"
+                              onClick={() => handleCloneClick(material)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {podeExcluir && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              title="Excluir"
+                              aria-label="Excluir"
+                              onClick={() => handleDeleteClick(material)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {!podeEditar && !podeCriar && !podeExcluir && (
+                            <span className="text-xs text-muted-foreground">Somente leitura</span>
+                          )}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   </ContextMenuTrigger>
                   <ContextMenuContent>
                     
+                      {podeEditar && (
                       <ContextMenuItem onClick={() => setEditingMaterial(material)}>
                         <Edit className="mr-2 h-4 w-4" />
                         Editar
                       </ContextMenuItem>
+                      )}
                     
                     
+                      {podeCriar && (
+                      <ContextMenuItem onClick={() => handleCloneClick(material)}>
+                        <Copy className="mr-2 h-4 w-4" />
+                        Clonar
+                      </ContextMenuItem>
+                      )}
+                    
+                    
+                      {podeMovimentar && (
                       <ContextMenuItem onClick={() => setMovimentacaoMaterial(material)}>
                         <MoreHorizontal className="mr-2 h-4 w-4" />
                         Movimentar Estoque
                       </ContextMenuItem>
+                      )}
                     
                     
+                      {podeExcluir && (
                       <ContextMenuItem 
                         className="text-destructive"
                         onClick={() => handleDeleteClick(material)}
@@ -669,13 +1092,14 @@ const MateriaisEquipamentosPage = () => {
                         <Trash2 className="mr-2 h-4 w-4" />
                         Excluir
                       </ContextMenuItem>
+                      )}
                     
                   </ContextMenuContent>
                 </ContextMenu>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={9} className="text-center">
+                <TableCell colSpan={10} className="text-center">
                   {search ? 'Nenhum item encontrado com os critérios de busca.' : 'Nenhum item cadastrado.'}
                 </TableCell>
               </TableRow>
@@ -707,6 +1131,39 @@ const MateriaisEquipamentosPage = () => {
             </DialogDescription>
           </DialogHeader>
           <MaterialEquipamentoForm onSubmit={handleCreate} onCancel={() => setIsCreateDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Clone Dialog */}
+      <Dialog open={!!cloningMaterial} onOpenChange={() => setCloningMaterial(null)}>
+        <DialogContent
+          className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto items-start"
+          style={{
+            position: 'absolute',
+            top: dialogPosition.top,
+            left: dialogPosition.left,
+            transform: 'translate(-50%, -50%)',
+            margin: 0,
+            zIndex: 9999,
+            maxHeight: '90vh',
+            width: 'min(95vw, 800px)',
+            overflowY: 'auto'
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>Clonar Material/Equipamento</DialogTitle>
+            <DialogDescription>
+              Os dados foram copiados do item original. Revise e salve para criar um novo item
+              (um novo código será gerado automaticamente).
+            </DialogDescription>
+          </DialogHeader>
+          {cloningMaterial && (
+            <MaterialEquipamentoForm
+              initialData={cloningMaterial}
+              onSubmit={handleCloneSubmit}
+              onCancel={() => setCloningMaterial(null)}
+            />
+          )}
         </DialogContent>
       </Dialog>
 

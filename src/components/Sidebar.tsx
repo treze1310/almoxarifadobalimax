@@ -27,6 +27,7 @@ import {
   Settings,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { usePermissoes } from '@/contexts/PermissionsContext'
 import {
   Collapsible,
   CollapsibleContent,
@@ -48,11 +49,13 @@ const menuItems = [
     title: 'Dashboard',
     href: '/dashboard',
     icon: Home,
+    modulo: 'dashboard',
   },
   {
     title: 'Gestão de Romaneios',
     href: '/romaneios',
     icon: FileText,
+    modulo: 'romaneios',
   },
   {
     title: 'Integração NF-e',
@@ -62,11 +65,14 @@ const menuItems = [
         title: 'Importar NF-e',
         href: '/nfe/importacao',
         icon: Upload,
+        modulo: 'nfe',
+        acao: 'create' as const,
       },
       {
         title: 'Histórico',
         href: '/nfe/historico',
         icon: History,
+        modulo: 'nfe',
       },
     ],
   },
@@ -74,6 +80,7 @@ const menuItems = [
     title: 'Materiais e Equipamentos',
     href: '/materiais-equipamentos',
     icon: Wrench,
+    modulo: 'materiais',
   },
   {
     title: 'Solicitações de Compra',
@@ -83,11 +90,14 @@ const menuItems = [
         title: 'Nova Solicitação',
         href: '/solicitacoes/nova',
         icon: PlusSquare,
+        modulo: 'solicitacoes',
+        acao: 'create' as const,
       },
       {
         title: 'Consultar Solicitações',
         href: '/solicitacoes',
         icon: Search,
+        modulo: 'solicitacoes',
       },
     ],
   },
@@ -96,23 +106,26 @@ const menuItems = [
     title: 'Cadastros Auxiliares',
     icon: BookUser,
     subItems: [
-      { title: 'Colaboradores', href: '/cadastros/colaboradores', icon: BookUser },
-      { title: 'Empresas', href: '/cadastros/empresas', icon: Building },
-      { title: 'Fornecedores', href: '/cadastros/fornecedores', icon: Truck },
+      { title: 'Colaboradores', href: '/cadastros/colaboradores', icon: BookUser, modulo: 'colaboradores' },
+      { title: 'Empresas', href: '/cadastros/empresas', icon: Building, modulo: 'empresas' },
+      { title: 'Fornecedores', href: '/cadastros/fornecedores', icon: Truck, modulo: 'fornecedores' },
       {
         title: 'Centros de Custo',
         href: '/cadastros/centros-custo',
         icon: Landmark,
+        modulo: 'centros_custo',
       },
       {
         title: 'Marcas',
         href: '/cadastros/marcas',
         icon: Tag,
+        modulo: 'marcas',
       },
       {
         title: 'Categorias',
         href: '/cadastros/categorias',
         icon: Layers,
+        modulo: 'materiais',
       },
     ],
   },
@@ -120,16 +133,19 @@ const menuItems = [
     title: 'Gestão de Localização',
     href: '/localizacao',
     icon: MapPin,
+    modulo: 'localizacao',
   },
   {
     title: 'Relatórios',
     href: '/relatorios',
     icon: BarChart2,
+    modulo: 'relatorios',
   },
   {
     title: 'Configurações',
     href: '/configuracoes',
     icon: Settings,
+    modulo: 'configuracoes',
   },
 ]
 
@@ -137,6 +153,24 @@ const menuItems = [
 const MenuContent = ({ onNavigate }: { onNavigate?: () => void }) => {
   const location = useLocation()
   const { user, signOut } = useAuth()
+  const { can, perfilNome } = usePermissoes()
+
+  // Esconde do menu o que o perfil de acesso do usuário não pode visualizar
+  const visibleMenuItems = menuItems
+    .map((item) => {
+      if (!item.subItems) return item
+      const subItems = item.subItems.filter((sub: any) =>
+        sub.modulo ? can(sub.modulo, sub.acao || 'read') : true
+      )
+      return { ...item, subItems }
+    })
+    .filter((item: any) =>
+      item.subItems
+        ? item.subItems.length > 0
+        : item.modulo
+          ? can(item.modulo)
+          : true
+    )
 
   const isActive = (href: string) => {
     const [path] = href.split('?')
@@ -169,7 +203,7 @@ const MenuContent = ({ onNavigate }: { onNavigate?: () => void }) => {
     <div className="flex flex-col h-full">
       <ScrollArea className="flex-1">
         <nav className="p-3 space-y-1">
-          {menuItems.map((item) =>
+          {visibleMenuItems.map((item: any) =>
             item.subItems ? (
               <Collapsible
                 key={item.title}
@@ -226,6 +260,7 @@ const MenuContent = ({ onNavigate }: { onNavigate?: () => void }) => {
               <p className="text-xs text-muted-foreground truncate">
                 {user?.email}
               </p>
+              <p className="text-xs text-primary truncate">{perfilNome}</p>
             </div>
           </div>
           

@@ -100,10 +100,18 @@ export function ColaboradorForm({ initialData, onSubmit, onCancel }: Colaborador
   const activeEmpresas = empresas.filter(empresa => empresa.ativo)
   const activeCentrosCusto = centrosCusto.filter(centro => centro.ativo)
 
-  // Filter centros de custo by selected empresa
+  // Filter centros de custo by selected empresa. Centros sem empresa vinculada
+  // e o centro ja salvo no colaborador continuam na lista, para que a edicao
+  // nunca esconda o valor atual.
   const selectedEmpresaId = form.watch('empresa_id')
-  const filteredCentrosCusto = selectedEmpresaId 
-    ? activeCentrosCusto.filter(centro => centro.empresa_id === selectedEmpresaId)
+  const selectedCentroCustoId = form.watch('centro_custo_id')
+  const filteredCentrosCusto = selectedEmpresaId
+    ? activeCentrosCusto.filter(
+        (centro) =>
+          centro.empresa_id === selectedEmpresaId ||
+          !centro.empresa_id ||
+          centro.id === selectedCentroCustoId
+      )
     : activeCentrosCusto
 
   return (
@@ -317,7 +325,7 @@ export function ColaboradorForm({ initialData, onSubmit, onCancel }: Colaborador
                   <SelectContent>
                     {filteredCentrosCusto.map((centro) => (
                       <SelectItem key={centro.id} value={centro.id}>
-                        {centro.codigo} - {(centro as any).nome}
+                        {centro.codigo} - {centro.descricao}
                       </SelectItem>
                     ))}
                   </SelectContent>
