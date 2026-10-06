@@ -16,7 +16,8 @@ import {
   Ban,
   Download,
   Clock,
-  Copy
+  Copy,
+  Bot
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { useCenteredDialog } from '@/hooks/useCenteredDialog'
@@ -431,10 +432,23 @@ const SolicitacoesPage = () => {
       valorOrdenacao: (s) => s.id,
       celula: (s) => (
         <div className="min-w-0">
-          <div className="font-medium">{s.id}</div>
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{s.id}</span>
+            {s.origem === 'automatica' && (
+              <Badge variant="outline" className="gap-1 text-xs font-normal">
+                <Bot className="h-3 w-3" />
+                Automática
+              </Badge>
+            )}
+          </div>
           <div className="text-xs text-muted-foreground">{formatDate(s.data as any)}</div>
         </div>
       ),
+    },
+    {
+      id: 'origem',
+      cabecalho: 'Origem',
+      valor: (s) => (s.origem === 'automatica' ? 'Ponto de pedido' : 'Manual'),
     },
     {
       id: 'solicitante',
@@ -683,6 +697,18 @@ const SolicitacoesPage = () => {
                 </div>
               </div>
               
+              {selectedSolicitacao.justificativa && (
+                <div className="rounded-md border bg-muted/40 p-3">
+                  <div className="mb-1 flex items-center gap-2 text-sm font-medium">
+                    {selectedSolicitacao.origem === 'automatica' && <Bot className="h-4 w-4" />}
+                    Justificativa
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedSolicitacao.justificativa}
+                  </p>
+                </div>
+              )}
+
               {selectedSolicitacao.rejectionReason && (
                 <div>
                   <span className="font-medium">Motivo da Rejeição:</span>

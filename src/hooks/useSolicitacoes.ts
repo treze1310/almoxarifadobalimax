@@ -82,7 +82,12 @@ export const useSolicitacoes = (): UseSolicitacoesReturn => {
         centroCustoDestinoId: item.centro_custo_id, // usar o mesmo para ambos por enquanto
         prazoEntrega: 'Normal (3-5 dias úteis)' as any, // valor padrão
         colaborador_id: item.colaborador_id,
-        solicitante_nome: item.colaboradores?.nome || item.solicitante_nome,
+        solicitante_nome:
+          item.colaboradores?.nome ||
+          item.solicitante_nome ||
+          (item.origem === 'automatica' ? 'Sistema (ponto de pedido)' : undefined),
+        origem: item.origem === 'automatica' ? 'automatica' : 'manual',
+        justificativa: item.justificativa || undefined,
         status: item.status === 'pendente' ? 'Pendente' : 
                 item.status === 'aprovada' ? 'Aprovada' :
                 item.status === 'rejeitada' ? 'Rejeitada' :

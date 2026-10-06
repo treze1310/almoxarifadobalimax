@@ -116,8 +116,11 @@ const MateriaisEquipamentosPage = () => {
 
   // RF-02: a classificação vem da coluna gerada `situacao_estoque`, calculada no
   // banco. O Dashboard, este alerta e este filtro leem a mesma fonte.
+  // RF-10 soma aqui o item que chegou no ponto de pedido sem ter chegado no mínimo.
   const isEstoqueBaixoOuZerado = (material: any) =>
-    material.situacao_estoque === 'zerado' || material.situacao_estoque === 'baixo'
+    material.situacao_estoque === 'zerado' ||
+    material.situacao_estoque === 'baixo' ||
+    material.precisa_repor === true
 
   /**
    * Filtros próprios desta tela (inativos, calibração e estoque crítico).
@@ -324,13 +327,16 @@ const MateriaisEquipamentosPage = () => {
       id: 'estoque',
       cabecalho: 'Estoque',
       alinhamento: 'right',
-      // RF-02: situação vem da coluna gerada no banco
+      // RF-02: situação vem da coluna gerada no banco.
+      // RF-10: `precisa_repor` olha o ponto de pedido, que pode estar acima do mínimo.
       valor: (m) =>
         m.situacao_estoque === 'zerado'
           ? 'Zerado'
           : m.situacao_estoque === 'baixo'
             ? 'No mínimo'
-            : 'Normal',
+            : m.precisa_repor
+              ? 'No ponto de pedido'
+              : 'Normal',
       valorOrdenacao: (m) => m.estoque_atual ?? 0,
       celula: (m) => (
         <div className="text-right">
@@ -346,7 +352,8 @@ const MateriaisEquipamentosPage = () => {
             {m.estoque_atual ?? 0}
           </div>
           <div className="text-xs text-muted-foreground">
-            Mín: {m.estoque_minimo ?? 0} {m.unidade_medida}
+            Mín: {m.estoque_minimo ?? 0}
+            {m.ponto_pedido != null && ` · Pedir em ${m.ponto_pedido}`} {m.unidade_medida}
           </div>
         </div>
       ),

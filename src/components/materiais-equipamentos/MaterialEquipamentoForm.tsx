@@ -57,6 +57,10 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
       numero_serie: initialData?.numero_serie || '',
       valor_unitario: initialData?.valor_unitario ?? undefined,
       estoque_atual: initialData?.estoque_atual ?? 0,
+      estoque_minimo: initialData?.estoque_minimo ?? undefined,
+      ponto_pedido: (initialData as any)?.ponto_pedido ?? undefined,
+      estoque_maximo: (initialData as any)?.estoque_maximo ?? undefined,
+      reposicao_automatica: (initialData as any)?.reposicao_automatica ?? true,
       localizacao_id: initialData?.localizacao_id || undefined,
       fornecedor_id: initialData?.fornecedor_id || undefined,
       foto_url: initialData?.foto_url || '',
@@ -93,6 +97,10 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
         numero_serie: initialData.numero_serie || '',
         valor_unitario: initialData.valor_unitario ?? undefined,
         estoque_atual: initialData.estoque_atual,
+        estoque_minimo: initialData.estoque_minimo ?? undefined,
+        ponto_pedido: (initialData as any)?.ponto_pedido ?? undefined,
+        estoque_maximo: (initialData as any)?.estoque_maximo ?? undefined,
+        reposicao_automatica: (initialData as any)?.reposicao_automatica ?? true,
         localizacao_id: initialData.localizacao_id || undefined,
         fornecedor_id: initialData.fornecedor_id || undefined,
         foto_url: initialData.foto_url || '',
@@ -357,24 +365,115 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="estoque_atual"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Quantidade em Estoque</FormLabel>
-              <FormControl>
-                <Input 
-                  type="number" 
-                  placeholder="0"
-                  {...field}
-                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Níveis de estoque e ponto de pedido (RF-10) */}
+        <div className="space-y-4 rounded-md border p-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <FormField
+              control={form.control}
+              name="estoque_atual"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Quantidade em Estoque</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      {...field}
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="estoque_minimo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Estoque Mínimo</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      {...field}
+                      value={field.value ?? ''}
+                      onChange={(e) =>
+                        field.onChange(e.target.value ? parseInt(e.target.value) : undefined)
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="ponto_pedido"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Ponto de Pedido</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="Usa o mínimo"
+                      {...field}
+                      value={field.value ?? ''}
+                      onChange={(e) =>
+                        field.onChange(e.target.value ? parseInt(e.target.value) : undefined)
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="estoque_maximo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Estoque Máximo</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="Dobro do ponto"
+                      {...field}
+                      value={field.value ?? ''}
+                      onChange={(e) =>
+                        field.onChange(e.target.value ? parseInt(e.target.value) : undefined)
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="reposicao_automatica"
+            render={({ field }) => (
+              <FormItem className="flex items-center justify-between gap-4 rounded-md bg-muted/40 p-3">
+                <div className="space-y-0.5">
+                  <FormLabel>Reposição automática</FormLabel>
+                  <p className="text-xs text-muted-foreground">
+                    Ao atingir o ponto de pedido, o sistema abre uma solicitação de compra
+                    pendente com a quantidade que falta para o estoque máximo. Só uma por item
+                    fica em aberto.
+                  </p>
+                </div>
+                <FormControl>
+                  <Switch checked={field.value ?? true} onCheckedChange={field.onChange} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
 
         {/* Localização e Fornecedor */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -32,6 +32,8 @@ const ROTULOS: Record<string, string> = {
   'seguranca.acesso_negado': 'Acesso negado',
   'colaborador.cpf_consultado': 'CPF completo consultado',
   'romaneio.cancelar': 'Romaneio cancelado',
+  'nfe.conferir': 'NF-e conferida',
+  'nfe.lancar_estoque': 'NF-e lançada no estoque',
 }
 
 const destrutiva = (acao: string) =>

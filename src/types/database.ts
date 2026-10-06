@@ -436,7 +436,11 @@ export type Database = {
           data_aquisicao: string | null
           descricao: string | null
           estoque_atual: number | null
+          estoque_maximo: number | null
           estoque_minimo: number | null
+          ponto_pedido: number | null
+          precisa_repor: boolean | null
+          reposicao_automatica: boolean
           /** Coluna gerada no banco (RF-02): 'zerado' | 'baixo' | 'normal' */
           situacao_estoque: 'zerado' | 'baixo' | 'normal' | null
           fornecedor_id: string | null
@@ -479,7 +483,10 @@ export type Database = {
           data_aquisicao?: string | null
           descricao?: string | null
           estoque_atual?: number | null
+          estoque_maximo?: number | null
           estoque_minimo?: number | null
+          ponto_pedido?: number | null
+          reposicao_automatica?: boolean
           fornecedor_id?: string | null
           foto_url?: string | null
           frequencia_calibracao_meses?: number | null
@@ -520,7 +527,10 @@ export type Database = {
           data_aquisicao?: string | null
           descricao?: string | null
           estoque_atual?: number | null
+          estoque_maximo?: number | null
           estoque_minimo?: number | null
+          ponto_pedido?: number | null
+          reposicao_automatica?: boolean
           fornecedor_id?: string | null
           foto_url?: string | null
           frequencia_calibracao_meses?: number | null
@@ -1171,15 +1181,17 @@ export type Database = {
         Row: {
           aprovado_por: string | null
           centro_custo_id: string | null
-          colaborador_id: string
+          colaborador_id: string | null
           created_at: string | null
           data_aprovacao: string | null
+          gerada_por_material_id: string | null
           data_solicitacao: string | null
           descricao: string | null
           id: string
           justificativa: string | null
           numero: string
           observacoes_aprovacao: string | null
+          origem: string
           status: string | null
           tipo: string
           updated_at: string | null
@@ -1189,15 +1201,17 @@ export type Database = {
         Insert: {
           aprovado_por?: string | null
           centro_custo_id?: string | null
-          colaborador_id: string
+          colaborador_id: string | null
           created_at?: string | null
           data_aprovacao?: string | null
+          gerada_por_material_id?: string | null
           data_solicitacao?: string | null
           descricao?: string | null
           id?: string
           justificativa?: string | null
           numero: string
           observacoes_aprovacao?: string | null
+          origem?: string
           status?: string | null
           tipo: string
           updated_at?: string | null
@@ -1207,15 +1221,17 @@ export type Database = {
         Update: {
           aprovado_por?: string | null
           centro_custo_id?: string | null
-          colaborador_id?: string
+          colaborador_id?: string | null
           created_at?: string | null
           data_aprovacao?: string | null
+          gerada_por_material_id?: string | null
           data_solicitacao?: string | null
           descricao?: string | null
           id?: string
           justificativa?: string | null
           numero?: string
           observacoes_aprovacao?: string | null
+          origem?: string
           status?: string | null
           tipo?: string
           updated_at?: string | null

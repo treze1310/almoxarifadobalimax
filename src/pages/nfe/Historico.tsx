@@ -5,6 +5,7 @@ import { formatarCNPJ } from '@/lib/dadosPessoais'
 import { DataTable, type ColunaDataTable } from '@/components/ds/DataTable'
 import { StatusBadge } from '@/components/ds/StatusBadge'
 import { PageHeader } from '@/components/ds/PageHeader'
+import { ConciliacaoNFeDialog } from '@/components/nfe/ConciliacaoNFeDialog'
 import { EmptyState, TableSkeleton } from '@/components/ds/EstadosPagina'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -18,15 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { 
-  ArrowLeft, 
-  FileText, 
-  Package, 
-  Eye,
-  Trash2,
-  RefreshCw,
-  TrendingUp
-} from 'lucide-react'
+import { ArrowLeft, FileText, Package, Eye, Trash2, RefreshCw, TrendingUp, Link2 } from 'lucide-react'
 import { useNFeImportCrud } from '@/hooks/useNFeImportCrud'
 import { NfeImportDetailsDialog } from '@/components/nfe/NfeImportDetailsDialog'
 import type { NFEImportacao } from '@/services/nfeImportService'
@@ -73,12 +66,17 @@ const HistoricoNFePage = () => {
     }
   }
 
+  // Ciclo do RF-13: Importada -> Conferida -> Lançada
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'importado': return 'Importado'
-      case 'processado': return 'Processado'
+      case 'importada': return 'Importada'
+      case 'conferida': return 'Conferida'
+      case 'lancada': return 'Lançada'
       case 'reprocessando': return 'Reprocessando'
       case 'erro': return 'Erro'
+      // valores legados
+      case 'importado': return 'Importada'
+      case 'processado': return 'Lançada'
       default: return status
     }
   }
@@ -128,6 +126,9 @@ const HistoricoNFePage = () => {
       </div>
     )
   }
+
+  // RF-13: conciliação item a item, conferência e lançamento no estoque
+  const [conciliando, setConciliando] = useState<any | null>(null)
 
   const colunas: ColunaDataTable<any>[] = [
     {
@@ -190,8 +191,8 @@ const HistoricoNFePage = () => {
     {
       id: 'status',
       cabecalho: 'Status',
-      valor: (n) => getStatusLabel(n.status || 'importado'),
-      celula: (n) => <StatusBadge status={n.status || 'importado'} genero="feminino" />,
+      valor: (n) => getStatusLabel(n.status || 'importada'),
+      celula: (n) => <StatusBadge status={n.status || 'importada'} genero="feminino" />,
     },
   ]
 
@@ -295,6 +296,15 @@ const HistoricoNFePage = () => {
               variant="ghost"
               size="icon"
               className="h-7 w-7"
+              title={nfe.status === 'lancada' ? 'Ver conciliação' : 'Conciliar itens'}
+              onClick={() => setConciliando(nfe)}
+            >
+              <Link2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
               title="Ver detalhes"
               onClick={() => handleViewDetails(nfe)}
             >
@@ -336,6 +346,18 @@ const HistoricoNFePage = () => {
             }
           />
         }
+      />
+
+      <ConciliacaoNFeDialog
+        nfeId={conciliando?.id ?? null}
+        numeroNfe={conciliando?.numero_nfe}
+        status={conciliando?.status}
+        onFechar={() => setConciliando(null)}
+        onAtualizado={() => {
+          fetchImportacoes()
+          fetchStats()
+          setConciliando(null)
+        }}
       />
 
       {/* Diálogo de Detalhes/Edição */}

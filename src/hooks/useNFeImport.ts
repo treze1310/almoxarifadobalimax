@@ -158,7 +158,7 @@ export function useNFeImport() {
             valor_ipi: nfeData.totals.vIPI || 0,
             valor_pis: nfeData.totals.vPIS || 0,
             valor_cofins: nfeData.totals.vCOFINS || 0,
-            status: 'importado'
+            status: 'importada'
           }
 
           const { data: nfeImport, error: nfeError } = await supabase
@@ -289,53 +289,9 @@ export function useNFeImport() {
                 continue
               }
 
-              // Para materiais JÁ existentes (vínculo manual ou por código),
-              // somar a quantidade da nota ao estoque atual e registrar movimentação.
-              // Materiais recém-criados já tiveram o estoque definido na criação.
-              if (isExisting && item.quantity > 0) {
-                const { data: material, error: matError } = await supabase
-                  .from('materiais_equipamentos')
-                  .select('estoque_atual')
-                  .eq('id', materialId)
-                  .single()
-
-                if (matError || !material) {
-                  result.errors.push(`Erro ao ler estoque do material ${item.code}: ${matError?.message || 'não encontrado'}`)
-                  continue
-                }
-
-                const estoqueAnterior = material.estoque_atual ?? 0
-                const novoEstoque = estoqueAnterior + item.quantity
-
-                const { error: updateError } = await supabase
-                  .from('materiais_equipamentos')
-                  .update({ estoque_atual: novoEstoque })
-                  .eq('id', materialId)
-
-                if (updateError) {
-                  result.errors.push(`Erro ao atualizar estoque de ${item.code}: ${updateError.message}`)
-                  continue
-                }
-
-                // Registrar movimentação de entrada vinculada à NFe
-                const { error: movError } = await supabase
-                  .from('movimentacao_estoque')
-                  .insert({
-                    material_equipamento_id: materialId,
-                    tipo_movimentacao: 'entrada',
-                    quantidade: item.quantity,
-                    quantidade_anterior: estoqueAnterior,
-                    quantidade_atual: novoEstoque,
-                    motivo: `Entrada via NFe ${nfeData.number}`,
-                    valor_unitario: item.unitValue,
-                    nfe_id: nfeImport.id,
-                    data_movimentacao: new Date().toISOString(),
-                  })
-
-                if (movError) {
-                  console.warn(`Movimentação não registrada para ${item.code}: ${movError.message}`)
-                }
-              }
+              // RF-13: a importação NÃO movimenta estoque. A nota nasce como
+              // "importada" e o estoque só entra no lançamento explícito, depois
+              // da conferência item a item (nfe_lancar_estoque no banco).
 
             } catch (itemError: any) {
               result.errors.push(`Erro ao processar item ${item.code}: ${itemError.message}`)

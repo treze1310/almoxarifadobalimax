@@ -29,6 +29,8 @@ export type AcaoAuditavel =
   | 'seguranca.acesso_negado'
   | 'colaborador.cpf_consultado'
   | 'romaneio.cancelar'
+  | 'nfe.conferir'
+  | 'nfe.lancar_estoque'
 
 interface RegistroAuditoria {
   acao: AcaoAuditavel

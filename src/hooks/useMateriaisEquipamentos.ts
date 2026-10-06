@@ -504,7 +504,10 @@ export function useMateriaisEquipamentos() {
         tipo: nfeItem.tipo || ('material' as const),
         categoria: nfeItem.categoria || 'MATERIAL DE CONSUMO',
         unidade_medida: nfeItem.unidade || 'UN',
-        estoque_atual: Math.floor(nfeItem.quantidade || 0), // ✅ Usar quantidade da NFe
+        // RF-13: o material criado a partir da NF-e nasce com estoque zero.
+        // A quantidade entra no lançamento da nota, que gera a movimentação
+        // correspondente — antes o estoque entrava aqui, sem nenhum rastro.
+        estoque_atual: 0,
         estoque_minimo: 0,
         valor_unitario: nfeItem.valor_unitario,
         codigo_ncm: nfeItem.ncm, // ✅ NCM da NFe

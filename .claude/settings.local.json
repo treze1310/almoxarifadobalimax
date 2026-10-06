@@ -65,7 +65,20 @@
       "Bash(ls tsc_now.txt)",
       "Bash(npx vite *)",
       "Bash(echo \"BUILD EXIT=$?\")",
-      "Bash(git mv *)"
+      "Bash(git mv *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git -c credential.helper= -c credential.helper='!f\\(\\){ echo username=treze1310; echo \"password=$\\(cat .pat\\)\"; };f' push origin main)",
+      "PowerShell(pnpm exec *)",
+      "PowerShell(npx tsc --noEmit -p tsconfig.json 2>&1 | Select-Object -First 40)",
+      "PowerShell($out = & npx --no-install tsc --noEmit -p tsconfig.json 2>$null; Write-Output \"EXIT=$LASTEXITCODE\"; $out | Select-Object -First 40)",
+      "PowerShell($out = & npx --no-install tsc --noEmit -p tsconfig.json 2>$null; Write-Output \"EXIT=$LASTEXITCODE\"; $out | Select-Object -First 50)",
+      "Read(//c/Users/Safetec/Documents/Projetos/CURSOR-PROJECTS/02 - DESENVOLVIMENTO/**)",
+      "PowerShell($out = & npx --no-install tsc --noEmit -p tsconfig.json 2>$null; Write-Output \"EXIT=$LASTEXITCODE\"; $out | Select-Object -First 30)",
+      "PowerShell(git *)",
+      "PowerShell($repo = \"C:\\\\Users\\\\Safetec\\\\Documents\\\\Projetos\\\\CURSOR-PROJECTS\\\\02 - DESENVOLVIMENTO\\\\sistema-de-almoxarifado\"; git -C $repo push origin main; Write-Output \"EXIT_PUSH=$LASTEXITCODE\")",
+      "PowerShell($repo = \"C:\\\\Users\\\\Safetec\\\\Documents\\\\Projetos\\\\CURSOR-PROJECTS\\\\02 - DESENVOLVIMENTO\\\\sistema-de-almoxarifado\"; $out = & npx --no-install tsc --noEmit -p \"$repo\\\\tsconfig.json\" 2>$null; Write-Output \"TSC_EXIT=$LASTEXITCODE\"; $out | Select-Object -First 20)",
+      "PowerShell(Push-Location *)",
+      "PowerShell(Test-Path *)"
     ]
   },
   "enableAllProjectMcpServers": true,

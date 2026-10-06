@@ -139,7 +139,33 @@ export const materialEquipamentoSchema = z.object({
   estoque_minimo: z.number().int().min(0).optional(),
   garantia_meses: z.number().int().min(0).optional(),
   observacoes: z.string().optional().or(z.literal('')).transform(val => val || undefined),
+
+  // Ponto de pedido (RF-10): quando o estoque chega neste nível, o sistema
+  // gera sozinho a solicitação de compra.
+  ponto_pedido: z.number().int().min(0).optional(),
+  estoque_maximo: z.number().int().min(0).optional(),
+  reposicao_automatica: z.boolean().optional(),
 })
+  .superRefine((dados, ctx) => {
+    const minimo = dados.estoque_minimo ?? 0
+
+    if (dados.estoque_maximo !== undefined && dados.estoque_maximo < minimo) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['estoque_maximo'],
+        message: 'O estoque máximo não pode ser menor que o mínimo',
+      })
+    }
+
+    if (dados.estoque_maximo !== undefined && dados.ponto_pedido !== undefined
+        && dados.ponto_pedido > dados.estoque_maximo) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ponto_pedido'],
+        message: 'O ponto de pedido não pode passar do estoque máximo',
+      })
+    }
+  })
 
 // Utility functions
 export const formatCNPJ = (value: string) => {

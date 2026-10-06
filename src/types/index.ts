@@ -117,6 +117,9 @@ export interface SolicitacaoCompra {
   // Solicitante como colaborador (mesmo sistema dos romaneios)
   colaborador_id?: string // ID do colaborador quando é um colaborador cadastrado
   solicitante_nome?: string // Nome quando é um solicitante avulso
+  // 'automatica' = aberta pelo ponto de pedido (RF-10), sem solicitante humano
+  origem?: 'manual' | 'automatica'
+  justificativa?: string
   status: 'Pendente' | 'Aprovada' | 'Rejeitada' | 'Cancelada' | 'Concluída'
   itens: SolicitacaoCompraItem[]
   approverId?: string

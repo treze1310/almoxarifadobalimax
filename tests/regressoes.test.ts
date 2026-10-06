@@ -9,6 +9,7 @@ import {
   mascararTelefone,
 } from '../src/lib/dadosPessoais'
 import { STATUS, normalizarStatus, rotuloStatus } from '../src/lib/status'
+import { materialEquipamentoSchema } from '../src/lib/validations'
 
 /**
  * Testes das regressões reais encontradas no sistema. Cada bloco cobre um bug
@@ -235,5 +236,62 @@ describe('menu agrupado do AppShell', () => {
     for (const grupo of ['Operação', 'Compras', 'Cadastros', 'Gestão']) {
       expect(fonte).toContain(`grupo: '${grupo}'`)
     }
+  })
+})
+
+describe('ciclo de status da NF-e (RF-13)', () => {
+  test('os três status do ciclo são reconhecidos pelo mapa central', () => {
+    expect(normalizarStatus('importada')).toBe('pendente')
+    expect(normalizarStatus('conferida')).toBe('aprovado')
+    expect(normalizarStatus('lancada')).toBe('concluido')
+  })
+
+  test('status legados continuam mapeados', () => {
+    expect(normalizarStatus('importado')).toBe('pendente')
+    expect(normalizarStatus('processado')).not.toBeUndefined()
+  })
+
+  // "Conferida" e "Lançada" precisam ser visualmente distintos
+  test('conferida e lançada têm cores diferentes', () => {
+    const conferida = normalizarStatus('conferida')!
+    const lancada = normalizarStatus('lancada')!
+    expect(STATUS[conferida].classe).not.toBe(STATUS[lancada].classe)
+  })
+})
+
+describe('níveis de estoque e ponto de pedido (RF-10)', () => {
+  const base = { nome: 'Luva', codigo: '99999', tipo: 'material' as const }
+
+  test('aceita máximo acima do mínimo e ponto no meio', () => {
+    const r = materialEquipamentoSchema.safeParse({
+      ...base,
+      estoque_minimo: 10,
+      ponto_pedido: 15,
+      estoque_maximo: 40,
+    })
+    expect(r.success).toBe(true)
+  })
+
+  test('recusa máximo menor que o mínimo', () => {
+    const r = materialEquipamentoSchema.safeParse({
+      ...base,
+      estoque_minimo: 30,
+      estoque_maximo: 10,
+    })
+    expect(r.success).toBe(false)
+  })
+
+  // O ponto de pedido acima do máximo deixaria o item pedindo reposição sempre
+  test('recusa ponto de pedido acima do máximo', () => {
+    const r = materialEquipamentoSchema.safeParse({
+      ...base,
+      ponto_pedido: 50,
+      estoque_maximo: 40,
+    })
+    expect(r.success).toBe(false)
+  })
+
+  test('os três campos são opcionais', () => {
+    expect(materialEquipamentoSchema.safeParse(base).success).toBe(true)
   })
 })

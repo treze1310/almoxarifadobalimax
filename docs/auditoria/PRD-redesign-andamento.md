@@ -129,13 +129,51 @@ modo de cards no mobile do `DataTable` e completar o `AppShell` (grupos no menu,
 Ctrl+K). O `DetailDrawer` está pronto mas ainda não substituiu os diálogos de detalhe — os módulos
 seguem abrindo o registro em modal.
 
+## Fase 3 — P1 entregues
+
+### RF-12 — Paleta de comandos (Ctrl+K)
+Entregue. Busca materiais, romaneios, solicitações e colaboradores respeitando as permissões do
+perfil. O resultado abre o **registro**, e não só a listagem: o destino carrega `?item=<id>` e o
+hook `useAbrirItemDaUrl` abre o cadastro quando os dados chegam, limpando o parâmetro depois.
+
+### RF-13 — Conciliação de NF-e item a item
+Entregue. A importação não movimenta mais estoque: ela cria a nota como **Importada** e os
+materiais novos nascem com estoque zero. O ciclo passou a ser **Importada → Conferida → Lançada**.
+Cada item da nota precisa apontar para um material do cadastro (diálogo de conciliação); só com
+tudo vinculado a nota pode ser conferida e, depois, lançada. O lançamento roda inteiro no banco
+(`nfe_lancar_estoque`): atualiza o estoque, grava a movimentação de entrada de cada item e muda o
+status, numa só transação, e é idempotente — chamar duas vezes não duplica movimentação. As quatro
+notas que já existiam foram marcadas como `lancada` para que o fluxo novo não as lançasse de novo.
+
+### RF-10 — Ponto de pedido com solicitação automática
+Entregue. Cada item passou a ter **estoque máximo**, **ponto de pedido** e uma chave de
+**reposição automática** (ligada por padrão); o ponto de pedido em branco usa o estoque mínimo.
+Quando o estoque entra no ponto, um gatilho no banco abre sozinho uma solicitação de compra
+pendente, com a quantidade que falta para o estoque máximo (ou o dobro do ponto, quando não há
+máximo) e urgência alta se o item zerou.
+
+Três garantias, todas verificadas no banco:
+
+1. **Uma solicitação em aberto por item.** Um índice único parcial impede a segunda enquanto a
+   primeira estiver pendente, aprovada ou em andamento — baixas sucessivas não geram enxurrada de
+   pedidos. Fechando a solicitação, uma nova queda volta a gerar.
+2. **Dispara na entrada no ponto**, não a cada saída abaixo dele.
+3. **Respeita a chave do item**: com a reposição desligada, nada é gerado.
+
+A solicitação automática não tem solicitante humano — `colaborador_id` passou a aceitar nulo e a
+coluna `origem` (`manual`/`automatica`) explica o porquê. A listagem mostra a etiqueta
+**Automática** e uma coluna *Origem*; a justificativa registra o estoque e o ponto no momento da
+geração, e a ação entra na trilha de auditoria como `solicitacoes.reposicao_automatica`.
+
+Coerente com a decisão de 05/10: a solicitação de compra **continua sendo só entrada** — ela não
+movimenta estoque. A entrada acontece no lançamento da NF-e.
+
 ## Pendente
 
 ### P1 (RF-08 a RF-15)
 Busca/filtros/paginação no servidor em todas as listagens, fluxo de retirada em 3 passos com código
-de barras, ponto de pedido com solicitação automática, importação CSV em lote, paleta de comandos
-(Ctrl+K), conciliação de NF-e item a item, revisão da matriz de perfis, pré-visualização e
-agendamento de relatórios.
+de barras, importação CSV em lote, revisão da matriz de perfis, pré-visualização e agendamento de
+relatórios. **RF-10, RF-12 e RF-13 entregues** (ver Fase 3).
 
 ### P2 (RF-16 a RF-19)
 Hierarquia de localização com etiqueta QR, inventário cíclico pelo celular, central de
