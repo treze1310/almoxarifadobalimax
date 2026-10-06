@@ -1,21 +1,10 @@
 import { useState } from 'react'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { PlusCircle, MoreHorizontal, Edit, Trash2, Search, Tag } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { PageHeader } from '@/components/ds/PageHeader'
+import { DataTable, type ColunaDataTable } from '@/components/ds/DataTable'
+import { StatusBadge } from '@/components/ds/StatusBadge'
+import { EmptyState, TableSkeleton } from '@/components/ds/EstadosPagina'
+import { PlusCircle, Edit, Trash2, Tag } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -33,7 +22,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
 import { useSupabaseTable } from '@/hooks/useSupabase'
 import { MarcaForm } from '@/components/marcas/MarcaForm'
 import type { Tables } from '@/types/database'
@@ -44,15 +32,10 @@ type Marca = Tables<'marcas'>
 const MarcasPage = () => {
   const { data: marcas, loading, create, update, remove } = useSupabaseTable('marcas')
   
-  const [search, setSearch] = useState('')
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingMarca, setEditingMarca] = useState<Marca | null>(null)
   const [deletingMarca, setDeletingMarca] = useState<Marca | null>(null)
 
-  const filteredMarcas = marcas.filter(marca =>
-    marca.nome.toLowerCase().includes(search.toLowerCase()) ||
-    (marca.descricao && marca.descricao.toLowerCase().includes(search.toLowerCase()))
-  )
 
   const handleCreate = async (data: any) => {
     const result = await create(data)
@@ -79,114 +62,101 @@ const MarcasPage = () => {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Cadastro de Marcas</h1>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-        </div>
+      <div className="space-y-6">
+        <PageHeader
+          titulo="Marcas"
+          descricao="Marcas de materiais e equipamentos."
+          migalhas={[{ label: 'Cadastros' }, { label: 'Marcas' }]}
+        />
+        <TableSkeleton colunas={3} />
       </div>
     )
   }
 
+  const colunas: ColunaDataTable<any>[] = [
+    {
+      id: 'nome',
+      cabecalho: 'Marca',
+      fixa: true,
+      semFiltro: true,
+      valor: (m) => m.nome ?? '',
+      celula: (m) => (
+        <div className="flex items-center gap-2">
+          <Tag className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium">{m.nome}</span>
+        </div>
+      ),
+    },
+    {
+      id: 'descricao',
+      cabecalho: 'Descrição',
+      semFiltro: true,
+      valor: (m) => m.descricao || '—',
+    },
+    {
+      id: 'status',
+      cabecalho: 'Status',
+      valor: (m) => (m.ativo ? 'Ativo' : 'Inativo'),
+      celula: (m) => <StatusBadge status={m.ativo ? 'ativo' : 'inativo'} />,
+    },
+  ]
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Cadastro de Marcas</h1>
-        
+    <div className="space-y-6">
+      <PageHeader
+        titulo="Marcas"
+        descricao="Marcas de materiais e equipamentos."
+        migalhas={[{ label: 'Cadastros' }, { label: 'Marcas' }]}
+        acoes={
           <Button onClick={() => setIsCreateDialogOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Nova Marca
+            Nova marca
           </Button>
-        
-      </div>
+        }
+      />
 
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome ou descrição..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8"
+      <DataTable
+        dados={marcas}
+        colunas={colunas}
+        idLinha={(m) => m.id}
+        chaveUrl="marcas"
+        placeholderBusca="Buscar por nome ou descrição..."
+        nomeArquivoCsv="marcas"
+        acoesLinha={(marca) => (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title="Editar"
+              onClick={() => setEditingMarca(marca)}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-destructive hover:text-destructive"
+              title="Excluir"
+              onClick={() => setDeletingMarca(marca)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </>
+        )}
+        vazio={
+          <EmptyState
+            titulo="Nenhuma marca cadastrada"
+            icone={Tag}
+            acao={
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Nova marca
+              </Button>
+            }
           />
-        </div>
-        <Badge variant="secondary">
-          {filteredMarcas.length} marca{filteredMarcas.length !== 1 ? 's' : ''}
-        </Badge>
-      </div>
-
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Marca</TableHead>
-              <TableHead>Descrição</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredMarcas.length > 0 ? (
-              filteredMarcas.map((marca) => (
-                <TableRow key={marca.id}>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Tag className="h-4 w-4 text-muted-foreground" />
-                      <div className="font-medium">{marca.nome}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {marca.descricao ? (
-                      marca.descricao.length > 100 
-                        ? `${marca.descricao.substring(0, 100)}...`
-                        : marca.descricao
-                    ) : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={marca.ativo ? 'default' : 'secondary'}>
-                      {marca.ativo ? 'Ativo' : 'Inativo'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        
-                          <DropdownMenuItem onClick={() => setEditingMarca(marca)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Editar
-                          </DropdownMenuItem>
-                        
-                        
-                          <DropdownMenuItem 
-                            className="text-destructive"
-                            onClick={() => setDeletingMarca(marca)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Excluir
-                          </DropdownMenuItem>
-                        
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center">
-                  {search ? 'Nenhuma marca encontrada com os critérios de busca.' : 'Nenhuma marca cadastrada.'}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+        }
+      />
 
       {/* Create Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

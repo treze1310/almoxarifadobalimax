@@ -4,7 +4,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { useMateriaisEquipamentos } from './useMateriaisEquipamentos'
 import { CodeGenerationService } from '@/services/codeGenerationService'
 import type { Tables, TablesInsert } from '@/types/database'
-import type { NFe, NFeItem } from '@/types'
+import type { NFe } from '@/types'
 
 type NFeImportacao = Tables<'nfe_importacao'> & {
   fornecedores?: { nome: string; cnpj: string } | null

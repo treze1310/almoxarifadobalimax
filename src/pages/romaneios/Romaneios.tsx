@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { 
   PlusSquare, 
@@ -12,18 +10,13 @@ import {
   FileText, 
   Calendar,
   User,
-  MapPin,
   Package,
-  Eye,
   Edit,
   Trash2,
-  MoreHorizontal,
   Check,
-  X,
   Ban,
   Download,
   Copy,
-  Lock,
 } from 'lucide-react'
 import { useRomaneios } from '@/hooks/useRomaneios'
 
@@ -31,8 +24,6 @@ import { formatDate } from '@/lib/utils'
 import { useCenteredDialog } from '@/hooks/useCenteredDialog'
 
 
-import RomaneioDialog from '@/components/romaneios/RomaneioDialog'
-import DevolucaoDialog from '@/components/romaneios/DevolucaoDialog'
 import { generateRomaneoPDFContent } from '@/components/romaneios/RomaneioPDF'
 import { enriquecerComMaiorPreco } from '@/utils/romaneioPdf'
 import { companyService } from '@/services/companyService'
@@ -41,11 +32,7 @@ import StatusDevolucaoLabel from '@/components/romaneios/StatusDevolucaoLabel'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  } from "@/components/ui/dropdown-menu"
 import {
   Dialog,
   DialogContent,
@@ -66,6 +53,12 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Separator } from "@/components/ui/separator"
 import type { Tables } from '@/types/database'
+import { PageHeader } from '@/components/ds/PageHeader'
+import { DataTable, type ColunaDataTable } from '@/components/ds/DataTable'
+import { StatusBadge } from '@/components/ds/StatusBadge'
+import { EmptyState, TableSkeleton } from '@/components/ds/EstadosPagina'
+import { rotuloStatus } from '@/lib/status'
+import { useAbrirItemDaUrl } from '@/hooks/useAbrirItemDaUrl'
 
 type Romaneio = Tables<'romaneios'> & {
   colaboradores?: { nome: string; matricula: string } | null
@@ -134,7 +127,6 @@ const documentoEditavel = (status?: string | null) =>
 
 const RomaneiosPage = () => {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState('retiradas')
   const [selectedRomaneio, setSelectedRomaneio] = useState<Romaneio | null>(null)
   const [motivoCancelamento, setMotivoCancelamento] = useState('')
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
@@ -179,9 +171,6 @@ const RomaneiosPage = () => {
   }, [romaneios, loading])
 
 
-  const retiradas = romaneios.filter(r => r.tipo === 'retirada')
-  const devolucoes = romaneios.filter(r => r.tipo === 'devolucao')
-  const transferencias = romaneios.filter(r => r.tipo === 'transferencia')
 
   const handleRomaneioUpdated = () => {
     fetchRomaneios({ includeItens: true })
@@ -309,236 +298,177 @@ const RomaneiosPage = () => {
     }
   }
 
-  const RomaneioCard = ({ romaneio }: { romaneio: Romaneio }) => (
-    <Card 
-      key={romaneio.id} 
-      className="mb-4 cursor-pointer hover:shadow-md transition-shadow"
-      onClick={() => setSelectedRomaneio(romaneio)}
-    >
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <CardTitle className="text-lg">{romaneio.numero}</CardTitle>
-            <CardDescription className="flex items-center gap-2 mt-1">
-              <Calendar className="h-4 w-4" />
-              {formatDate(romaneio.data_romaneio || romaneio.created_at)}
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={getStatusBadgeVariant(romaneio.status || 'pendente')}>
-              {romaneio.status || 'pendente'}
-            </Badge>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="sm">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {documentoEditavel(romaneio.status) ? (
-                  <DropdownMenuItem onClick={(e) => {
-                    e.stopPropagation()
-                    navigate(`/novo-romaneio?tipo=${romaneio.tipo}&edit=${romaneio.id}`)
-                  }}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Editar
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem disabled>
-                    <Lock className="h-4 w-4 mr-2" />
-                    Aprovado — somente cancelamento
-                  </DropdownMenuItem>
-                )}
-                
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-          {romaneio.colaboradores && (
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span>{romaneio.colaboradores.nome}</span>
-            </div>
-          )}
-          
-          
-          {romaneio.centro_custo_origem && (
-            <div className="flex items-center gap-2">
-              <Package className="h-4 w-4 text-blue-500" />
-              <span>CC Origem: {romaneio.centro_custo_origem.codigo}</span>
-            </div>
-          )}
-          
-          {romaneio.centro_custo_destino && (
-            <div className="flex items-center gap-2">
-              <Package className="h-4 w-4 text-green-500" />
-              <span>CC Destino: {romaneio.centro_custo_destino.codigo}</span>
-            </div>
-          )}
-          
-          {romaneio.romaneios_itens && romaneio.romaneios_itens.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Package className="h-4 w-4 text-muted-foreground" />
-              <span>{romaneio.romaneios_itens.length} item(s)</span>
-            </div>
-          )}
-        </div>
-        
-        {romaneio.responsavel_retirada && (
-          <div className="mt-3 text-sm text-muted-foreground">
-            Responsável: {romaneio.responsavel_retirada}
-          </div>
-        )}
+  /**
+   * Colunas da listagem de romaneios. As antigas abas (Retiradas, Devoluções,
+   * Transferências) viraram filtro da coluna Tipo, como pede o PRD.
+   */
+  // Abre o romaneio vindo da paleta de comandos (?item=<id>)
+  useAbrirItemDaUrl(romaneios as Romaneio[], (r) => r.id, (r) => setSelectedRomaneio(r))
 
-        {/* Status de devolução para romaneios de retirada aprovados */}
-        {romaneio.tipo === 'retirada' && ['aprovado', 'retirado'].includes(romaneio.status || '') && (
-          <div className="mt-3">
-            {loadingStatus ? (
-              <div className="text-xs text-muted-foreground">Carregando status...</div>
-            ) : (
-              (() => {
-                const status = statusDevolucoes.get(romaneio.id)
-                return status ? (
-                  <StatusDevolucaoLabel statusDevolucao={status} size="sm" />
-                ) : null
-              })()
-            )}
+  const colunas: ColunaDataTable<Romaneio>[] = [
+    {
+      id: 'numero',
+      cabecalho: 'Romaneio',
+      fixa: true,
+      semFiltro: true,
+      valor: (r) =>
+        `${r.numero ?? ''} ${r.colaboradores?.nome ?? ''} ${r.centro_custo_origem?.codigo ?? ''}`.trim(),
+      valorOrdenacao: (r) => r.numero ?? '',
+      celula: (r) => (
+        <div className="min-w-0">
+          <div className="font-medium">{r.numero}</div>
+          <div className="text-xs text-muted-foreground">
+            {formatDate(r.data_romaneio || r.created_at)}
           </div>
-        )}
-        
-        <div className="mt-3 text-xs text-muted-foreground flex items-center gap-1">
-          <Eye className="h-3 w-3" />
-          Clique para ver detalhes
         </div>
-      </CardContent>
-    </Card>
-  )
+      ),
+    },
+    {
+      id: 'tipo',
+      cabecalho: 'Tipo',
+      valor: (r) => (r.tipo ? r.tipo.charAt(0).toUpperCase() + r.tipo.slice(1) : '—'),
+    },
+    {
+      id: 'colaborador',
+      cabecalho: 'Colaborador',
+      valor: (r) => r.colaboradores?.nome ?? r.responsavel_retirada ?? '—',
+      celula: (r) => (
+        <div className="min-w-0">
+          <div className="truncate">{r.colaboradores?.nome ?? r.responsavel_retirada ?? '—'}</div>
+          {r.colaboradores?.matricula && (
+            <div className="text-xs text-muted-foreground">Matrícula {r.colaboradores.matricula}</div>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'centro_custo',
+      cabecalho: 'Centro de custo',
+      valor: (r) =>
+        r.centro_custo_origem
+          ? `${r.centro_custo_origem.codigo} - ${r.centro_custo_origem.descricao ?? ''}`.trim()
+          : '—',
+    },
+    {
+      id: 'itens',
+      cabecalho: 'Itens',
+      semFiltro: true,
+      alinhamento: 'right',
+      valor: (r) => String(r.romaneios_itens?.length ?? 0),
+      valorOrdenacao: (r) => r.romaneios_itens?.length ?? 0,
+    },
+    {
+      id: 'valor',
+      cabecalho: 'Valor',
+      semFiltro: true,
+      alinhamento: 'right',
+      valor: (r) =>
+        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+          r.valor_total ?? 0,
+        ),
+      valorOrdenacao: (r) => r.valor_total ?? 0,
+    },
+    {
+      id: 'status',
+      cabecalho: 'Status',
+      valor: (r) => rotuloStatus(r.status),
+      celula: (r) => <StatusBadge status={r.status} />,
+    },
+    {
+      // Mantém a informação que antes aparecia no rodapé do card
+      id: 'devolucao',
+      cabecalho: 'Devolução',
+      semFiltro: true,
+      valor: (r) => {
+        const devolucao = statusDevolucoes.get(r.id)
+        if (!devolucao) return '—'
+        return (
+          {
+            nao_devolvido: 'Não devolvido',
+            parcialmente_devolvido: 'Parcialmente devolvido',
+            totalmente_devolvido: 'Totalmente devolvido',
+          }[devolucao.status] ?? devolucao.status
+        )
+      },
+      celula: (r) => {
+        const aplicavel =
+          r.tipo === 'retirada' && ['aprovado', 'retirado'].includes(r.status || '')
+        if (!aplicavel) return <span className="text-muted-foreground">—</span>
+        if (loadingStatus) return <span className="text-xs text-muted-foreground">…</span>
+        const devolucao = statusDevolucoes.get(r.id)
+        return devolucao ? (
+          <StatusDevolucaoLabel statusDevolucao={devolucao} size="sm" />
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )
+      },
+    },
+  ]
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="space-y-6">
+        <PageHeader
+          titulo="Romaneios"
+          descricao="Retiradas, devoluções e transferências de materiais."
+          migalhas={[{ label: 'Operação' }, { label: 'Romaneios' }]}
+        />
+        <TableSkeleton colunas={6} />
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Gestão de Romaneios</h1>
-          <p className="text-muted-foreground mt-1">
-            Gerencie retiradas, devoluções e transferências de materiais
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link to="/romaneios/novo?tipo=retirada">
-            <Button>
-              <PlusSquare className="mr-2 h-4 w-4" />
-              Nova Retirada
-            </Button>
-          </Link>
-          <Link to="/romaneios/novo?tipo=devolucao">
-            <Button variant="outline">
-              <ArrowLeftRight className="mr-2 h-4 w-4" />
-              Nova Devolução
-            </Button>
-          </Link>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        titulo="Romaneios"
+        descricao="Retiradas, devoluções e transferências de materiais."
+        migalhas={[{ label: 'Operação' }, { label: 'Romaneios' }]}
+        acoes={
+          <>
+            <Link to="/romaneios/novo?tipo=retirada">
+              <Button>
+                <PlusSquare className="mr-2 h-4 w-4" />
+                Nova retirada
+              </Button>
+            </Link>
+            <Link to="/romaneios/novo?tipo=devolucao">
+              <Button variant="outline">
+                <ArrowLeftRight className="mr-2 h-4 w-4" />
+                Nova devolução
+              </Button>
+            </Link>
+          </>
+        }
+      />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="retiradas" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Retiradas ({retiradas.length})
-          </TabsTrigger>
-          <TabsTrigger value="devolucoes" className="flex items-center gap-2">
-            <ArrowLeftRight className="h-4 w-4" />
-            Devoluções ({devolucoes.length})
-          </TabsTrigger>
-          <TabsTrigger value="transferencias" className="flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Transferências ({transferencias.length})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="retiradas" className="mt-6">
-          {retiradas.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhuma retirada encontrada</h3>
-              <p className="text-muted-foreground mb-4">
-                Crie sua primeira retirada de materiais
-              </p>
+      {/* As abas de tipo viraram coluna filtrável (PRD): uma lista só, com
+          filtro por Tipo, Status, Centro de custo e Colaborador. */}
+      <DataTable
+        dados={romaneios as Romaneio[]}
+        colunas={colunas}
+        idLinha={(r) => r.id}
+        chaveUrl="rom"
+        placeholderBusca="Buscar por número, colaborador ou centro de custo..."
+        nomeArquivoCsv="romaneios"
+        onLinhaClick={(r) => setSelectedRomaneio(r)}
+        vazio={
+          <EmptyState
+            titulo="Nenhum romaneio encontrado"
+            descricao="Crie a primeira retirada para começar a movimentar materiais."
+            icone={FileText}
+            acao={
               <Link to="/romaneios/novo?tipo=retirada">
                 <Button>
                   <PlusSquare className="mr-2 h-4 w-4" />
-                  Nova Retirada
+                  Nova retirada
                 </Button>
               </Link>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {retiradas.map(romaneio => (
-                <RomaneioCard key={romaneio.id} romaneio={romaneio} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
+            }
+          />
+        }
+      />
 
-        <TabsContent value="devolucoes" className="mt-6">
-          {devolucoes.length === 0 ? (
-            <div className="text-center py-12">
-              <ArrowLeftRight className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhuma devolução encontrada</h3>
-              <p className="text-muted-foreground mb-4">
-                As devoluções aparecerão aqui
-              </p>
-              <Link to="/romaneios/novo?tipo=devolucao">
-                <Button>
-                  <ArrowLeftRight className="mr-2 h-4 w-4" />
-                  Nova Devolução
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {devolucoes.map(romaneio => (
-                <RomaneioCard key={romaneio.id} romaneio={romaneio} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="transferencias" className="mt-6">
-          {transferencias.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhuma transferência encontrada</h3>
-              <p className="text-muted-foreground mb-4">
-                As transferências aparecerão aqui
-              </p>
-              <Link to="/romaneios/novo?tipo=transferencia">
-                <Button>
-                  <Package className="mr-2 h-4 w-4" />
-                  Nova Transferência
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {transferencias.map(romaneio => (
-                <RomaneioCard key={romaneio.id} romaneio={romaneio} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
-      
       {/* Diálogo de Detalhes do Romaneio */}
       <Dialog open={!!selectedRomaneio} onOpenChange={() => setSelectedRomaneio(null)}>
         <DialogContent 

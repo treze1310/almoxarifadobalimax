@@ -40,54 +40,34 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
-  SheetTitle,
   SheetTrigger,
   SheetClose,
 } from '@/components/ui/sheet'
 
-const menuItems = [
+/**
+ * Menu agrupado por área, conforme o AppShell do PRD: Operação, Compras,
+ * Cadastros e Gestão. Cada item declara o módulo (e a ação, quando não for
+ * leitura) que o perfil precisa ter para vê-lo.
+ */
+const gruposDeMenu = [
   {
-    title: 'Dashboard',
-    href: '/dashboard',
-    icon: Home,
-    modulo: 'dashboard',
-  },
-  {
-    title: 'Gestão de Romaneios',
-    href: '/romaneios',
-    icon: FileText,
-    modulo: 'romaneios',
-  },
-  {
-    title: 'Integração NF-e',
-    icon: FileSymlink,
-    subItems: [
+    grupo: 'Operação',
+    itens: [
+      { title: 'Dashboard', href: '/dashboard', icon: Home, modulo: 'dashboard' },
+      { title: 'Romaneios', href: '/romaneios', icon: FileText, modulo: 'romaneios' },
       {
-        title: 'Importar NF-e',
-        href: '/nfe/importacao',
-        icon: Upload,
-        modulo: 'nfe',
-        acao: 'create' as const,
+        title: 'Materiais e Equipamentos',
+        href: '/materiais-equipamentos',
+        icon: Wrench,
+        modulo: 'materiais',
       },
-      {
-        title: 'Histórico',
-        href: '/nfe/historico',
-        icon: History,
-        modulo: 'nfe',
-      },
+      { title: 'Controle de EPI', href: '/epi', icon: HardHat, modulo: 'epi' },
+      { title: 'Localização', href: '/localizacao', icon: MapPin, modulo: 'localizacao' },
     ],
   },
   {
-    title: 'Materiais e Equipamentos',
-    href: '/materiais-equipamentos',
-    icon: Wrench,
-    modulo: 'materiais',
-  },
-  {
-    title: 'Solicitações de Compra',
-    icon: ShoppingCart,
-    subItems: [
+    grupo: 'Compras',
+    itens: [
       {
         title: 'Nova Solicitação',
         href: '/solicitacoes/nova',
@@ -95,65 +75,34 @@ const menuItems = [
         modulo: 'solicitacoes',
         acao: 'create' as const,
       },
+      { title: 'Solicitações', href: '/solicitacoes', icon: ShoppingCart, modulo: 'solicitacoes' },
       {
-        title: 'Consultar Solicitações',
-        href: '/solicitacoes',
-        icon: Search,
-        modulo: 'solicitacoes',
+        title: 'Importar NF-e',
+        href: '/nfe/importacao',
+        icon: Upload,
+        modulo: 'nfe',
+        acao: 'create' as const,
       },
+      { title: 'Histórico de NF-e', href: '/nfe/historico', icon: History, modulo: 'nfe' },
     ],
   },
-
   {
-    title: 'Cadastros Auxiliares',
-    icon: BookUser,
-    subItems: [
+    grupo: 'Cadastros',
+    itens: [
       { title: 'Colaboradores', href: '/cadastros/colaboradores', icon: BookUser, modulo: 'colaboradores' },
       { title: 'Empresas', href: '/cadastros/empresas', icon: Building, modulo: 'empresas' },
       { title: 'Fornecedores', href: '/cadastros/fornecedores', icon: Truck, modulo: 'fornecedores' },
-      {
-        title: 'Centros de Custo',
-        href: '/cadastros/centros-custo',
-        icon: Landmark,
-        modulo: 'centros_custo',
-      },
-      {
-        title: 'Marcas',
-        href: '/cadastros/marcas',
-        icon: Tag,
-        modulo: 'marcas',
-      },
-      {
-        title: 'Categorias',
-        href: '/cadastros/categorias',
-        icon: Layers,
-        modulo: 'materiais',
-      },
+      { title: 'Centros de Custo', href: '/cadastros/centros-custo', icon: Landmark, modulo: 'centros_custo' },
+      { title: 'Marcas', href: '/cadastros/marcas', icon: Tag, modulo: 'marcas' },
+      { title: 'Categorias', href: '/cadastros/categorias', icon: Layers, modulo: 'materiais' },
     ],
   },
   {
-    title: 'Controle de EPI',
-    href: '/epi',
-    icon: HardHat,
-    modulo: 'epi',
-  },
-  {
-    title: 'Gestão de Localização',
-    href: '/localizacao',
-    icon: MapPin,
-    modulo: 'localizacao',
-  },
-  {
-    title: 'Relatórios',
-    href: '/relatorios',
-    icon: BarChart2,
-    modulo: 'relatorios',
-  },
-  {
-    title: 'Configurações',
-    href: '/configuracoes',
-    icon: Settings,
-    modulo: 'configuracoes',
+    grupo: 'Gestão',
+    itens: [
+      { title: 'Relatórios', href: '/relatorios', icon: BarChart2, modulo: 'relatorios' },
+      { title: 'Configurações', href: '/configuracoes', icon: Settings, modulo: 'configuracoes' },
+    ],
   },
 ]
 
@@ -164,21 +113,13 @@ const MenuContent = ({ onNavigate }: { onNavigate?: () => void }) => {
   const { can, perfilNome, loading: carregandoPermissoes } = usePermissoes()
 
   // Esconde do menu o que o perfil de acesso do usuário não pode visualizar
-  const visibleMenuItems = menuItems
-    .map((item) => {
-      if (!item.subItems) return item
-      const subItems = item.subItems.filter((sub: any) =>
-        sub.modulo ? can(sub.modulo, sub.acao || 'read') : true
-      )
-      return { ...item, subItems }
-    })
-    .filter((item: any) =>
-      item.subItems
-        ? item.subItems.length > 0
-        : item.modulo
-          ? can(item.modulo)
-          : true
-    )
+  // Esconde do menu o que o perfil não pode ver; grupo sem item some junto
+  const gruposVisiveis = gruposDeMenu
+    .map((g) => ({
+      ...g,
+      itens: g.itens.filter((item: any) => can(item.modulo, item.acao ?? 'read')),
+    }))
+    .filter((g) => g.itens.length > 0)
 
   const isActive = (href: string) => {
     const [path] = href.split('?')
@@ -210,52 +151,31 @@ const MenuContent = ({ onNavigate }: { onNavigate?: () => void }) => {
   return (
     <div className="flex flex-col h-full">
       <ScrollArea className="flex-1">
-        <nav className="p-3 space-y-1">
+        <nav className="space-y-4 p-3">
           {/* RF-07: enquanto as permissões carregam, mostra skeleton em vez de
               um menu vazio que faz o usuário parecer sem acesso */}
           {carregandoPermissoes
             ? Array.from({ length: 8 }).map((_, i) => (
                 <Skeleton key={i} className="h-9 w-full rounded-md" />
               ))
-            : visibleMenuItems.map((item: any) =>
-            item.subItems ? (
-              <Collapsible
-                key={item.title}
-                defaultOpen={isParentActive(item.subItems)}
-              >
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-start text-sm py-2 h-auto">
-                    <item.icon className="mr-2 h-4 w-4 shrink-0" />
-                    <span className="truncate">{item.title}</span>
-                    <ChevronDown className="ml-auto h-4 w-4 shrink-0" />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pl-3">
-                  {item.subItems.map((subItem) => (
-                    <Link to={subItem.href} key={subItem.title} onClick={handleNavClick}>
+            : gruposVisiveis.map((grupo) => (
+                <div key={grupo.grupo} className="space-y-1">
+                  <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {grupo.grupo}
+                  </p>
+                  {grupo.itens.map((item: any) => (
+                    <Link to={item.href} key={item.href} onClick={handleNavClick}>
                       <Button
-                        variant={isActive(subItem.href) ? 'secondary' : 'ghost'}
-                        className="w-full justify-start mt-1 text-sm py-2 h-auto"
+                        variant={isActive(item.href) ? 'secondary' : 'ghost'}
+                        className="h-auto w-full justify-start py-2 text-ds-body"
                       >
-                        <subItem.icon className="mr-2 h-4 w-4 shrink-0" />
-                        <span className="truncate">{subItem.title}</span>
+                        <item.icon className="mr-2 h-4 w-4 shrink-0" />
+                        <span className="truncate">{item.title}</span>
                       </Button>
                     </Link>
                   ))}
-                </CollapsibleContent>
-              </Collapsible>
-            ) : (
-              <Link to={item.href!} key={item.title} onClick={handleNavClick}>
-                <Button
-                  variant={isActive(item.href!) ? 'secondary' : 'ghost'}
-                  className="w-full justify-start text-sm py-2 h-auto"
-                >
-                  <item.icon className="mr-2 h-4 w-4 shrink-0" />
-                  <span className="truncate">{item.title}</span>
-                </Button>
-              </Link>
-              ),
-            )}
+                </div>
+              ))}
         </nav>
       </ScrollArea>
       

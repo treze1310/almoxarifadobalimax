@@ -1,21 +1,10 @@
 import { useState } from 'react'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { PlusCircle, MoreHorizontal, Edit, Trash2, Search, Layers } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { PageHeader } from '@/components/ds/PageHeader'
+import { DataTable, type ColunaDataTable } from '@/components/ds/DataTable'
+import { StatusBadge } from '@/components/ds/StatusBadge'
+import { EmptyState, TableSkeleton } from '@/components/ds/EstadosPagina'
+import { PlusCircle, Edit, Trash2, Layers } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -33,7 +22,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
 import { useSupabaseTable } from '@/hooks/useSupabase'
 import { CategoriaForm } from '@/components/categorias/CategoriaForm'
 import type { Tables } from '@/types/database'
@@ -43,16 +31,10 @@ type Categoria = Tables<'categorias'>
 const CategoriasPage = () => {
   const { data: categorias, loading, create, update, remove } = useSupabaseTable('categorias')
 
-  const [search, setSearch] = useState('')
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingCategoria, setEditingCategoria] = useState<Categoria | null>(null)
   const [deletingCategoria, setDeletingCategoria] = useState<Categoria | null>(null)
 
-  const filteredCategorias = categorias.filter(
-    (c) =>
-      c.nome.toLowerCase().includes(search.toLowerCase()) ||
-      (c.descricao && c.descricao.toLowerCase().includes(search.toLowerCase())),
-  )
 
   const handleCreate = async (data: any) => {
     const result = await create(data)
@@ -73,110 +55,96 @@ const CategoriasPage = () => {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Cadastro de Categorias</h1>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-        </div>
+      <div className="space-y-6">
+        <PageHeader
+          titulo="Categorias"
+          descricao="Categorias de materiais e equipamentos."
+          migalhas={[{ label: 'Cadastros' }, { label: 'Categorias' }]}
+        />
+        <TableSkeleton colunas={4} />
       </div>
     )
   }
 
+  const colunas: ColunaDataTable<any>[] = [
+    {
+      id: 'nome',
+      cabecalho: 'Categoria',
+      fixa: true,
+      semFiltro: true,
+      valor: (c) => c.nome ?? '',
+      celula: (c) => <span className="font-medium">{c.nome}</span>,
+    },
+    {
+      id: 'descricao',
+      cabecalho: 'Descrição',
+      semFiltro: true,
+      valor: (c) => c.descricao || '—',
+    },
+    {
+      id: 'status',
+      cabecalho: 'Status',
+      valor: (c) => (c.ativo ? 'Ativo' : 'Inativo'),
+      celula: (c) => <StatusBadge status={c.ativo ? 'ativo' : 'inativo'} />,
+    },
+  ]
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Cadastro de Categorias</h1>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Nova Categoria
-        </Button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        titulo="Categorias"
+        descricao="Categorias de materiais e equipamentos."
+        migalhas={[{ label: 'Cadastros' }, { label: 'Categorias' }]}
+        acoes={
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Nova categoria
+          </Button>
+        }
+      />
 
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome ou descrição..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8"
+      <DataTable
+        dados={categorias}
+        colunas={colunas}
+        idLinha={(r) => r.id}
+        chaveUrl="categorias"
+        placeholderBusca="Buscar por nome ou descrição..."
+        nomeArquivoCsv="categorias"
+        acoesLinha={(registro) => (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title="Editar"
+              onClick={() => setEditingCategoria(registro)}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-destructive hover:text-destructive"
+              title="Excluir"
+              onClick={() => setDeletingCategoria(registro)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </>
+        )}
+        vazio={
+          <EmptyState
+            titulo="Nada cadastrado ainda"
+            icone={Layers}
+            acao={
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Nova categoria
+              </Button>
+            }
           />
-        </div>
-        <Badge variant="secondary">
-          {filteredCategorias.length} categoria{filteredCategorias.length !== 1 ? 's' : ''}
-        </Badge>
-      </div>
-
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Categoria</TableHead>
-              <TableHead>Descrição</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredCategorias.length > 0 ? (
-              filteredCategorias.map((categoria) => (
-                <TableRow key={categoria.id}>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Layers className="h-4 w-4 text-muted-foreground" />
-                      <div className="font-medium">{categoria.nome}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {categoria.descricao
-                      ? categoria.descricao.length > 100
-                        ? `${categoria.descricao.substring(0, 100)}...`
-                        : categoria.descricao
-                      : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={categoria.ativo ? 'default' : 'secondary'}>
-                      {categoria.ativo ? 'Ativo' : 'Inativo'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setEditingCategoria(categoria)}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => setDeletingCategoria(categoria)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center">
-                  {search
-                    ? 'Nenhuma categoria encontrada com os critérios de busca.'
-                    : 'Nenhuma categoria cadastrada.'}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+        }
+      />
 
       {/* Create Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

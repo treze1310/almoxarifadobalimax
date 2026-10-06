@@ -11,17 +11,13 @@ import { Badge } from '@/components/ui/badge'
 import {
   Package,
   PackageX,
-  AlertTriangle,
   Clock,
   TrendingUp,
-  TrendingDown,
   Users,
   Building,
   FileText,
   ShoppingCart,
   ArrowUpRight,
-  Calendar,
-  Eye,
   Plus,
   RotateCcw,
   Send,
@@ -38,6 +34,8 @@ import {
 } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { formatCurrency } from '@/lib/utils'
+import { PageHeader } from '@/components/ds/PageHeader'
+import { KpiCard } from '@/components/ds/KpiCard'
 
 interface DashboardMetrics {
   totalMateriais: number
@@ -347,6 +345,7 @@ const DashboardPage = () => {
       bgColor: 'bg-blue-50',
       variacao: metrics.variacaoMateriais,
       link: '/materiais-equipamentos',
+      tom: 'neutro' as const,
     },
     {
       title: 'Valor do Estoque',
@@ -357,6 +356,7 @@ const DashboardPage = () => {
       bgColor: 'bg-green-50',
       variacao: null,
       link: '/materiais-equipamentos',
+      tom: 'neutro' as const,
     },
     {
       title: 'Estoque Crítico',
@@ -367,6 +367,7 @@ const DashboardPage = () => {
       bgColor: 'bg-red-50',
       variacao: null,
       link: '/materiais-equipamentos?estoque=critico',
+      tom: 'critico' as const,
     },
     {
       title: 'Movimentações Hoje',
@@ -377,6 +378,7 @@ const DashboardPage = () => {
       bgColor: 'bg-yellow-50',
       variacao: metrics.variacaoMovimentacoes,
       link: '/romaneios',
+      tom: 'atencao' as const,
     },
   ]
 
@@ -402,18 +404,13 @@ const DashboardPage = () => {
   ]
 
   return (
-    <div className="space-y-6 p-1">
-      {/* Header */}
-      <div className="flex flex-col gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Dashboard do Almoxarifado
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Visão geral completa do seu sistema de gestão
-          </p>
-        </div>
+    <div className="space-y-6">
+      <PageHeader
+        titulo="Dashboard"
+        descricao="Visão geral do almoxarifado: estoque, movimentações e pendências."
+      />
 
+      <div className="flex flex-col gap-4">
         {/* Ações Rápidas */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {quickActions.map((action) => (
@@ -439,51 +436,20 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Cards Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPIs do design system: valor, variação real e link para a lista filtrada */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {mainCards.map((card) => (
-          <Card
+          <KpiCard
             key={card.title}
-            className="relative overflow-hidden cursor-pointer transition-colors hover:bg-muted/40"
-            onClick={() => navigate(card.link)}
-          >
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {card.title}
-                  </p>
-                  <p className="text-2xl font-bold">{card.value}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {card.subtitle}
-                  </p>
-                </div>
-                <div className={`p-3 rounded-full ${card.bgColor}`}>
-                  <card.icon className={`h-6 w-6 ${card.color}`} />
-                </div>
-              </div>
-
-              {/* RF-01: sem base de comparação, nenhum indicador é inventado */}
-              {card.variacao !== null && (
-                <div className="mt-4 flex items-center space-x-2">
-                  {card.variacao >= 0 ? (
-                    <TrendingUp className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <TrendingDown className="h-4 w-4 text-red-500" />
-                  )}
-                  <span
-                    className={`text-sm font-medium ${
-                      card.variacao >= 0 ? 'text-green-600' : 'text-red-600'
-                    }`}
-                  >
-                    {card.variacao >= 0 ? '+' : ''}
-                    {card.variacao.toFixed(1)}%
-                  </span>
-                  <span className="text-xs text-muted-foreground">vs. mês anterior</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            rotulo={card.title}
+            valor={card.value}
+            detalhe={card.subtitle}
+            icone={card.icon}
+            variacao={card.variacao}
+            link={card.link}
+            carregando={loading}
+            tom={card.tom}
+          />
         ))}
       </div>
 

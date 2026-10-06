@@ -3,7 +3,7 @@ import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
-import { Calendar as CalendarIcon, PlusCircle, Trash2, ArrowLeft, Search, User, MapPin, Package, Eye } from 'lucide-react'
+import { Calendar as CalendarIcon, PlusCircle, Trash2, ArrowLeft, Search, Package, Eye } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -22,13 +22,9 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-  CardFooter,
-} from '@/components/ui/card'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
+  } from '@/components/ui/card'
+import { PageHeader } from '@/components/ds/PageHeader'
+import { FormSection, FormActions } from '@/components/ds/FormLayout'
 import { Calendar } from '@/components/ui/calendar'
 import {
   Table,
@@ -105,7 +101,6 @@ const NovoRomaneioPage = () => {
   const navigate = useNavigate()
   const { toast } = useToast()
   // TODO: Implementar sistema de usuário simplificado
-  const usuario = { id: 'temp-user-id' }
   const [searchParams] = useSearchParams()
   const tipo = searchParams.get('tipo') as 'retirada' | 'devolucao' | 'transferencia'
   const editId = searchParams.get('edit')
@@ -508,19 +503,21 @@ const NovoRomaneioPage = () => {
   if (isDevolucao && step === 1) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => navigate(-1)}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-3xl font-bold">
-            Nova Devolução - Passo 1: Selecionar Romaneio de Retirada
-          </h1>
-        </div>
+        <PageHeader
+          titulo="Nova devolução"
+          descricao="Passo 1 de 2: escolha o romaneio de retirada de origem."
+          migalhas={[
+            { label: 'Operação' },
+            { label: 'Romaneios', href: '/romaneios' },
+            { label: 'Nova devolução' },
+          ]}
+          acoes={
+            <Button type="button" variant="outline" onClick={() => navigate(-1)}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar
+            </Button>
+          }
+        />
         <Card>
           <CardHeader>
             <CardTitle>Selecione o Romaneio Original</CardTitle>
@@ -680,35 +677,44 @@ const NovoRomaneioPage = () => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <PageHeader
+          titulo={
+            isEditing
+              ? 'Editar romaneio'
+              : isCloning
+                ? 'Clonar romaneio'
+                : isDevolucao
+                  ? 'Nova devolução'
+                  : 'Novo romaneio de retirada'
+          }
+          descricao={
+            isDevolucao && selectedRomaneio
+              ? `Devolução do romaneio ${selectedRomaneio.numero}.`
+              : 'Preencha os dados e adicione os itens movimentados.'
+          }
+          migalhas={[
+            { label: 'Operação' },
+            { label: 'Romaneios', href: '/romaneios' },
+            { label: isEditing ? 'Editar' : 'Novo' },
+          ]}
+          acoes={
             <Button
               type="button"
               variant="outline"
-              size="icon"
               onClick={() => (isDevolucao && !isEditing ? setStep(1) : navigate(-1))}
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar
             </Button>
-            <h1 className="text-3xl font-bold">
-              {isEditing 
-                ? `Editar Romaneio`
-                : isCloning
-                ? `Clonar Romaneio`
-                : isDevolucao
-                ? `Nova Devolução (Origem: ${selectedRomaneio?.numero})`
-                : 'Novo Romaneio de Retirada'}
-            </h1>
-          </div>
-        </div>
-        <Card>
-          <CardHeader>
-            <CardTitle>Informações Gerais</CardTitle>
-            <CardDescription>
-              Preencha os dados principais do romaneio.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          }
+        />
+
+        <FormSection
+          numero={1}
+          titulo="Informações gerais"
+          descricao="Dados principais do romaneio."
+        >
+          <div className="col-span-1 grid grid-cols-1 gap-6 md:col-span-12 md:grid-cols-2 lg:grid-cols-4">
             <FormField
               control={form.control}
               name="data_romaneio"
@@ -803,17 +809,16 @@ const NovoRomaneioPage = () => {
                 </FormItem>
               )}
             />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Itens do Romaneio</CardTitle>
-            <CardDescription>
-              Adicione os materiais ou equipamentos que serão movimentados.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="border rounded-md">
+          </div>
+        </FormSection>
+
+        <FormSection
+          numero={2}
+          titulo="Itens do romaneio"
+          descricao="Materiais ou equipamentos que serão movimentados."
+        >
+          <div className="md:col-span-12">
+            <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -924,29 +929,26 @@ const NovoRomaneioPage = () => {
               name="itens"
               render={() => <FormMessage className="mt-2" />}
             />
-          </CardContent>
-          <CardFooter className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => (isDevolucao && !isEditing ? setStep(1) : navigate(-1))}
-            >
-              Cancelar
+          </div>
+        </FormSection>
+
+        <FormActions>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => (isDevolucao && !isEditing ? setStep(1) : navigate(-1))}
+          >
+            Cancelar
+          </Button>
+          {!isEditing && (
+            <Button type="button" variant="secondary" onClick={handleSaveDraft}>
+              Salvar rascunho
             </Button>
-            {!isEditing && (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={handleSaveDraft}
-              >
-                Salvar Rascunho
-              </Button>
-            )}
-            <Button type="button" onClick={handleSaveAndApprove}>
-              {isEditing ? 'Salvar Alterações' : 'Salvar e Aprovar'}
-            </Button>
-          </CardFooter>
-        </Card>
+          )}
+          <Button type="button" onClick={handleSaveAndApprove}>
+            {isEditing ? 'Salvar alterações' : 'Salvar e aprovar'}
+          </Button>
+        </FormActions>
       </form>
     </Form>
   )

@@ -28,6 +28,8 @@ build/
 *.pat
 *.token
 .mcp.json
+.git-credentials.local
+.git-credentials*
 
 # Environment variables
 .env

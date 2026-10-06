@@ -2,7 +2,6 @@ import { supabase } from '@/lib/supabase'
 import { pdfService } from './pdfService'
 import {
   CORES_PADRAO,
-  FONTES_PADRAO,
   MARGENS_PDF,
   VALIDACAO_REGRAS
 } from '@/types/reports'
@@ -10,7 +9,6 @@ import type {
   ReportRequest,
   ReportResponse,
   ReportData,
-  ReportSummary,
   KPIMetrics,
   ABCDistribution,
   XYZDistribution,
@@ -2289,7 +2287,13 @@ class ReportService {
       return acc
     }, {})
 
-    const categorias = [...new Set(movimentos.map((mov: any) => mov.materiais_equipamentos?.categoria || 'Sem Categoria'))]
+    const categorias: string[] = [
+      ...new Set<string>(
+        (movimentos as any[]).map(
+          (mov) => (mov?.materiais_equipamentos?.categoria as string) || 'Sem Categoria',
+        ),
+      ),
+    ]
     const rows = Object.keys(consumoPorCentro).map(centro => {
       const row: any = { centro_custo: centro, total: consumoPorCentro[centro].total }
       categorias.forEach((categoria: any) => {

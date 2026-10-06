@@ -59,15 +59,27 @@ export const Header = () => {
           
           {/* 📱 DESKTOP: Busca tradicional */}
           <div className="hidden lg:block">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar produtos, romaneios, usuários..."
-                className="w-full max-w-sm pl-9 rounded-full"
-              />
-            </div>
+            {/* A busca é a paleta de comandos (Ctrl+K); o campo apenas a abre */}
+            <button
+              type="button"
+              onClick={() =>
+                document.dispatchEvent(
+                  new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }),
+                )
+              }
+              className="flex w-full max-w-sm items-center gap-2 rounded-full border bg-background px-3 py-2 text-left text-ds-body text-muted-foreground transition-colors hover:bg-muted/50"
+            >
+              <Search className="h-4 w-4 shrink-0" />
+              <span className="flex-1 truncate">Buscar materiais, romaneios, pessoas…</span>
+              <kbd className="rounded border bg-muted px-1.5 py-0.5 text-[10px] font-medium">
+                Ctrl K
+              </kbd>
+            </button>
           </div>
+        </div>
 
+        {/* Ações do topo, alinhadas à direita */}
+        <div className="ml-auto flex shrink-0 items-center gap-1 pl-2">
           <ThemeToggle />
         </div>
       </div>

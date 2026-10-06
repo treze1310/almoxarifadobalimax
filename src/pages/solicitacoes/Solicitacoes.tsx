@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { 
   PlusSquare, 
@@ -12,14 +10,13 @@ import {
   MapPin,
   Package,
   Edit,
-  MoreHorizontal,
   Check,
+  ShoppingCart,
   X,
   Ban,
   Download,
   Clock,
-  Copy,
-  List
+  Copy
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { useCenteredDialog } from '@/hooks/useCenteredDialog'
@@ -28,23 +25,26 @@ import { SolicitacaoCompra } from '@/types'
 import { supabase } from '@/lib/supabase'
 import { companyService, CompanyWithLogo } from '@/services/companyService'
 import { useSolicitacoes } from '@/hooks/useSolicitacoes'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import { PageHeader } from '@/components/ds/PageHeader'
+import { DataTable, type ColunaDataTable } from '@/components/ds/DataTable'
+import { StatusBadge } from '@/components/ds/StatusBadge'
+import { EmptyState, TableSkeleton } from '@/components/ds/EstadosPagina'
+import { useAbrirItemDaUrl } from '@/hooks/useAbrirItemDaUrl'
 import SolicitacaoActionDialogs from '@/components/solicitacoes/SolicitacaoActionDialogs'
 // Dynamic imports para jsPDF e html2canvas
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  } from "@/components/ui/dropdown-menu"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
-import { Checkbox } from "@/components/ui/checkbox"
 
 // Função para obter a variante do badge baseada no status
 
@@ -61,10 +61,12 @@ const getStatusBadgeVariant = (status: string) => {
 
 const SolicitacoesPage = () => {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState('todas')
   const [selectedSolicitacao, setSelectedSolicitacao] = useState<SolicitacaoCompra | null>(null)
   const [selectedSolicitacoes, setSelectedSolicitacoes] = useState<Set<string>>(new Set())
   const [isSelectionMode, setIsSelectionMode] = useState(false)
+  // Rejeição em lote exige motivo; guarda os ids enquanto o diálogo está aberto
+  const [rejeicaoEmLote, setRejeicaoEmLote] = useState<{ ids: string[]; limpar: () => void } | null>(null)
+  const [motivoRejeicao, setMotivoRejeicao] = useState('')
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
   const [centroCustoOrigem, setCentroCustoOrigem] = useState<string>('')
   const [centroCustoDestino, setCentroCustoDestino] = useState<string>('')
@@ -219,12 +221,6 @@ const SolicitacoesPage = () => {
   }, [selectedSolicitacao])
 
   // Filtrar solicitações por status
-  const todas = solicitacoes
-  const pendentes = solicitacoes.filter(s => s.status === 'Pendente')
-  const aprovadas = solicitacoes.filter(s => s.status === 'Aprovada')
-  const concluidas = solicitacoes.filter(s => s.status === 'Concluída')
-  const rejeitadas = solicitacoes.filter(s => s.status === 'Rejeitada')
-  const canceladas = solicitacoes.filter(s => s.status === 'Cancelada')
 
   // Handlers para ações das solicitações
   const handleSolicitacaoUpdated = () => {
@@ -418,267 +414,203 @@ const SolicitacoesPage = () => {
     }
   }
 
-  const SolicitacaoCard = ({ solicitacao }: { solicitacao: SolicitacaoCompra }) => {
-    const isSelected = selectedSolicitacoes.has(solicitacao.id)
-    
-    return (
-      <Card 
-        key={solicitacao.id} 
-        className={`mb-4 cursor-pointer hover:shadow-md transition-shadow ${isSelected ? 'ring-2 ring-primary' : ''}`}
-        onClick={(e) => {
-          if (isSelectionMode) {
-            e.preventDefault()
-            toggleSelection(solicitacao.id)
-          } else {
-            setSelectedSolicitacao(solicitacao)
-          }
-        }}
-      >
-        <CardHeader className="pb-3">
-          <div className="flex justify-between items-start">
-            <div className="flex items-center gap-3 flex-1">
-              {isSelectionMode && (
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={() => toggleSelection(solicitacao.id)}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              )}
-              <div className="flex-1">
-                <CardTitle className="text-lg">{solicitacao.id}</CardTitle>
-                <CardDescription className="flex items-center gap-2 mt-1">
-                  <Calendar className="h-4 w-4" />
-                  {formatDate(solicitacao.data as any)}
-                </CardDescription>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant={getStatusBadgeVariant(solicitacao.status)}>
-                {solicitacao.status}
-              </Badge>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="sm">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={(e) => {
-                  e.stopPropagation()
-                  navigate(`/solicitacoes/nova?edit=${solicitacao.id}`)
-                }}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Editar
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+  /**
+   * Colunas da listagem. As abas de status viraram filtro da coluna Status
+   * (PRD), e a seleção em lote agora é do DataTable.
+   */
+  // Abre a solicitação vinda da paleta de comandos (?item=<numero>)
+  useAbrirItemDaUrl(solicitacoes, (s) => s.id, (s) => setSelectedSolicitacao(s))
+
+  const colunas: ColunaDataTable<SolicitacaoCompra>[] = [
+    {
+      id: 'numero',
+      cabecalho: 'Solicitação',
+      fixa: true,
+      semFiltro: true,
+      valor: (s) => `${s.id} ${s.solicitante_nome ?? ''}`.trim(),
+      valorOrdenacao: (s) => s.id,
+      celula: (s) => (
+        <div className="min-w-0">
+          <div className="font-medium">{s.id}</div>
+          <div className="text-xs text-muted-foreground">{formatDate(s.data as any)}</div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            <span>{solicitacao.prazoEntrega}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Package className="h-4 w-4 text-muted-foreground" />
-            <span>{solicitacao.itens?.length || 0} item(s)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-muted-foreground" />
-            {/* RF-05: mostrar o nome do solicitante. Antes imprimia o texto
-                genérico "Colaborador" sempre que havia colaborador_id. */}
-            <span className="truncate">
-              {solicitacao.solicitante_nome || 'Não informado'}
-            </span>
-          </div>
-        </div>
-        <div className="mt-2 text-xs text-muted-foreground">
-          Clique para ver detalhes
-        </div>
-      </CardContent>
-    </Card>
-    )
-  }
+      ),
+    },
+    {
+      id: 'solicitante',
+      cabecalho: 'Solicitante',
+      valor: (s) => s.solicitante_nome || 'Não informado',
+    },
+    {
+      id: 'prazo',
+      cabecalho: 'Prazo',
+      valor: (s) => s.prazoEntrega ?? '—',
+    },
+    {
+      id: 'itens',
+      cabecalho: 'Itens',
+      semFiltro: true,
+      alinhamento: 'right',
+      valor: (s) => String(s.itens?.length ?? 0),
+      valorOrdenacao: (s) => s.itens?.length ?? 0,
+    },
+    {
+      id: 'status',
+      cabecalho: 'Status',
+      valor: (s) => s.status,
+      // Solicitação é feminina: "Aprovada", "Concluída"
+      celula: (s) => <StatusBadge status={s.status} genero="feminino" />,
+    },
+  ]
 
   // Loading state
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="space-y-6">
+        <PageHeader
+          titulo="Solicitações de Compra"
+          descricao="Pedidos de compra de materiais e equipamentos."
+          migalhas={[{ label: 'Compras' }, { label: 'Solicitações' }]}
+        />
+        <TableSkeleton colunas={5} />
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Gestão de Solicitações de Compra</h1>
-          <p className="text-muted-foreground mt-1">
-            Gerencie solicitações de compra de materiais e equipamentos
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <div className="space-y-6">
+      <PageHeader
+        titulo="Solicitações de Compra"
+        descricao="Pedidos de compra de materiais e equipamentos."
+        migalhas={[{ label: 'Compras' }, { label: 'Solicitações' }]}
+        acoes={
           <Link to="/solicitacoes/nova">
             <Button>
               <PlusSquare className="mr-2 h-4 w-4" />
-              Nova Solicitação
+              Nova solicitação
             </Button>
           </Link>
-        </div>
-      </div>
+        }
+      />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6 mb-6">
-          <TabsTrigger value="todas" className="flex items-center gap-2">
-            <List className="h-4 w-4" />
-            Todas ({todas.length})
-          </TabsTrigger>
-          <TabsTrigger value="pendentes" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Pendentes ({pendentes.length})
-          </TabsTrigger>
-          <TabsTrigger value="aprovadas" className="flex items-center gap-2">
-            <Check className="h-4 w-4" />
-            Aprovadas ({aprovadas.length})
-          </TabsTrigger>
-          <TabsTrigger value="concluidas" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Concluídas ({concluidas.length})
-          </TabsTrigger>
-          <TabsTrigger value="rejeitadas" className="flex items-center gap-2">
-            <X className="h-4 w-4" />
-            Rejeitadas ({rejeitadas.length})
-          </TabsTrigger>
-          <TabsTrigger value="canceladas" className="flex items-center gap-2">
-            <Ban className="h-4 w-4" />
-            Canceladas ({canceladas.length})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="todas" className="mt-0">
-          {todas.length === 0 ? (
-            <div className="text-center py-12">
-              <List className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhuma solicitação encontrada</h3>
-              <p className="text-muted-foreground mb-4">
-                Crie sua primeira solicitação de compra
-              </p>
+      {/* As abas de status viraram filtro da coluna Status; aprovar e rejeitar
+          em lote agora saem da seleção do DataTable. */}
+      <DataTable
+        dados={solicitacoes}
+        colunas={colunas}
+        idLinha={(s) => s.id}
+        chaveUrl="sol"
+        placeholderBusca="Buscar por número ou solicitante..."
+        nomeArquivoCsv="solicitacoes"
+        onLinhaClick={(s) => setSelectedSolicitacao(s)}
+        acoesEmLote={(ids, limpar) => {
+          const pendentesSelecionadas = ids.filter((id) =>
+            solicitacoes.some((s) => s.id === id && s.status === 'Pendente'),
+          )
+          return (
+            <>
+              <Button
+                size="sm"
+                disabled={pendentesSelecionadas.length === 0}
+                onClick={async () => {
+                  setSelectedSolicitacoes(new Set(pendentesSelecionadas))
+                  await handleBulkApprove()
+                  limpar()
+                }}
+              >
+                <Check className="mr-2 h-4 w-4" />
+                Aprovar ({pendentesSelecionadas.length})
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={pendentesSelecionadas.length === 0}
+                onClick={() => {
+                  setMotivoRejeicao('')
+                  setRejeicaoEmLote({ ids: pendentesSelecionadas, limpar })
+                }}
+              >
+                <X className="mr-2 h-4 w-4" />
+                Rejeitar ({pendentesSelecionadas.length})
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={ids.length === 0}
+                onClick={async () => {
+                  setSelectedSolicitacoes(new Set(ids))
+                  await handleBulkCancel()
+                  limpar()
+                }}
+              >
+                <Ban className="mr-2 h-4 w-4" />
+                Cancelar
+              </Button>
+            </>
+          )
+        }}
+        vazio={
+          <EmptyState
+            titulo="Nenhuma solicitação encontrada"
+            descricao="Crie a primeira solicitação de compra para registrar a necessidade de material."
+            icone={ShoppingCart}
+            acao={
               <Link to="/solicitacoes/nova">
                 <Button>
                   <PlusSquare className="mr-2 h-4 w-4" />
-                  Nova Solicitação
+                  Nova solicitação
                 </Button>
               </Link>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {todas.map(solicitacao => (
-                <SolicitacaoCard key={solicitacao.id} solicitacao={solicitacao} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
+            }
+          />
+        }
+      />
 
-        <TabsContent value="pendentes" className="mt-0">
-          {pendentes.length === 0 ? (
-            <div className="text-center py-12">
-              <Clock className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhuma solicitação pendente</h3>
-              <p className="text-muted-foreground mb-4">
-                Crie sua primeira solicitação de compra
-              </p>
-              <Link to="/solicitacoes/nova">
-                <Button>
-                  <PlusSquare className="mr-2 h-4 w-4" />
-                  Nova Solicitação
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {pendentes.map(solicitacao => (
-                <SolicitacaoCard key={solicitacao.id} solicitacao={solicitacao} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
+      {/* Rejeição em lote: motivo obrigatório, igual à rejeição individual */}
+      <Dialog
+        open={!!rejeicaoEmLote}
+        onOpenChange={(aberto) => !aberto && setRejeicaoEmLote(null)}
+      >
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Rejeitar solicitações</DialogTitle>
+            <DialogDescription>
+              {rejeicaoEmLote?.ids.length} solicitação(ões) serão rejeitadas. O motivo fica
+              registrado em cada uma.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="motivo-rejeicao-lote">Motivo da rejeição</Label>
+            <Textarea
+              id="motivo-rejeicao-lote"
+              value={motivoRejeicao}
+              onChange={(e) => setMotivoRejeicao(e.target.value)}
+              placeholder="Descreva o motivo da rejeição"
+              className="resize-none"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejeicaoEmLote(null)}>
+              Voltar
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={motivoRejeicao.trim().length < 10}
+              onClick={async () => {
+                if (!rejeicaoEmLote) return
+                setSelectedSolicitacoes(new Set(rejeicaoEmLote.ids))
+                await handleBulkReject(motivoRejeicao.trim())
+                rejeicaoEmLote.limpar()
+                setRejeicaoEmLote(null)
+                setMotivoRejeicao('')
+              }}
+            >
+              Confirmar rejeição
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        <TabsContent value="aprovadas" className="mt-0">
-          {aprovadas.length === 0 ? (
-            <div className="text-center py-12">
-              <Check className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhuma solicitação aprovada</h3>
-              <p className="text-muted-foreground mb-4">
-                As solicitações aprovadas aparecerão aqui
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {aprovadas.map(solicitacao => (
-                <SolicitacaoCard key={solicitacao.id} solicitacao={solicitacao} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="concluidas" className="mt-0">
-          {concluidas.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhuma solicitação concluída</h3>
-              <p className="text-muted-foreground mb-4">
-                As solicitações concluídas aparecerão aqui
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {concluidas.map(solicitacao => (
-                <SolicitacaoCard key={solicitacao.id} solicitacao={solicitacao} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="rejeitadas" className="mt-0">
-          {rejeitadas.length === 0 ? (
-            <div className="text-center py-12">
-              <X className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhuma solicitação rejeitada</h3>
-              <p className="text-muted-foreground mb-4">
-                As solicitações rejeitadas aparecerão aqui
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {rejeitadas.map(solicitacao => (
-                <SolicitacaoCard key={solicitacao.id} solicitacao={solicitacao} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="canceladas" className="mt-0">
-          {canceladas.length === 0 ? (
-            <div className="text-center py-12">
-              <Ban className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhuma solicitação cancelada</h3>
-              <p className="text-muted-foreground mb-4">
-                As solicitações canceladas aparecerão aqui
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {canceladas.map(solicitacao => (
-                <SolicitacaoCard key={solicitacao.id} solicitacao={solicitacao} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
-      
       {/* Diálogo de Detalhes da Solicitação */}
       <Dialog open={!!selectedSolicitacao} onOpenChange={() => setSelectedSolicitacao(null)}>
         <DialogContent 

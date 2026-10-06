@@ -215,3 +215,25 @@ describe('mapa central de status (design system)', () => {
     }
   })
 })
+
+describe('menu agrupado do AppShell', () => {
+  // Importa a definição do menu sem renderizar o componente
+  test('todo item de menu declara o módulo que controla sua visibilidade', async () => {
+    const fonte = await import('node:fs/promises').then((fs) =>
+      fs.readFile('src/components/Sidebar.tsx', 'utf-8'),
+    )
+    const itens = fonte.match(/\{ title: '[^']+', href: '[^']+'/g) ?? []
+    const comModulo = fonte.match(/\{ title: '[^']+', href: '[^']+'[^}]*modulo:/g) ?? []
+    expect(itens.length).toBeGreaterThan(0)
+    expect(comModulo.length).toBe(itens.length)
+  })
+
+  test('os quatro grupos do PRD existem', async () => {
+    const fonte = await import('node:fs/promises').then((fs) =>
+      fs.readFile('src/components/Sidebar.tsx', 'utf-8'),
+    )
+    for (const grupo of ['Operação', 'Compras', 'Cadastros', 'Gestão']) {
+      expect(fonte).toContain(`grupo: '${grupo}'`)
+    }
+  })
+})

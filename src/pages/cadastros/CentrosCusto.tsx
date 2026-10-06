@@ -1,16 +1,12 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Search, PlusCircle, Pencil, Trash2 } from 'lucide-react'
+import { PlusCircle, Pencil, Trash2, Landmark } from 'lucide-react'
+import { PageHeader } from '@/components/ds/PageHeader'
+import { DataTable, type ColunaDataTable } from '@/components/ds/DataTable'
+import { StatusBadge } from '@/components/ds/StatusBadge'
+import { EmptyState, TableSkeleton } from '@/components/ds/EstadosPagina'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,16 +71,11 @@ export default function CentrosCusto() {
   }, [deletingCentroCusto])
 
   // Filtrar centros de custo
-  const filteredCentrosCusto = useMemo(() => {
-    if (!centrosCusto) return []
-    
-    return centrosCusto.filter((centro) => {
-      const matchesSearch = centro.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           centro.descricao.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesStatus = showInactive || centro.ativo
-      return matchesSearch && matchesStatus
-    })
-  }, [centrosCusto, searchTerm, showInactive])
+  // A busca por texto é do DataTable; aqui fica só o recorte de ativos/inativos
+  const filteredCentrosCusto = useMemo(
+    () => (centrosCusto ?? []).filter((centro) => showInactive || centro.ativo),
+    [centrosCusto, showInactive],
+  )
 
   // Handlers
   const handleCreate = async (data: CentroCustoFormData) => {
@@ -175,88 +166,111 @@ export default function CentrosCusto() {
   }
 
   if (loading) {
-    return <div>Carregando...</div>
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          titulo="Centros de Custo"
+          descricao="Centros de custo vinculados às empresas."
+          migalhas={[{ label: 'Cadastros' }, { label: 'Centros de Custo' }]}
+        />
+        <TableSkeleton colunas={4} />
+      </div>
+    )
   }
 
+  const colunas: ColunaDataTable<any>[] = [
+    {
+      id: 'codigo',
+      cabecalho: 'Código',
+      fixa: true,
+      semFiltro: true,
+      valor: (c) => `${c.codigo ?? ''} ${c.descricao ?? ''}`.trim(),
+      valorOrdenacao: (c) => c.codigo ?? '',
+      celula: (c) => <span className="font-medium">{c.codigo}</span>,
+    },
+    {
+      id: 'descricao',
+      cabecalho: 'Descrição',
+      semFiltro: true,
+      valor: (c) => c.descricao || '—',
+    },
+    {
+      id: 'empresa',
+      cabecalho: 'Empresa',
+      valor: (c) => empresas?.find((e) => e.id === c.empresa_id)?.nome || '—',
+    },
+    {
+      id: 'status',
+      cabecalho: 'Status',
+      valor: (c) => (c.ativo ? 'Ativo' : 'Inativo'),
+      celula: (c) => <StatusBadge status={c.ativo ? 'ativo' : 'inativo'} />,
+    },
+  ]
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Cadastro de Centros de Custo</h1>
-        
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Novo Centro de Custo
-          </Button>
-        
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        titulo="Centros de Custo"
+        descricao="Centros de custo vinculados às empresas."
+        migalhas={[{ label: 'Cadastros' }, { label: 'Centros de Custo' }]}
+        acoes={
+          <>
+            <Button
+              variant={showInactive ? 'default' : 'outline'}
+              onClick={() => setShowInactive(!showInactive)}
+            >
+              {showInactive ? 'Mostrar apenas ativos' : 'Mostrar inativos'}
+            </Button>
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Novo centro de custo
+            </Button>
+          </>
+        }
+      />
 
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por código ou descrição..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8"
+      <DataTable
+        dados={filteredCentrosCusto}
+        colunas={colunas}
+        idLinha={(c) => c.id}
+        chaveUrl="cc"
+        placeholderBusca="Buscar por código ou descrição..."
+        nomeArquivoCsv="centros-de-custo"
+        acoesLinha={(centro) => (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title="Editar"
+              onClick={() => setEditingCentroCusto(centro)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-destructive hover:text-destructive"
+              title="Excluir"
+              onClick={() => setDeletingCentroCusto(centro)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </>
+        )}
+        vazio={
+          <EmptyState
+            titulo="Nenhum centro de custo cadastrado"
+            icone={Landmark}
+            acao={
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Novo centro de custo
+              </Button>
+            }
           />
-        </div>
-        <Button
-          variant={showInactive ? "default" : "outline"}
-          onClick={() => setShowInactive(!showInactive)}
-        >
-          {showInactive ? "Mostrar Apenas Ativos" : "Mostrar Inativos"}
-        </Button>
-      </div>
-
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Código</TableHead>
-              <TableHead>Descrição</TableHead>
-              <TableHead>Empresa</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredCentrosCusto.map((centro) => (
-              <TableRow key={centro.id}>
-                <TableCell className="font-mono">{centro.codigo}</TableCell>
-                <TableCell>{centro.descricao}</TableCell>
-                <TableCell>{getEmpresaNome(centro.empresa_id)}</TableCell>
-                <TableCell>
-                  <Badge variant={centro.ativo ? "default" : "secondary"}>
-                    {centro.ativo ? "Ativo" : "Inativo"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end space-x-2">
-                    
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEditingCentroCusto(centro)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    
-                    
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setDeletingCentroCusto(centro)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+        }
+      />
 
       {/* Diálogo de Criação */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

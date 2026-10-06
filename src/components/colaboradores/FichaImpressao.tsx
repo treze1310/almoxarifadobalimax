@@ -3,8 +3,7 @@ import { format } from 'date-fns'
 import {
   Colaborador,
   RetiradaHistorico,
-  ResourceTypeAssociation,
-} from '@/types'
+  } from '@/types'
 import {
   Table,
   TableBody,

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { PlusCircle, User, Mail, Phone, IdCard, Search, Briefcase, Building, Edit, FileText, Calendar, MapPin, CreditCard, Shield, Package, AlertTriangle, Users, Trash2, UserCheck, UserX } from 'lucide-react'
+import { PlusCircle, User, Mail, Phone, IdCard, Briefcase, Building, Edit, FileText, Calendar, CreditCard, Shield, Package, AlertTriangle, Users, Trash2, UserCheck, UserX } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -34,7 +33,12 @@ import {
   mascararTelefone,
 } from '@/lib/dadosPessoais'
 import { usePermissoes } from '@/contexts/PermissionsContext'
+import { PageHeader } from '@/components/ds/PageHeader'
+import { DataTable, type ColunaDataTable } from '@/components/ds/DataTable'
+import { StatusBadge } from '@/components/ds/StatusBadge'
+import { EmptyState, TableSkeleton } from '@/components/ds/EstadosPagina'
 import { registrarAuditoria } from '@/services/auditoriaService'
+import { useAbrirItemDaUrl } from '@/hooks/useAbrirItemDaUrl'
 import { generateFichaEPIPDF } from '@/components/colaboradores/FichaEPIPDF'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
@@ -46,7 +50,10 @@ import { ptBR } from 'date-fns/locale'
 import type { Tables } from '@/types/database'
 
 
-type Colaborador = Tables<'colaboradores'>
+// A consulta traz o centro de custo por join; o tipo gerado da tabela não inclui
+type Colaborador = Tables<'colaboradores'> & {
+  centros_custo?: { codigo: string; descricao: string | null } | null
+}
 
 interface ColaboradorDetalhado extends Tables<'colaboradores'> {
   empresas?: { nome: string } | null
@@ -65,14 +72,6 @@ interface EPIVinculadoRomaneio {
   status: 'retirado' | 'devolvido' | 'parcialmente_devolvido'
 }
 
-const normalizeSearchText = (value?: string | null) =>
-  (value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim()
-
 const onlyDigits = (value?: string | null) => (value || '').replace(/\D/g, '')
 
 const ColaboradoresPage = () => {
@@ -86,7 +85,6 @@ const ColaboradoresPage = () => {
     fetchData 
   } = useSupabaseTable('colaboradores')
   
-  const [search, setSearch] = useState('')
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [selectedColaborador, setSelectedColaborador] = useState<ColaboradorDetalhado | null>(null)
   const [showDetailsDialog, setShowDetailsDialog] = useState(false)
@@ -148,22 +146,83 @@ const ColaboradoresPage = () => {
     })
   }, [])
 
-  const filteredColaboradores = (colaboradores as Colaborador[]).filter(colaborador => {
-    const searchText = normalizeSearchText(search)
-    const searchDigits = onlyDigits(search)
-
-    if (!searchText) return true
-
-    const nome = normalizeSearchText(colaborador.nome)
-    const matricula = normalizeSearchText(colaborador.matricula)
-    const cpf = onlyDigits(colaborador.cpf)
-
-    return (
-      nome.includes(searchText) ||
-      matricula.includes(searchText) ||
-      (searchDigits.length > 0 && cpf.includes(searchDigits))
-    )
-  })
+  /**
+   * Colunas da listagem. A busca, os filtros por coluna, a ordenação, a
+   * paginação e a exportação ficam a cargo do DataTable do design system.
+   *
+   * Dado pessoal aparece mascarado aqui (RF-06); o valor completo só no
+   * detalhe, para quem tem permissão.
+   */
+  const colunas: ColunaDataTable<Colaborador>[] = [
+    {
+      id: 'nome',
+      cabecalho: 'Colaborador',
+      fixa: true,
+      semFiltro: true,
+      valor: (c) => `${c.nome} ${c.matricula ?? ''} ${onlyDigits(c.cpf)}`.trim(),
+      valorOrdenacao: (c) => c.nome,
+      celula: (c) => (
+        <div className="flex items-center gap-3">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={c.foto_url || undefined} />
+            <AvatarFallback className="bg-primary/10 text-xs">{getInitials(c.nome)}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <div className="truncate font-medium">{c.nome}</div>
+            {c.matricula && (
+              <div className="text-xs text-muted-foreground">Matrícula {c.matricula}</div>
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'cargo',
+      cabecalho: 'Cargo',
+      valor: (c) => capitalizarTexto(c.cargo),
+    },
+    {
+      id: 'setor',
+      cabecalho: 'Setor',
+      valor: (c) => capitalizarTexto(c.setor),
+    },
+    {
+      id: 'centro_custo',
+      cabecalho: 'Centro de custo',
+      valor: (c) =>
+        c.centros_custo ? `${c.centros_custo.codigo} - ${c.centros_custo.descricao ?? ''}`.trim() : '—',
+    },
+    {
+      id: 'cpf',
+      cabecalho: 'CPF',
+      semFiltro: true,
+      valor: (c) => mascararCPF(c.cpf),
+      celula: (c) => (
+        <span title="CPF mascarado — o completo fica no detalhe">{mascararCPF(c.cpf)}</span>
+      ),
+    },
+    {
+      id: 'contato',
+      cabecalho: 'Contato',
+      semFiltro: true,
+      valor: (c) => mascararEmail(c.email),
+      celula: (c) => (
+        <div className="space-y-0.5">
+          {c.email && <div className="truncate">{mascararEmail(c.email)}</div>}
+          {c.telefone && (
+            <div className="text-xs text-muted-foreground">{mascararTelefone(c.telefone)}</div>
+          )}
+          {!c.email && !c.telefone && <span className="text-muted-foreground">—</span>}
+        </div>
+      ),
+    },
+    {
+      id: 'status',
+      cabecalho: 'Status',
+      valor: (c) => (c.ativo ? 'Ativo' : 'Inativo'),
+      celula: (c) => <StatusBadge status={c.ativo ? 'ativo' : 'inativo'} />,
+    },
+  ]
 
   const handleCreate = async (data: any) => {
     const result = await create(data)
@@ -180,6 +239,14 @@ const ColaboradoresPage = () => {
     await loadEPIsRomaneio(colaborador.id)
     console.log('📱 Dialog state set to:', true)
   }
+
+  // Abre o colaborador vindo da paleta de comandos (?item=<id>)
+  useAbrirItemDaUrl(
+    colaboradores as Colaborador[],
+    (c) => c.id,
+    (c) => handleColaboradorClick(c),
+  )
+
 
   const handleColaboradorUpdated = () => {
     fetchData({ order: { column: 'nome', ascending: true } })
@@ -457,133 +524,53 @@ const ColaboradoresPage = () => {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Cadastro de Colaboradores</h1>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-        </div>
+      <div className="space-y-6">
+        <PageHeader
+          titulo="Colaboradores"
+          descricao="Cadastro de colaboradores, cargos e vínculo com centro de custo."
+          migalhas={[{ label: 'Cadastros' }, { label: 'Colaboradores' }]}
+        />
+        <TableSkeleton colunas={6} />
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Cadastro de Colaboradores</h1>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Novo Colaborador
-        </Button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        titulo="Colaboradores"
+        descricao="Cadastro de colaboradores, cargos e vínculo com centro de custo."
+        migalhas={[{ label: 'Cadastros' }, { label: 'Colaboradores' }]}
+        acoes={
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Novo colaborador
+          </Button>
+        }
+      />
 
-      <div className="flex items-center justify-between">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome, CPF ou matrícula..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8"
+      <DataTable
+        dados={colaboradores as Colaborador[]}
+        colunas={colunas}
+        idLinha={(c) => c.id}
+        chaveUrl="colab"
+        placeholderBusca="Buscar por nome, matrícula, cargo ou CPF..."
+        nomeArquivoCsv="colaboradores"
+        onLinhaClick={(c) => handleColaboradorClick(c)}
+        vazio={
+          <EmptyState
+            titulo="Nenhum colaborador cadastrado"
+            descricao="Cadastre o primeiro colaborador para começar a emitir romaneios e fichas de EPI."
+            icone={User}
+            acao={
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Cadastrar primeiro colaborador
+              </Button>
+            }
           />
-        </div>
-        <Badge variant="secondary">
-          {filteredColaboradores.length} colaborador{filteredColaboradores.length !== 1 ? 'es' : ''}
-        </Badge>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredColaboradores.length > 0 ? (
-              filteredColaboradores.map((colaborador) => (
-            <Card 
-              key={colaborador.id} 
-              className="cursor-pointer transition-all hover:shadow-md hover:border-primary/50"
-              onClick={() => handleColaboradorClick(colaborador)}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                    <Avatar className="h-10 w-10">
-                        <AvatarImage src={colaborador.foto_url || undefined} />
-                      <AvatarFallback className="bg-primary/10">
-                          {getInitials(colaborador.nome)}
-                        </AvatarFallback>
-                      </Avatar>
-                    <div className="flex-1">
-                      <CardTitle className="text-base leading-tight">
-                        {colaborador.nome}
-                      </CardTitle>
-                      {colaborador.matricula && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Matrícula: {colaborador.matricula}
-                        </p>
-                        )}
-                      </div>
-                    </div>
-                  <Badge variant={colaborador.ativo ? 'default' : 'secondary'} className="text-xs">
-                    {colaborador.ativo ? 'Ativo' : 'Inativo'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0 space-y-2">
-                      {colaborador.cargo && (
-                  <div className="flex items-center text-sm">
-                    <Briefcase className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>{capitalizarTexto(colaborador.cargo)}</span>
-                  </div>
-                      )}
-                      {colaborador.setor && (
-                  <div className="flex items-center text-sm">
-                    <Building className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>{colaborador.setor}</span>
-                  </div>
-                      )}
-                {colaborador.email && (
-                  <div className="flex items-center text-sm">
-                    <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span className="truncate">{mascararEmail(colaborador.email)}</span>
-                    </div>
-                )}
-                {colaborador.cpf && (
-                  <div className="flex items-center text-sm">
-                    <IdCard className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span title="CPF mascarado — veja o completo no detalhe">
-                      {mascararCPF(colaborador.cpf)}
-                    </span>
-                        </div>
-                )}
-                {colaborador.telefone && (
-                  <div className="flex items-center text-sm">
-                    <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>{mascararTelefone(colaborador.telefone)}</span>
-                      </div>
-                )}
-              </CardContent>
-            </Card>
-              ))
-            ) : (
-          <div className="col-span-full">
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <User className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Nenhum colaborador encontrado</h3>
-                <p className="text-muted-foreground text-center">
-                  {search ? 'Nenhum colaborador encontrado com os critérios de busca.' : 'Nenhum colaborador cadastrado.'}
-                </p>
-                {!search && (
-                  
-                    <Button className="mt-4" onClick={() => setIsCreateDialogOpen(true)}>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Cadastrar Primeiro Colaborador
-                    </Button>
-                  
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </div>
+        }
+      />
 
       {/* Create Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

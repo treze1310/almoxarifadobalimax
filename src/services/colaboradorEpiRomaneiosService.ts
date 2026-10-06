@@ -89,7 +89,7 @@ export const fetchRomaneiosRetiradaDoColaborador = async <
     if (error) throw error
 
     return {
-      data: ((data || []) as T[]).filter((romaneio) =>
+      data: ((data || []) as unknown as T[]).filter((romaneio) =>
         isRomaneioDoColaborador(romaneio, colaborador),
       ),
       error: null,

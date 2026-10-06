@@ -71,8 +71,9 @@ Componentes em `src/components/ds/` e tokens em `src/main.css` + `tailwind.confi
 | `DetailDrawer` | ✅ | Painel lateral com número, status, abas e barra de ações |
 | `KpiCard` | ✅ | Valor, rótulo, variação (oculta quando não há base) e link para a lista filtrada |
 | `EmptyState` / `Skeleton` / `ErrorState` | ✅ | `EstadosPagina.tsx`, com `TableSkeleton` e `CardsSkeleton` no lugar dos spinners |
-| `AppShell` | ⚠️ parcial | O shell atual (Sidebar + Header + Layout) já tem menu responsivo, busca e tema, e a versão agora aparece num único lugar. Falta: menu recolhível com grupos (Operação, Compras, Cadastros, Gestão), notificações e Ctrl+K (RF-12) |
-| `FormLayout` | ❌ | Não feito. Grid de 12 colunas com seções numeradas |
+| `AppShell` | ✅ quase completo | Menu agrupado em **Operação, Compras, Cadastros e Gestão**, com cada item filtrado por permissão e grupo vazio sumindo junto. Busca do topo virou a **paleta de comandos (Ctrl+K)**, com resultados agrupados. Falta apenas a central de notificações (RF-19, P2) |
+| `FormLayout` | ✅ | Grid de 12 colunas, seções numeradas e barra de ações fixa. Em uso em Nova Solicitação e Novo Romaneio |
+| `PaletaComandos` (RF-12) | ✅ | Ctrl+K / ⌘K. Busca materiais, romaneios, solicitações e colaboradores direto no banco, com resultados agrupados, atalhos de navegação e respeito às permissões do perfil |
 
 ### Desvio: TanStack Table
 
@@ -92,11 +93,41 @@ Tokens, padding de página e tema são globais — então **todas as telas já m
 espaçamento** com esta entrega. Os componentes novos (`DataTable`, `PageHeader`, `DetailDrawer`…)
 ainda **não foram aplicados** aos módulos: essa é a migração, que vem a seguir.
 
+
+### Migração dos módulos — concluída para as telas principais
+
+| Tela | Status | O que mudou |
+|---|---|---|
+| **Colaboradores** | ✅ | 62 cards → `DataTable`. Busca por nome, matrícula, cargo e CPF (por dígitos); filtros em Cargo, Setor, Centro de custo e Status; CPF, e-mail e telefone seguem mascarados |
+| **Romaneios** | ✅ | As 3 abas (Retiradas, Devoluções, Transferências) viraram **filtro da coluna Tipo**. Preservei como coluna o status de devolução, que aparecia no rodapé do card e teria se perdido |
+| **Solicitações** | ✅ | As 6 abas de status viraram filtro. `StatusBadge` com gênero feminino resolve "Concluída" e "Aprovada" com a mesma cor. **Ações em lote ligadas**: aprovar, rejeitar (com motivo obrigatório) e cancelar — os handlers existiam no código mas nunca eram chamados |
+| **Materiais e Equipamentos** | ✅ | Tabela manual + cards mobile → `DataTable`. Colunas configuráveis resolvem a coluna Calibração cortada; Tipo e Categoria agora são colunas separadas, com um filtro cada |
+| **Dashboard** | ✅ | Cards manuais → `KpiCard`, com `PageHeader` |
+| **Nova solicitação** | ✅ | `PageHeader` + `FormSection` numeradas + `FormActions` fixa no rodapé |
+| **Novo romaneio** (retirada, entrada e devolução) | ✅ | Mesmo padrão; o passo 1 da devolução também ganhou `PageHeader` |
+
+`FormLayout` (grid de 12 colunas, seções numeradas e barra de ações) foi criado nesta rodada e já
+está em uso nos dois formulários.
+
+#### Limitações registradas
+
+- **Paginação é no cliente.** O `DataTable` carrega tudo e pagina em memória. Serve para os volumes
+  atuais (62 colaboradores, 78 materiais), mas o RNF-01 pede paginação no servidor — trabalho nos
+  hooks de busca, não nas telas.
+- **Sem modo de cards no mobile.** O PRD prevê "tabelas viram lista de cards compactos" em telas
+  pequenas; hoje a tabela rola na horizontal. Falta implementar no `DataTable`.
+- **Telas migradas na segunda leva**: Empresas, Fornecedores, Centros de Custo, Marcas, Categorias,
+  Localização e Histórico de NF-e — todas de tabela manual para `DataTable`, com `PageHeader`,
+  `StatusBadge` e estados de página padrão.
+- **Telas ainda não migradas**: Importação de NF-e (é um assistente de upload, não uma listagem),
+  Relatórios (grade de cards de relatório) e EPI (recém-ligado, tem abas próprias).
+
 ### Próximo passo da Fase 2
 
-Migrar módulo por módulo, começando pelo que o PRD prioriza: **Romaneios, Solicitações e
-Colaboradores saem de cards para `DataTable` com detalhe em drawer**. Cada módulo migrado deve
-passar a usar `PageHeader`, `StatusBadge` e os estados de página padrão.
+Migrar as telas restantes (NF-e, Localização, Relatórios e os cadastros auxiliares), implementar o
+modo de cards no mobile do `DataTable` e completar o `AppShell` (grupos no menu, notificações e
+Ctrl+K). O `DetailDrawer` está pronto mas ainda não substituiu os diálogos de detalhe — os módulos
+seguem abrindo o registro em modal.
 
 ## Pendente
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Check, ChevronsUpDown, Plus, Search, User } from 'lucide-react'
+import { Check, Plus, Search, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -53,7 +53,6 @@ const ResponsavelSelector = ({
   error 
 }: ResponsavelSelectorProps) => {
   // TODO: Implementar sistema de usuário simplificado
-  const usuario = { id: 'temp-user-id' }
   const [open, setOpen] = useState(false)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([])
@@ -64,7 +63,6 @@ const ResponsavelSelector = ({
   useEffect(() => {
     const fetchColaboradores = async () => {
       console.log('Iniciando carregamento de colaboradores...')
-      console.log('Usuário autenticado:', (usuario as any)?.email)
       setLoading(true)
       try {
         const { data, error } = await supabase

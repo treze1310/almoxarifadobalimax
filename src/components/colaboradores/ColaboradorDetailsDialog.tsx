@@ -23,7 +23,7 @@ import {
   Users,
   Wrench
 } from 'lucide-react'
-import { formatDate, formatDateTime } from '@/lib/utils'
+import { formatDateTime } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 import { generateFichaEPIPDF } from './FichaEPIPDF'
 import { supabase } from '@/lib/supabase'
@@ -34,16 +34,7 @@ import type { ColaboradorFormData } from '@/lib/validations'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+  } from "@/components/ui/alert-dialog"
 import { colaboradorMateriaisService, type MaterialEquipamentoVinculado } from '@/services/colaboradorMateriaisService'
 
 interface ColaboradorDetailsDialogProps {

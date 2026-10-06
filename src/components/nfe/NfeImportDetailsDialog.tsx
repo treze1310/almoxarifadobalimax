@@ -40,8 +40,6 @@ import {
   FileText, 
   Package, 
   Building2, 
-  Calendar,
-  DollarSign,
   Save,
   X,
   ExternalLink

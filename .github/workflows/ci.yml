@@ -26,7 +26,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Type-check
-        run: pnpm exec tsc --noEmit
+        # tsconfig.json tem "files": [] e apenas referencias de projeto, entao
+        # "tsc --noEmit" na raiz nao verifica arquivo nenhum. E preciso apontar
+        # para o projeto da aplicacao.
+        run: pnpm run typecheck
 
       - name: Lint (falha apenas em erros)
         run: pnpm exec eslint src --max-warnings 200

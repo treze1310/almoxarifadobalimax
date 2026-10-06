@@ -1,29 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { PlusCircle, MoreHorizontal, Edit, Trash2, Search, Package, Wrench, Tag, Eye, RefreshCw, Settings, AlertTriangle, Copy } from 'lucide-react'
+import { PlusCircle, Edit, Trash2, Package, Wrench, Eye, RefreshCw, AlertTriangle, Copy } from 'lucide-react'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { verificarStatusCalibracao } from '@/utils/calibracao'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from '@/components/ui/context-menu'
 import {
   Dialog,
   DialogContent,
@@ -42,7 +21,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
-import { ColumnFilter, type SortDirection } from '@/components/ui/column-filter'
 
 import { MaterialEquipamentoForm } from '@/components/materiais-equipamentos/MaterialEquipamentoForm'
 import { MaterialEquipamentoDialog } from '@/components/materiais-equipamentos/MaterialEquipamentoDialog'
@@ -52,130 +30,14 @@ import CentroCustoLabel from '@/components/materiais-equipamentos/CentroCustoLab
 import { useMateriaisEquipamentos } from '@/hooks/useMateriaisEquipamentos'
 import { useCenteredDialog } from '@/hooks/useCenteredDialog'
 import { usePermissoes } from '@/contexts/PermissionsContext'
+import { PageHeader } from '@/components/ds/PageHeader'
+import { DataTable, type ColunaDataTable } from '@/components/ds/DataTable'
+import { StatusBadge } from '@/components/ds/StatusBadge'
+import { EmptyState, TableSkeleton } from '@/components/ds/EstadosPagina'
 import { useSearchParams } from 'react-router-dom'
+import { useAbrirItemDaUrl } from '@/hooks/useAbrirItemDaUrl'
 
 import type { MaterialEquipamentoFormData } from '@/lib/validations'
-
-// ---------------------------------------------------------------------------
-// Configuração dos filtros por coluna (estilo planilha)
-// ---------------------------------------------------------------------------
-
-type ColumnKey =
-  | 'codigo'
-  | 'tipo'
-  | 'categoria'
-  | 'localizacao'
-  | 'marca'
-  | 'centroCusto'
-  | 'estoque'
-  | 'valor'
-  | 'calibracao'
-  | 'status'
-
-const COLUMN_KEYS: ColumnKey[] = [
-  'codigo',
-  'tipo',
-  'categoria',
-  'localizacao',
-  'marca',
-  'centroCusto',
-  'estoque',
-  'valor',
-  'calibracao',
-  'status',
-]
-
-const emptyColumnFilters = () =>
-  COLUMN_KEYS.reduce((acc, key) => {
-    acc[key] = []
-    return acc
-  }, {} as Record<ColumnKey, string[]>)
-
-const brl = (value: number | null | undefined) =>
-  value === null || value === undefined || value === 0
-    ? '-'
-    : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
-
-const statusLabels: Record<string, string> = {
-  ativo: 'Ativo',
-  inativo: 'Inativo',
-  manutencao: 'Manutenção',
-  descartado: 'Descartado',
-}
-
-const situacaoEstoque = (material: any) => {
-  const estoque = material.estoque_atual || 0
-  const minimo = material.estoque_minimo || 0
-  if (estoque === 0) return 'Zerado'
-  if (estoque <= minimo) return 'Baixo'
-  return 'Normal'
-}
-
-const COLUMN_CONFIG: Record<
-  ColumnKey,
-  { label: string; value: (material: any) => string; sortValue?: (material: any) => string | number }
-> = {
-  codigo: {
-    label: 'Item',
-    value: (m) => m.codigo || '-',
-  },
-  tipo: {
-    label: 'Tipo',
-    value: (m) => m.tipo || '-',
-  },
-  categoria: {
-    label: 'Categoria',
-    value: (m) => m.categoria || 'Sem categoria',
-  },
-  localizacao: {
-    label: 'Localização',
-    value: (m) => m.localizacao?.nome || 'Não definida',
-  },
-  marca: {
-    label: 'Marca',
-    value: (m) => m.marcas?.nome || 'Sem marca',
-  },
-  centroCusto: {
-    label: 'Centro de Custo',
-    value: (m) => m.centros_custo?.codigo || 'Sem centro de custo',
-  },
-  estoque: {
-    label: 'Estoque',
-    value: situacaoEstoque,
-    sortValue: (m) => m.estoque_atual || 0,
-  },
-  valor: {
-    label: 'Valor',
-    value: (m) => brl(m.valor_unitario),
-    sortValue: (m) => m.valor_unitario || 0,
-  },
-  calibracao: {
-    label: 'Calibração',
-    value: (m) => {
-      const status = verificarStatusCalibracao(
-        m.requer_calibracao,
-        m.proxima_calibracao,
-        m.frequencia_calibracao_meses
-      )
-      switch (status.status) {
-        case 'nao_requer':
-          return 'Não requer'
-        case 'em_dia':
-          return 'Em dia'
-        case 'proxima_vencimento':
-          return 'Próxima do vencimento'
-        case 'vencida':
-          return 'Vencida'
-        default:
-          return 'Sem data'
-      }
-    },
-  },
-  status: {
-    label: 'Status',
-    value: (m) => statusLabels[m.status] || m.status || '-',
-  },
-}
 
 const MateriaisEquipamentosPage = () => {
   const { 
@@ -195,7 +57,6 @@ const MateriaisEquipamentosPage = () => {
   const podeExcluir = can('materiais', 'delete')
   const podeMovimentar = can('estoque', 'update')
   
-  const [search, setSearch] = useState('')
   const [showInactive, setShowInactive] = useState(false)
   const [filtroCalibracaoVencida, setFiltroCalibracaoVencida] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
@@ -210,21 +71,6 @@ const MateriaisEquipamentosPage = () => {
   const [dependenciesDialogOpen, setDependenciesDialogOpen] = useState(false)
   const [materialWithDependencies, setMaterialWithDependencies] = useState<any>(null)
   const [dialogPosition, setDialogPosition] = useState({ top: '50vh', left: '50vw' })
-  const [columnFilters, setColumnFilters] = useState<Record<ColumnKey, string[]>>(
-    () => emptyColumnFilters()
-  )
-  const [sort, setSort] = useState<{ column: ColumnKey; direction: SortDirection }>({
-    column: 'codigo',
-    direction: null,
-  })
-
-  const setColumnFilter = (column: ColumnKey) => (values: string[]) =>
-    setColumnFilters((prev) => ({ ...prev, [column]: values }))
-
-  const setColumnSort = (column: ColumnKey) => (direction: SortDirection) =>
-    setSort({ column, direction })
-
-  const hasColumnFilters = COLUMN_KEYS.some((key) => columnFilters[key].length > 0)
 
   // Calcular posição central da viewport atual quando abre qualquer dialog
   useEffect(() => {
@@ -248,9 +94,9 @@ const MateriaisEquipamentosPage = () => {
     updateDialogPosition()
   }, [isCreateDialogOpen, editingMaterial, deletingMaterial, movimentacaoMaterial, cloningMaterial])
 
-  // Hook para centralização inteligente dos dialogs
-  const createDialogPosition = useCenteredDialog(isCreateDialogOpen)
-  const editDialogPosition = useCenteredDialog(!!editingMaterial)
+
+  // Abre o item vindo da paleta de comandos (?item=<id>)
+  useAbrirItemDaUrl(materiaisEquipamentos, (m) => m.id, (m) => setEditingMaterial(m))
 
   // Mantém o filtro de estoque crítico refletido na URL, para o link do
   // Dashboard funcionar e o estado ser compartilhável (RF-08).
@@ -273,74 +119,29 @@ const MateriaisEquipamentosPage = () => {
   const isEstoqueBaixoOuZerado = (material: any) =>
     material.situacao_estoque === 'zerado' || material.situacao_estoque === 'baixo'
 
-  const filteredMateriais = materiaisEquipamentos.filter(material => {
-    const matchesSearch = search === '' ||
-      material.codigo.toLowerCase().includes(search.toLowerCase()) ||
-      material.nome.toLowerCase().includes(search.toLowerCase()) ||
-      (material.descricao && material.descricao.toLowerCase().includes(search.toLowerCase())) ||
-      (material.categoria && material.categoria.toLowerCase().includes(search.toLowerCase())) ||
-      (material.subcategoria && material.subcategoria.toLowerCase().includes(search.toLowerCase())) ||
-      (material.marcas?.nome && material.marcas.nome.toLowerCase().includes(search.toLowerCase()))
-
-    // "Mostrar inativos": quando marcado, exibir APENAS inativos; caso contrário, apenas ativos
+  /**
+   * Filtros próprios desta tela (inativos, calibração e estoque crítico).
+   * Busca, filtro por coluna e ordenação são responsabilidade do DataTable.
+   */
+  const filteredMateriais = materiaisEquipamentos.filter((material) => {
+    // "Mostrar inativos": quando marcado, exibe APENAS inativos
     const matchesAtivo = showInactive ? material.ativo === false : material.ativo !== false
 
-    // Filtro para calibração vencida
     let matchesCalibracaoVencida = true
     if (filtroCalibracaoVencida) {
       const statusCalibracao = verificarStatusCalibracao(
         material.requer_calibracao,
         material.proxima_calibracao,
-        material.frequencia_calibracao_meses
+        material.frequencia_calibracao_meses,
       )
-      matchesCalibracaoVencida = statusCalibracao.status === 'vencida' ||
-                                 statusCalibracao.status === 'proxima_vencimento'
+      matchesCalibracaoVencida =
+        statusCalibracao.status === 'vencida' || statusCalibracao.status === 'proxima_vencimento'
     }
 
-    // Filtro para estoque baixo/zerado
     const matchesEstoqueBaixo = !filtroEstoqueBaixo || isEstoqueBaixoOuZerado(material)
 
-    // Filtros por coluna (estilo planilha)
-    const matchesColumns = COLUMN_KEYS.every((key) => {
-      const selected = columnFilters[key]
-      if (selected.length === 0) return true
-      return selected.includes(COLUMN_CONFIG[key].value(material))
-    })
-
-    return (
-      matchesSearch &&
-      matchesAtivo &&
-      matchesCalibracaoVencida &&
-      matchesEstoqueBaixo &&
-      matchesColumns
-    )
+    return matchesAtivo && matchesCalibracaoVencida && matchesEstoqueBaixo
   })
-
-  // Ordenação pela coluna escolhida no filtro
-  const sortedMateriais = React.useMemo(() => {
-    if (!sort.direction) return filteredMateriais
-    const { sortValue, value } = COLUMN_CONFIG[sort.column]
-    const factor = sort.direction === 'asc' ? 1 : -1
-    return [...filteredMateriais].sort((a, b) => {
-      const va = sortValue ? sortValue(a) : value(a)
-      const vb = sortValue ? sortValue(b) : value(b)
-      if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * factor
-      return String(va).localeCompare(String(vb), 'pt-BR') * factor
-    })
-  }, [filteredMateriais, sort])
-
-  // Opções disponíveis em cada coluna (valores distintos dos itens visíveis)
-  const columnOptions = React.useMemo(() => {
-    const base = materiaisEquipamentos.filter((material) =>
-      showInactive ? material.ativo === false : material.ativo !== false
-    )
-    return COLUMN_KEYS.reduce((acc, key) => {
-      const values = new Set<string>()
-      base.forEach((material) => values.add(COLUMN_CONFIG[key].value(material)))
-      acc[key] = Array.from(values).sort((a, b) => a.localeCompare(b, 'pt-BR'))
-      return acc
-    }, {} as Record<ColumnKey, string[]>)
-  }, [materiaisEquipamentos, showInactive])
 
   // Contar itens com estoque baixo ou zerado (apenas ativos)
   const itensEstoqueBaixo = materiaisEquipamentos.filter(
@@ -459,62 +260,179 @@ const MateriaisEquipamentosPage = () => {
     }).format(value)
   }
 
+  /** Colunas da listagem, no padrão do design system */
+  const colunas: ColunaDataTable<any>[] = [
+    {
+      id: 'item',
+      cabecalho: 'Item',
+      fixa: true,
+      semFiltro: true,
+      valor: (m) => `${m.codigo ?? ''} ${m.nome ?? ''}`.trim(),
+      valorOrdenacao: (m) => m.codigo ?? '',
+      celula: (m) => (
+        <div className="flex items-center gap-2">
+          {m.tipo === 'equipamento' ? (
+            <Wrench className="h-4 w-4 shrink-0 text-muted-foreground" />
+          ) : (
+            <Package className="h-4 w-4 shrink-0 text-muted-foreground" />
+          )}
+          <div className="min-w-0">
+            <div className="font-medium">{m.codigo}</div>
+            <div className="truncate text-xs text-muted-foreground" title={m.nome}>
+              {m.nome}
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    { id: 'tipo', cabecalho: 'Tipo', valor: (m) => m.tipo ?? '—' },
+    { id: 'categoria', cabecalho: 'Categoria', valor: (m) => m.categoria || 'Sem categoria' },
+    {
+      id: 'localizacao',
+      cabecalho: 'Localização',
+      valor: (m) => m.localizacao?.nome || 'Não definida',
+    },
+    {
+      id: 'marca',
+      cabecalho: 'Marca/Modelo',
+      valor: (m) => m.marcas?.nome || 'Sem marca',
+      celula: (m) => (
+        <div className="min-w-0">
+          <div className="truncate">{m.marcas?.nome || '—'}</div>
+          {m.modelo && <div className="text-xs text-muted-foreground">{m.modelo}</div>}
+        </div>
+      ),
+    },
+    {
+      id: 'centro_custo',
+      cabecalho: 'Centro de custo',
+      valor: (m) => m.centros_custo?.codigo || 'Sem centro de custo',
+      celula: (m) =>
+        m.centros_custo ? (
+          <CentroCustoLabel
+            materialId={m.id}
+            centroCusto={{
+              codigo: m.centros_custo.codigo,
+              nome: m.centros_custo.empresas?.nome || m.centros_custo.descricao,
+            }}
+          />
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      id: 'estoque',
+      cabecalho: 'Estoque',
+      alinhamento: 'right',
+      // RF-02: situação vem da coluna gerada no banco
+      valor: (m) =>
+        m.situacao_estoque === 'zerado'
+          ? 'Zerado'
+          : m.situacao_estoque === 'baixo'
+            ? 'No mínimo'
+            : 'Normal',
+      valorOrdenacao: (m) => m.estoque_atual ?? 0,
+      celula: (m) => (
+        <div className="text-right">
+          <div
+            className={
+              m.situacao_estoque === 'zerado'
+                ? 'font-medium text-destructive'
+                : m.situacao_estoque === 'baixo'
+                  ? 'font-medium text-status-pendente'
+                  : 'font-medium'
+            }
+          >
+            {m.estoque_atual ?? 0}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Mín: {m.estoque_minimo ?? 0} {m.unidade_medida}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'valor',
+      cabecalho: 'Valor',
+      semFiltro: true,
+      alinhamento: 'right',
+      valor: (m) => formatCurrency(m.valor_unitario),
+      valorOrdenacao: (m) => m.valor_unitario ?? 0,
+    },
+    {
+      id: 'calibracao',
+      cabecalho: 'Calibração',
+      valor: (m) => {
+        const st = verificarStatusCalibracao(
+          m.requer_calibracao,
+          m.proxima_calibracao,
+          m.frequencia_calibracao_meses,
+        )
+        return st.mensagem
+      },
+      celula: (m) => {
+        const st = verificarStatusCalibracao(
+          m.requer_calibracao,
+          m.proxima_calibracao,
+          m.frequencia_calibracao_meses,
+        )
+        return (
+          <div className="flex items-center gap-1">
+            <span aria-hidden>{st.icone}</span>
+            <span className="text-xs text-muted-foreground">{st.mensagem}</span>
+          </div>
+        )
+      },
+    },
+    {
+      id: 'status',
+      cabecalho: 'Status',
+      valor: (m) => getStatusLabel(m.status),
+      celula: (m) => <StatusBadge status={m.status} />,
+    },
+  ]
+
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Materiais e Equipamentos</h1>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-        </div>
+      <div className="space-y-6">
+        <PageHeader
+          titulo="Materiais e Equipamentos"
+          descricao="Itens de estoque, equipamentos, calibração e localização."
+          migalhas={[{ label: 'Operação' }, { label: 'Materiais e Equipamentos' }]}
+        />
+        <TableSkeleton colunas={7} />
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      {/* 📱 Header responsivo */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
-        <h1 className="text-xl md:text-2xl font-bold">Materiais e Equipamentos</h1>
-        <div className="flex gap-2">
-          <Button 
-            onClick={() => {
-              console.log('🔄 Forçando atualização dos materiais...')
-              fetchMateriais({ includeInactive: showInactive })
-            }} 
-            variant="outline" 
-            size="sm" 
-            className="flex-1 sm:flex-none"
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Atualizar</span>
-            <span className="sm:hidden">🔄</span>
-          </Button>
-          {podeCriar && (
-          <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="flex-1 sm:flex-none">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Novo Item</span>
-            <span className="sm:hidden">Adicionar</span>
-          </Button>
-          )}
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        titulo="Materiais e Equipamentos"
+        descricao="Itens de estoque, equipamentos, calibração e localização."
+        migalhas={[{ label: 'Operação' }, { label: 'Materiais e Equipamentos' }]}
+        acoes={
+          <>
+            <Button
+              onClick={() => fetchMateriais({ includeInactive: showInactive })}
+              variant="outline"
+              size="sm"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Atualizar
+            </Button>
+            {podeCriar && (
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Novo item
+              </Button>
+            )}
+          </>
+        }
+      />
 
-      {/* 📱 Filtros responsivos */}
       <div className="space-y-3">
-        {/* 📱 Busca */}
-        <div className="relative">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por código, nome ou categoria..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 w-full"
-          />
-        </div>
-        
-        {/* 📱 Checkboxes e contador */}
+      {/* 📱 Checkboxes e contador */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-4">
             <div className="flex items-center space-x-2">
@@ -570,24 +488,9 @@ const MateriaisEquipamentosPage = () => {
               </label>
             </div>
           </div>
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            {(hasColumnFilters || sort.direction) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => {
-                  setColumnFilters(emptyColumnFilters())
-                  setSort({ column: 'codigo', direction: null })
-                }}
-              >
-                Limpar filtros de coluna
-              </Button>
-            )}
-            <Badge variant="secondary">
-              {sortedMateriais.length} item{sortedMateriais.length !== 1 ? 's' : ''}
-            </Badge>
-          </div>
+          <Badge variant="secondary" className="self-start sm:self-auto">
+            {filteredMateriais.length} item{filteredMateriais.length !== 1 ? 's' : ''}
+          </Badge>
         </div>
       </div>
 
@@ -612,514 +515,85 @@ const MateriaisEquipamentosPage = () => {
         Clique para editar ou clique com o botão direito para mais opções
       </div>
 
-      {/* 📱 MOBILE: Cards layout */}
-      <div className="lg:hidden space-y-3">
-        {sortedMateriais.length > 0 ? (
-          sortedMateriais.map((material) => (
-            <ContextMenu key={material.id}>
-              <ContextMenuTrigger asChild>
-                <div 
-                  className="border rounded-lg p-4 space-y-3 cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => podeEditar && setEditingMaterial(material)}
-                >
-                  {/* 📱 Header do card */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-2 min-w-0 flex-1">
-                      {material.tipo === 'equipamento' ? (
-                        <Wrench className="h-4 w-4 text-muted-foreground shrink-0" />
-                      ) : (
-                        <Package className="h-4 w-4 text-muted-foreground shrink-0" />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <span className="font-medium text-sm">{material.codigo}</span>
-                          <Badge variant="outline" className="text-xs px-1 py-0 h-4 shrink-0">
-                            {material.tipo}
-                          </Badge>
-                        </div>
-                        <div className="text-sm text-muted-foreground truncate">{material.nome}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2 shrink-0">
-                      <Badge variant={getStatusColor(material.status)} className="text-xs">
-                        {getStatusLabel(material.status)}
-                      </Badge>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-6 w-6">
-                            <MoreHorizontal className="h-3 w-3" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {podeEditar && (
-                            <DropdownMenuItem onClick={() => setEditingMaterial(material)}>
-                              <Edit className="mr-2 h-3 w-3" />
-                              Editar
-                            </DropdownMenuItem>
-                          )}
-                          {podeCriar && (
-                            <DropdownMenuItem onClick={() => handleCloneClick(material)}>
-                              <Copy className="mr-2 h-3 w-3" />
-                              Clonar
-                            </DropdownMenuItem>
-                          )}
-                          {podeMovimentar && (
-                            <DropdownMenuItem onClick={() => setMovimentacaoMaterial(material)}>
-                              <Package className="mr-2 h-3 w-3" />
-                              Movimentar
-                            </DropdownMenuItem>
-                          )}
-                          {podeExcluir && (
-                            <DropdownMenuItem 
-                              onClick={() => setDeletingMaterial(material)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-3 w-3" />
-                              Excluir
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                  
-                  {/* 📱 Informações principais */}
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <span className="text-muted-foreground text-xs">Categoria</span>
-                      <div className="font-medium">
-                        {material.categoria || '-'}
-                        {material.subcategoria && (
-                          <div className="text-xs text-muted-foreground">{material.subcategoria}</div>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground text-xs">Localização</span>
-                      <div className="font-medium">
-                        {material.localizacao?.nome || (
-                          <span className="text-muted-foreground">Não definida</span>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground text-xs">Estoque</span>
-                      <div className="font-medium">
-                        {material.estoque_atual || 0} {material.unidade_medida || 'UN'}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground text-xs">Valor</span>
-                      <div className="font-medium">
-                        {formatCurrency(material.valor_unitario)}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* 📱 Informações adicionais */}
-                  {(material.marcas?.nome || material.centros_custo) && (
-                    <div className="pt-2 border-t text-xs space-y-1">
-                      {material.marcas?.nome && (
-                        <div className="flex items-center space-x-1">
-                          <Tag className="h-3 w-3 text-muted-foreground" />
-                          <span>{material.marcas.nome}</span>
-                          {material.modelo && <span className="text-muted-foreground">• {material.modelo}</span>}
-                        </div>
-                      )}
-                      {material.centros_custo && (
-                        <div>
-                          <CentroCustoLabel
-                            materialId={material.id}
-                            centroCusto={{
-                              codigo: material.centros_custo.codigo,
-                              nome:
-                                (material.centros_custo as any).empresas?.nome ||
-                                material.centros_custo.descricao,
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </ContextMenuTrigger>
-              <ContextMenuContent>
-                {podeEditar && (
-                  <ContextMenuItem onClick={() => setEditingMaterial(material)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Editar
-                  </ContextMenuItem>
-                )}
-                {podeCriar && (
-                  <ContextMenuItem onClick={() => handleCloneClick(material)}>
-                    <Copy className="mr-2 h-4 w-4" />
-                    Clonar
-                  </ContextMenuItem>
-                )}
-                {podeMovimentar && (
-                  <ContextMenuItem onClick={() => setMovimentacaoMaterial(material)}>
-                    <Package className="mr-2 h-4 w-4" />
-                    Movimentar Estoque
-                  </ContextMenuItem>
-                )}
-                {podeExcluir && (
-                  <ContextMenuItem 
-                    onClick={() => setDeletingMaterial(material)}
-                    className="text-destructive"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Excluir
-                  </ContextMenuItem>
-                )}
-              </ContextMenuContent>
-            </ContextMenu>
-          ))
-        ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <Package className="mx-auto h-12 w-12 mb-4 opacity-50" />
-            <p>Nenhum material encontrado</p>
-          </div>
-        )}
-      </div>
-
-      {/* 📱 DESKTOP: Table layout */}
-      <div className="hidden lg:block border rounded-md overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>
-                <div className="flex items-center gap-1">
-                  <span>Item</span>
-                  <ColumnFilter
-                    title="Item"
-                    options={columnOptions.codigo}
-                    selected={columnFilters.codigo}
-                    onSelectedChange={setColumnFilter('codigo')}
-                    sortDirection={sort.column === 'codigo' ? sort.direction : null}
-                    onSortChange={setColumnSort('codigo')}
-                  />
-                </div>
-              </TableHead>
-              <TableHead>
-                <div className="flex items-center gap-1">
-                  <span>Tipo/Categoria</span>
-                  <ColumnFilter
-                    title="Tipo"
-                    options={columnOptions.tipo}
-                    selected={columnFilters.tipo}
-                    onSelectedChange={setColumnFilter('tipo')}
-                    sortDirection={sort.column === 'tipo' ? sort.direction : null}
-                    onSortChange={setColumnSort('tipo')}
-                  />
-                  <ColumnFilter
-                    title="Categoria"
-                    options={columnOptions.categoria}
-                    selected={columnFilters.categoria}
-                    onSelectedChange={setColumnFilter('categoria')}
-                    sortDirection={sort.column === 'categoria' ? sort.direction : null}
-                    onSortChange={setColumnSort('categoria')}
-                  />
-                </div>
-              </TableHead>
-              <TableHead>
-                <div className="flex items-center gap-1">
-                  <span>Localização</span>
-                  <ColumnFilter
-                    title="Localização"
-                    options={columnOptions.localizacao}
-                    selected={columnFilters.localizacao}
-                    onSelectedChange={setColumnFilter('localizacao')}
-                    sortDirection={sort.column === 'localizacao' ? sort.direction : null}
-                    onSortChange={setColumnSort('localizacao')}
-                  />
-                </div>
-              </TableHead>
-              <TableHead>
-                <div className="flex items-center gap-1">
-                  <span>Marca/Modelo</span>
-                  <ColumnFilter
-                    title="Marca"
-                    options={columnOptions.marca}
-                    selected={columnFilters.marca}
-                    onSelectedChange={setColumnFilter('marca')}
-                    sortDirection={sort.column === 'marca' ? sort.direction : null}
-                    onSortChange={setColumnSort('marca')}
-                  />
-                </div>
-              </TableHead>
-              <TableHead>
-                <div className="flex items-center gap-1">
-                  <span>Centro de Custo</span>
-                  <ColumnFilter
-                    title="Centro de Custo"
-                    options={columnOptions.centroCusto}
-                    selected={columnFilters.centroCusto}
-                    onSelectedChange={setColumnFilter('centroCusto')}
-                    sortDirection={sort.column === 'centroCusto' ? sort.direction : null}
-                    onSortChange={setColumnSort('centroCusto')}
-                  />
-                </div>
-              </TableHead>
-              <TableHead>
-                <div className="flex items-center gap-1">
-                  <span>Estoque</span>
-                  <ColumnFilter
-                    title="Estoque"
-                    options={columnOptions.estoque}
-                    selected={columnFilters.estoque}
-                    onSelectedChange={setColumnFilter('estoque')}
-                    sortDirection={sort.column === 'estoque' ? sort.direction : null}
-                    onSortChange={setColumnSort('estoque')}
-                  />
-                </div>
-              </TableHead>
-              <TableHead>
-                <div className="flex items-center gap-1">
-                  <span>Valor</span>
-                  <ColumnFilter
-                    title="Valor"
-                    options={columnOptions.valor}
-                    selected={columnFilters.valor}
-                    onSelectedChange={setColumnFilter('valor')}
-                    sortDirection={sort.column === 'valor' ? sort.direction : null}
-                    onSortChange={setColumnSort('valor')}
-                  />
-                </div>
-              </TableHead>
-              <TableHead>
-                <div className="flex items-center gap-1">
-                  <span>Calibração</span>
-                  <ColumnFilter
-                    title="Calibração"
-                    options={columnOptions.calibracao}
-                    selected={columnFilters.calibracao}
-                    onSelectedChange={setColumnFilter('calibracao')}
-                    sortDirection={sort.column === 'calibracao' ? sort.direction : null}
-                    onSortChange={setColumnSort('calibracao')}
-                  />
-                </div>
-              </TableHead>
-              <TableHead>
-                <div className="flex items-center gap-1">
-                  <span>Status</span>
-                  <ColumnFilter
-                    title="Status"
-                    options={columnOptions.status}
-                    selected={columnFilters.status}
-                    onSelectedChange={setColumnFilter('status')}
-                    sortDirection={sort.column === 'status' ? sort.direction : null}
-                    onSortChange={setColumnSort('status')}
-                  />
-                </div>
-              </TableHead>
-              <TableHead className="w-[120px] text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedMateriais.length > 0 ? (
-              sortedMateriais.map((material) => (
-                <ContextMenu key={material.id}>
-                  <ContextMenuTrigger asChild>
-                    <TableRow 
-                      className="cursor-pointer hover:bg-muted/50 transition-colors h-12"
-                      onClick={() => podeEditar && setEditingMaterial(material)}
-                    >
-                  <TableCell className="py-2">
-                    <div className="flex items-center space-x-2">
-                      {material.tipo === 'equipamento' ? (
-                        <Wrench className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                      )}
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <span className="font-medium text-sm">{material.codigo}</span>
-                          <Badge variant="outline" className="text-xs px-1 py-0 h-4">
-                            {material.tipo}
-                          </Badge>
-                        </div>
-                        <div className="text-xs text-muted-foreground truncate max-w-[200px]">{material.nome}</div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-2">
-                    <div className="text-sm">
-                      {material.categoria && (
-                        <div className="font-medium">{material.categoria}</div>
-                      )}
-                      {material.subcategoria && (
-                        <div className="text-xs text-muted-foreground">{material.subcategoria}</div>
-                      )}
-                      {!material.categoria && !material.subcategoria && '-'}
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-2">
-                    <div className="text-sm">
-                      {material.localizacao?.nome || (
-                        <span className="text-xs text-muted-foreground">Não definida</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-2">
-                    <div className="text-sm">
-                      {material.marcas?.nome && (
-                        <div className="flex items-center space-x-1">
-                          <Tag className="h-3 w-3 text-muted-foreground" />
-                          <span>{material.marcas.nome}</span>
-                        </div>
-                      )}
-                      {material.modelo && (
-                        <div className="text-xs text-muted-foreground">{material.modelo}</div>
-                      )}
-                      {!material.marcas?.nome && !material.modelo && '-'}
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-2">
-                    {material.centros_custo ? (
-                      <CentroCustoLabel
-                        materialId={material.id}
-                        centroCusto={{
-                          codigo: material.centros_custo.codigo,
-                          nome: material.centros_custo.empresas?.nome || material.centros_custo.descricao
-                        }}
-                      />
-                    ) : (
-                      <span className="text-muted-foreground text-sm">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="py-2">
-                    <div className="text-center text-sm">
-                      <div className="font-medium">{material.estoque_atual}</div>
-                      <div className="text-xs text-muted-foreground">
-                        Min: {material.estoque_minimo} {material.unidade_medida}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-2 text-sm">
-                    {formatCurrency(material.valor_unitario)}
-                  </TableCell>
-                  <TableCell className="py-2">
-                    {(() => {
-                      const statusCalibracao = verificarStatusCalibracao(
-                        material.requer_calibracao,
-                        material.proxima_calibracao,
-                        material.frequencia_calibracao_meses
-                      )
-                      
-                      return (
-                        <div>
-                          <Badge 
-                            variant={statusCalibracao.cor} 
-                            className="text-xs px-1 py-0 h-4 mb-1"
-                          >
-                            {statusCalibracao.icone}
-                          </Badge>
-                          <div className="text-xs text-muted-foreground">
-                            {statusCalibracao.mensagem}
-                          </div>
-                        </div>
-                      )
-                    })()}
-                  </TableCell>
-                      <TableCell className="py-2">
-                        <Badge variant={getStatusColor(material.status)} className="text-xs px-2 py-0 h-5">
-                          {getStatusLabel(material.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1">
-                          {podeEditar && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              title="Editar"
-                              aria-label="Editar"
-                              onClick={() => setEditingMaterial(material)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {podeCriar && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              title="Clonar"
-                              aria-label="Clonar"
-                              onClick={() => handleCloneClick(material)}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {podeExcluir && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-destructive hover:text-destructive"
-                              title="Excluir"
-                              aria-label="Excluir"
-                              onClick={() => handleDeleteClick(material)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {!podeEditar && !podeCriar && !podeExcluir && (
-                            <span className="text-xs text-muted-foreground">Somente leitura</span>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  </ContextMenuTrigger>
-                  <ContextMenuContent>
-                    
-                      {podeEditar && (
-                      <ContextMenuItem onClick={() => setEditingMaterial(material)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Editar
-                      </ContextMenuItem>
-                      )}
-                    
-                    
-                      {podeCriar && (
-                      <ContextMenuItem onClick={() => handleCloneClick(material)}>
-                        <Copy className="mr-2 h-4 w-4" />
-                        Clonar
-                      </ContextMenuItem>
-                      )}
-                    
-                    
-                      {podeMovimentar && (
-                      <ContextMenuItem onClick={() => setMovimentacaoMaterial(material)}>
-                        <MoreHorizontal className="mr-2 h-4 w-4" />
-                        Movimentar Estoque
-                      </ContextMenuItem>
-                      )}
-                    
-                    
-                      {podeExcluir && (
-                      <ContextMenuItem 
-                        className="text-destructive"
-                        onClick={() => handleDeleteClick(material)}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Excluir
-                      </ContextMenuItem>
-                      )}
-                    
-                  </ContextMenuContent>
-                </ContextMenu>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={10} className="text-center">
-                  {search ? 'Nenhum item encontrado com os critérios de busca.' : 'Nenhum item cadastrado.'}
-                </TableCell>
-              </TableRow>
+      <DataTable
+        dados={filteredMateriais}
+        colunas={colunas}
+        idLinha={(m) => m.id}
+        chaveUrl="mat"
+        placeholderBusca="Buscar por código, nome, categoria ou marca..."
+        nomeArquivoCsv="materiais-equipamentos"
+        onLinhaClick={(m) => podeEditar && setEditingMaterial(m)}
+        acoesLinha={(material) => (
+          <>
+            {podeEditar && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                title="Editar"
+                aria-label="Editar"
+                onClick={() => setEditingMaterial(material)}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
             )}
-          </TableBody>
-        </Table>
-      </div>
+            {podeCriar && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                title="Clonar"
+                aria-label="Clonar"
+                onClick={() => handleCloneClick(material)}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            )}
+            {podeMovimentar && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                title="Movimentar estoque"
+                aria-label="Movimentar estoque"
+                onClick={() => setMovimentacaoMaterial(material)}
+              >
+                <Package className="h-4 w-4" />
+              </Button>
+            )}
+            {podeExcluir && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive hover:text-destructive"
+                title="Excluir"
+                aria-label="Excluir"
+                onClick={() => handleDeleteClick(material)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+            {!podeEditar && !podeCriar && !podeExcluir && (
+              <span className="text-xs text-muted-foreground">Somente leitura</span>
+            )}
+          </>
+        )}
+        vazio={
+          <EmptyState
+            titulo="Nenhum material encontrado"
+            descricao="Cadastre o primeiro item para começar a controlar o estoque."
+            icone={Package}
+            acao={
+              podeCriar ? (
+                <Button onClick={() => setIsCreateDialogOpen(true)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Novo item
+                </Button>
+              ) : undefined
+            }
+          />
+        }
+      />
 
       {/* Create Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

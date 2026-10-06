@@ -24,7 +24,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { useSupabaseTable } from '@/hooks/useSupabase'
 import type { Tables } from '@/types/database'
 import { cn } from '@/lib/utils'
-import { getCentroCustoDisplayName, getCentroCustoFullText } from '@/utils/centroCustoUtils'
+import { getCentroCustoFullText } from '@/utils/centroCustoUtils'
 
 interface CentroCustoSelectorProps {
   value?: string

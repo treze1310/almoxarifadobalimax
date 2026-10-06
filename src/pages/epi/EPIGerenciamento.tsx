@@ -1,29 +1,31 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogTrigger } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { SelectValue } from '@/components/ui/select'
+import { TabsTrigger } from '@/components/ui/tabs'
 import { 
   Package, 
   User, 
   AlertTriangle, 
   Calendar, 
-  Search, 
-  Filter, 
   FileText,
-  Plus,
-  Download
+  Plus
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
 import { epiService, EPIComAtribuicao } from '@/services/epiService'
+import { PageHeader } from '@/components/ds/PageHeader'
+import { DataTable, type ColunaDataTable } from '@/components/ds/DataTable'
+import { StatusBadge } from '@/components/ds/StatusBadge'
+import { KpiCard } from '@/components/ds/KpiCard'
+import { CardsSkeleton, EmptyState, TableSkeleton } from '@/components/ds/EstadosPagina'
 import { EPIAtribuicaoDialog } from '@/components/epi/EPIAtribuicaoDialog'
 import { FichaEPIPDF } from '@/components/epi/FichaEPIPDF'
 import { ColaboradorClickableLabel } from '@/components/colaboradores/ColaboradorClickableLabel'
-import { format, isAfter, isBefore, addDays } from 'date-fns'
+import { format, isBefore, addDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 // Dynamic imports para jsPDF e html2canvas
 
@@ -220,200 +222,168 @@ export default function EPIGerenciamento() {
     })
   }
 
-  if (loading) {
-    return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {[1,2,3,4].map(i => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
-            ))}
+  const colunas: ColunaDataTable<EPIComAtribuicao>[] = [
+    {
+      id: 'epi',
+      cabecalho: 'EPI',
+      fixa: true,
+      semFiltro: true,
+      valor: (e) => `${e.codigo ?? ''} ${e.nome ?? ''} ${e.numero_ca ?? ''}`.trim(),
+      valorOrdenacao: (e) => e.nome ?? '',
+      celula: (e) => (
+        <div className="min-w-0">
+          <div className="truncate font-medium">{e.nome}</div>
+          <div className="text-xs text-muted-foreground">
+            {e.codigo} {e.numero_ca ? `• CA ${e.numero_ca}` : ''}
           </div>
         </div>
+      ),
+    },
+    {
+      id: 'colaborador',
+      cabecalho: 'Colaborador',
+      valor: (e) => e.colaborador_nome || '—',
+      celula: (e) =>
+        e.colaborador_id && e.colaborador_nome ? (
+          <ColaboradorClickableLabel
+            colaboradorId={e.colaborador_id}
+            colaboradorNome={e.colaborador_nome}
+            colaboradorMatricula={e.colaborador_matricula ?? undefined}
+            colaboradorCargo={e.colaborador_cargo ?? undefined}
+            colaboradorSetor={e.colaborador_setor ?? undefined}
+          />
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      id: 'atribuicao',
+      cabecalho: 'Atribuído em',
+      semFiltro: true,
+      valor: (e) =>
+        e.data_atribuicao ? format(new Date(e.data_atribuicao), 'dd/MM/yyyy', { locale: ptBR }) : '—',
+      valorOrdenacao: (e) => e.data_atribuicao ?? '',
+    },
+    {
+      id: 'vencimento',
+      cabecalho: 'Vencimento',
+      semFiltro: true,
+      valor: (e) =>
+        e.data_vencimento ? format(new Date(e.data_vencimento), 'dd/MM/yyyy', { locale: ptBR }) : '—',
+      valorOrdenacao: (e) => e.data_vencimento ?? '',
+    },
+    {
+      id: 'situacao',
+      cabecalho: 'Situação',
+      // status_calculado vem da view: em_dia, vencendo, vencido ou sem_validade
+      valor: (e) =>
+        ({
+          em_dia: 'Em dia',
+          vencendo: 'Vence em breve',
+          vencido: 'Vencido',
+          sem_validade: 'Sem validade',
+        })[e.status_calculado ?? ''] ?? (e.status_calculado || '—'),
+      celula: (e) => {
+        const mapa: Record<string, string> = {
+          em_dia: 'concluido',
+          vencendo: 'pendente',
+          vencido: 'rejeitado',
+          sem_validade: 'rascunho',
+        }
+        return <StatusBadge status={mapa[e.status_calculado ?? ''] ?? 'rascunho'} />
+      },
+    },
+  ]
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          titulo="Controle de EPI"
+          descricao="Equipamentos de proteção individual atribuídos aos colaboradores."
+          migalhas={[{ label: 'Operação' }, { label: 'EPI' }]}
+        />
+        <CardsSkeleton />
+        <TableSkeleton colunas={5} />
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Gerenciamento de EPIs</h1>
-          <p className="text-muted-foreground">
-            Controle e acompanhamento de Equipamentos de Proteção Individual
-          </p>
-        </div>
-        
-        <Dialog open={showAtribuicaoDialog} onOpenChange={setShowAtribuicaoDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Atribuir EPI
-            </Button>
-          </DialogTrigger>
-          <EPIAtribuicaoDialog onSuccess={handleAtribuicaoSuccess} />
-        </Dialog>
+      <PageHeader
+        titulo="Controle de EPI"
+        descricao="Equipamentos de proteção individual atribuídos aos colaboradores."
+        migalhas={[{ label: 'Operação' }, { label: 'EPI' }]}
+        acoes={
+          <Dialog open={showAtribuicaoDialog} onOpenChange={setShowAtribuicaoDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Atribuir EPI
+              </Button>
+            </DialogTrigger>
+            <EPIAtribuicaoDialog onSuccess={handleAtribuicaoSuccess} />
+          </Dialog>
+        }
+      />
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <KpiCard
+          rotulo="Total de EPIs"
+          valor={estatisticas.total_epis}
+          detalhe="EPIs cadastrados"
+          icone={Package}
+        />
+        <KpiCard
+          rotulo="EPIs atribuídos"
+          valor={estatisticas.epis_atribuidos}
+          detalhe="Em uso pelos colaboradores"
+          icone={User}
+        />
+        <KpiCard
+          rotulo="Vencendo"
+          valor={estatisticas.epis_vencendo}
+          detalhe="Próximos 30 dias"
+          icone={Calendar}
+          tom="atencao"
+        />
+        <KpiCard
+          rotulo="Vencidos"
+          valor={estatisticas.epis_vencidos}
+          detalhe="Precisam ser substituídos"
+          icone={AlertTriangle}
+          tom="critico"
+        />
       </div>
 
-      {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total EPIs</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{estatisticas.total_epis}</div>
-            <p className="text-xs text-muted-foreground">EPIs cadastrados</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">EPIs Atribuídos</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{estatisticas.epis_atribuidos}</div>
-            <p className="text-xs text-muted-foreground">Em uso pelos colaboradores</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Vencendo</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{estatisticas.epis_vencendo}</div>
-            <p className="text-xs text-muted-foreground">Próximos 30 dias</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Vencidos</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{estatisticas.epis_vencidos}</div>
-            <p className="text-xs text-muted-foreground">Precisam ser substituídos</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filtros e Busca */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por EPI, colaborador, código ou CA..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-48">
-            <Filter className="w-4 h-4 mr-2" />
-            <SelectValue placeholder="Filtrar por status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            <SelectItem value="ativo">Ativo</SelectItem>
-            <SelectItem value="vence_breve">Vence em breve</SelectItem>
-            <SelectItem value="vencido">Vencido</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Lista de EPIs */}
-      <div className="grid gap-4">
-        {filteredEPIs.map((epi) => (
-          <Card key={epi.atribuicao_id} className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <CardTitle className="flex items-center gap-2">
-                    <Package className="w-5 h-5" />
-                    {epi.nome}
-                    {getStatusBadge(epi)}
-                  </CardTitle>
-                  <CardDescription className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <span><strong>Código:</strong> {epi.codigo}</span>
-                    <span><strong>CA:</strong> {epi.numero_ca || 'N/A'}</span>
-                    <div className="flex items-center gap-2">
-                      <strong>Colaborador:</strong>
-                      {epi.colaborador_id && epi.colaborador_nome ? (
-                        <ColaboradorClickableLabel
-                          colaboradorId={epi.colaborador_id}
-                          colaboradorNome={epi.colaborador_nome}
-                          colaboradorMatricula={epi.colaborador_matricula}
-                          colaboradorCargo={epi.colaborador_cargo}
-                          colaboradorSetor={epi.colaborador_setor}
-                          variant="default"
-                          onColaboradorUpdated={loadEPIsAtribuidos}
-                        />
-                      ) : (
-                        <span>{epi.colaborador_nome || 'N/A'}</span>
-                      )}
-                    </div>
-                    <span><strong>Matrícula:</strong> {epi.colaborador_matricula || 'N/A'}</span>
-                  </CardDescription>
-                </div>
-                
-                <div className="flex gap-2 ml-4">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => generateFichaEPI(epi.atribuicao_id || '')}
-                    disabled={!epi.atribuicao_id}
-                  >
-                    <FileText className="w-4 h-4 mr-1" />
-                    Ficha
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <strong>Data de Atribuição:</strong><br />
-                  {epi.data_atribuicao ? format(new Date(epi.data_atribuicao), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'}
-                </div>
-                <div>
-                  <strong>Data de Vencimento:</strong><br />
-                  {epi.data_vencimento ? format(new Date(epi.data_vencimento), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'}
-                </div>
-                <div>
-                  <strong>Quantidade:</strong><br />
-                  {epi.quantidade_atribuida || 1}
-                </div>
-              </div>
-              {epi.observacoes_atribuicao && (
-                <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
-                  <strong>Observações:</strong> {epi.observacoes_atribuicao}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-        
-        {filteredEPIs.length === 0 && (
-          <Card>
-            <CardContent className="text-center py-8">
-              <Package className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
-                {searchTerm || statusFilter !== 'all' 
-                  ? 'Nenhum EPI encontrado com os filtros aplicados' 
-                  : 'Nenhum EPI atribuído ainda'}
-              </p>
-            </CardContent>
-          </Card>
+      <DataTable
+        dados={episAtribuidos}
+        colunas={colunas}
+        idLinha={(e) => e.atribuicao_id}
+        chaveUrl="epi"
+        placeholderBusca="Buscar por EPI, colaborador, código ou CA..."
+        nomeArquivoCsv="epis-atribuidos"
+        acoesLinha={(epi) => (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            title="Gerar ficha de EPI"
+            disabled={!epi.atribuicao_id}
+            onClick={() => generateFichaEPI(epi.atribuicao_id || '')}
+          >
+            <FileText className="h-4 w-4" />
+          </Button>
         )}
-      </div>
+        vazio={
+          <EmptyState
+            titulo="Nenhum EPI atribuído"
+            descricao="Use “Atribuir EPI” para vincular um equipamento a um colaborador."
+            icone={Package}
+          />
+        }
+      />
     </div>
   )
 }

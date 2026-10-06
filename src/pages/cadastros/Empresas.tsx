@@ -1,16 +1,13 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Search, PlusCircle, Pencil, Trash2 } from 'lucide-react'
+import { Building2, Edit, PlusCircle, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { formatarCNPJ, formatarTelefone } from '@/lib/dadosPessoais'
+import { PageHeader } from '@/components/ds/PageHeader'
+import { DataTable, type ColunaDataTable } from '@/components/ds/DataTable'
+import { StatusBadge } from '@/components/ds/StatusBadge'
+import { EmptyState, TableSkeleton } from '@/components/ds/EstadosPagina'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -74,17 +71,11 @@ export default function Empresas() {
   }, [deletingEmpresa])
 
   // Filtrar empresas
-  const filteredEmpresas = useMemo(() => {
-    if (!empresas) return []
-    
-    return empresas.filter((empresa) => {
-      const matchesSearch = empresa.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           empresa.cnpj?.includes(searchTerm) ||
-                           false
-      const matchesStatus = showInactive || empresa.ativo
-      return matchesSearch && matchesStatus
-    })
-  }, [empresas, searchTerm, showInactive])
+  // A busca por texto é do DataTable; aqui fica só o recorte de ativos/inativos
+  const filteredEmpresas = useMemo(
+    () => (empresas ?? []).filter((empresa) => showInactive || empresa.ativo),
+    [empresas, showInactive],
+  )
 
   // Handlers
   const handleCreate = async (data: EmpresaFormData) => {
@@ -174,88 +165,121 @@ export default function Empresas() {
   }
 
   if (loading) {
-    return <div>Carregando...</div>
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          titulo="Empresas"
+          descricao="Empresas do grupo e seus dados fiscais."
+          migalhas={[{ label: 'Cadastros' }, { label: 'Empresas' }]}
+        />
+        <TableSkeleton colunas={4} />
+      </div>
+    )
   }
 
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Cadastro de Empresas</h1>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Nova Empresa
-        </Button>
-      </div>
-
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome ou CNPJ..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8"
-          />
+  const colunas: ColunaDataTable<any>[] = [
+    {
+      id: 'nome',
+      cabecalho: 'Empresa',
+      fixa: true,
+      semFiltro: true,
+      valor: (e) => `${e.nome ?? ''} ${e.cnpj ?? ''}`.trim(),
+      valorOrdenacao: (e) => e.nome ?? '',
+      celula: (e) => <span className="font-medium">{e.nome}</span>,
+    },
+    {
+      id: 'cnpj',
+      cabecalho: 'CNPJ',
+      semFiltro: true,
+      valor: (e) => formatarCNPJ(e.cnpj),
+    },
+    {
+      id: 'contato',
+      cabecalho: 'Contato',
+      semFiltro: true,
+      valor: (e) => e.email || '—',
+      celula: (e) => (
+        <div className="space-y-0.5">
+          {e.email && <div className="truncate">{e.email}</div>}
+          {e.telefone && (
+            <div className="text-xs text-muted-foreground">{formatarTelefone(e.telefone)}</div>
+          )}
+          {!e.email && !e.telefone && <span className="text-muted-foreground">—</span>}
         </div>
-        <Button
-          variant={showInactive ? "default" : "outline"}
-          onClick={() => setShowInactive(!showInactive)}
-        >
-          {showInactive ? "Mostrar Apenas Ativos" : "Mostrar Inativos"}
-        </Button>
-      </div>
+      ),
+    },
+    {
+      id: 'status',
+      cabecalho: 'Status',
+      valor: (e) => (e.ativo ? 'Ativo' : 'Inativo'),
+      celula: (e) => <StatusBadge status={e.ativo ? 'ativo' : 'inativo'} />,
+    },
+  ]
 
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>CNPJ</TableHead>
-              <TableHead>E-mail</TableHead>
-              <TableHead>Telefone</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredEmpresas.map((empresa) => (
-              <TableRow key={empresa.id}>
-                <TableCell className="font-medium">{empresa.nome}</TableCell>
-                <TableCell>{formatCNPJ(empresa.cnpj)}</TableCell>
-                <TableCell>{empresa.email || '-'}</TableCell>
-                <TableCell>{empresa.telefone || '-'}</TableCell>
-                <TableCell>
-                  <Badge variant={empresa.ativo ? "default" : "secondary"}>
-                    {empresa.ativo ? "Ativo" : "Inativo"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end space-x-2">
-                    
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEditingEmpresa(empresa)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    
-                    
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setDeletingEmpresa(empresa)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        titulo="Empresas"
+        descricao="Empresas do grupo e seus dados fiscais."
+        migalhas={[{ label: 'Cadastros' }, { label: 'Empresas' }]}
+        acoes={
+          <>
+            <Button
+              variant={showInactive ? 'default' : 'outline'}
+              onClick={() => setShowInactive(!showInactive)}
+            >
+              {showInactive ? 'Mostrar apenas ativas' : 'Mostrar inativas'}
+            </Button>
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Nova empresa
+            </Button>
+          </>
+        }
+      />
+
+      <DataTable
+        dados={filteredEmpresas}
+        colunas={colunas}
+        idLinha={(e) => e.id}
+        chaveUrl="emp"
+        placeholderBusca="Buscar por nome ou CNPJ..."
+        nomeArquivoCsv="empresas"
+        acoesLinha={(empresa) => (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title="Editar"
+              onClick={() => setEditingEmpresa(empresa)}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-destructive hover:text-destructive"
+              title="Excluir"
+              onClick={() => setDeletingEmpresa(empresa)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </>
+        )}
+        vazio={
+          <EmptyState
+            titulo="Nenhuma empresa cadastrada"
+            icone={Building2}
+            acao={
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Nova empresa
+              </Button>
+            }
+          />
+        }
+      />
 
       {/* Diálogo de Criação */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
-import { TrendingUp, TrendingDown, RotateCcw, Download, Filter, FileText, Activity } from 'lucide-react'
+import { TrendingUp, TrendingDown, RotateCcw, Filter, FileText, Activity } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {

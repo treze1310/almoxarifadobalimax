@@ -4,17 +4,8 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -32,7 +23,8 @@ import {
 } from '@/components/ui/table'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/use-toast'
-import { Separator } from '@/components/ui/separator'
+import { PageHeader } from '@/components/ds/PageHeader'
+import { FormSection, FormActions } from '@/components/ds/FormLayout'
 import {
   SolicitacaoCompra,
   PrazoEntregaOptions,
@@ -50,7 +42,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { RadioGroupItem } from '@/components/ui/radio-group'
 import { Loader2, Plus, Trash2 } from 'lucide-react'
 
 const requestSchema = z
@@ -338,66 +330,52 @@ const NovaSolicitacaoPage = () => {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
-        <Card className="mx-auto max-w-6xl">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>
-          {isEditMode 
-            ? 'Editar Requisição de Compra' 
-            : isCloneMode 
-            ? 'Clonar Requisição de Compra' 
-            : 'Nova Requisição de Compra'
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <PageHeader
+          titulo={
+            isEditMode
+              ? 'Editar solicitação de compra'
+              : isCloneMode
+                ? 'Clonar solicitação de compra'
+                : 'Nova solicitação de compra'
           }
-        </CardTitle>
-                <CardDescription>
-                  Preencha as informações para criar uma nova requisição.
-                </CardDescription>
-              </div>
-              <div className="text-right">
-                <p className="font-semibold">Nº do Documento</p>
-                  {isGeneratingCode ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <span className="font-mono">
-                      {generatedCode || (
-                        <span className="text-xs font-sans text-muted-foreground">
-                          Reservando…
-                        </span>
-                      )}
-                    </span>
+          descricao="Preencha as informações e adicione os itens a comprar."
+          migalhas={[
+            { label: 'Compras' },
+            { label: 'Solicitações', href: '/solicitacoes' },
+            { label: isEditMode ? 'Editar' : 'Nova' },
+          ]}
+          acoes={
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">Nº do documento</p>
+              {isGeneratingCode ? (
+                <Loader2 className="ml-auto h-4 w-4 animate-spin" />
+              ) : (
+                <span className="font-mono text-ds-section">
+                  {generatedCode || (
+                    <span className="font-sans text-xs text-muted-foreground">Reservando…</span>
                   )}
-              </div>
+                </span>
+              )}
             </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {isEditMode && (
-              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                <h4 className="font-medium text-destructive mb-1">
-                  Modo de Edição
-                </h4>
-                <p className="text-sm text-destructive/90">
-                  Esta requisição será reenviada para aprovação após salvar.
-                </p>
-              </div>
-            )}
+          }
+        />
 
-            <Separator />
-            <div>
-              <h3 className="text-lg font-medium mb-4">
-                Configuração do Documento
-              </h3>
-              <div className="text-sm text-muted-foreground">
-                Tipo de documento: <strong>SCO (Solicitação de Compra)</strong> - padrão fixo
-              </div>
-            </div>
+        {isEditMode && (
+          <div className="rounded-[var(--radius)] border border-destructive/20 bg-destructive/10 p-4">
+            <h4 className="font-medium text-destructive">Modo de edição</h4>
+            <p className="text-ds-body text-destructive/90">
+              Esta solicitação será reenviada para aprovação após salvar.
+            </p>
+          </div>
+        )}
 
-            <Separator />
-            <div>
-              <h3 className="text-lg font-medium mb-4">
-                Informações da Requisição
-              </h3>
+        <FormSection
+          numero={1}
+          titulo="Informações da solicitação"
+          descricao="Tipo de documento: SCO (Solicitação de Compra), padrão fixo."
+        >
+            <div className="md:col-span-12">
               <div className="grid grid-cols-1 gap-4">
                 <FormField
                   control={form.control}
@@ -524,10 +502,15 @@ const NovaSolicitacaoPage = () => {
                 />
               </div>
             </div>
-            <Separator />
-            <div>
-              <h3 className="text-lg font-medium mb-4">Itens Solicitados</h3>
-              <div className="border rounded-md">
+        </FormSection>
+
+        <FormSection
+          numero={2}
+          titulo="Itens solicitados"
+          descricao="Escolha itens do estoque ou descreva um item avulso."
+        >
+            <div className="md:col-span-12">
+              <div className="rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -650,23 +633,17 @@ const NovaSolicitacaoPage = () => {
                 </div>
               </div>
             </div>
-          </CardContent>
-          <CardFooter className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate(-1)}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isGeneratingCode || !generatedCode}>
-              {isGeneratingCode ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
-              {isEditMode ? 'Reenviar para Aprovação' : 'Salvar Requisição'}
-            </Button>
-          </CardFooter>
-        </Card>
+        </FormSection>
+
+        <FormActions>
+          <Button type="button" variant="outline" onClick={() => navigate(-1)}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isGeneratingCode || !generatedCode}>
+            {isGeneratingCode ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {isEditMode ? 'Reenviar para aprovação' : 'Salvar solicitação'}
+          </Button>
+        </FormActions>
       </form>
     </Form>
   )

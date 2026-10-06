@@ -1,24 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { formatarCNPJ } from '@/lib/dadosPessoais'
+import { DataTable, type ColunaDataTable } from '@/components/ds/DataTable'
+import { StatusBadge } from '@/components/ds/StatusBadge'
+import { PageHeader } from '@/components/ds/PageHeader'
+import { EmptyState, TableSkeleton } from '@/components/ds/EstadosPagina'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,10 +22,7 @@ import {
   ArrowLeft, 
   FileText, 
   Package, 
-  Calendar, 
-  MoreHorizontal,
   Eye,
-  Edit,
   Trash2,
   RefreshCw,
   TrendingUp
@@ -132,35 +118,105 @@ const HistoricoNFePage = () => {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center space-x-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/nfe/importacao">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar
-            </Link>
-          </Button>
-          <h1 className="text-2xl font-bold">Histórico de Importações NFe</h1>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-        </div>
+      <div className="space-y-6">
+        <PageHeader
+          titulo="Histórico de NF-e"
+          descricao="Notas fiscais importadas e seus itens."
+          migalhas={[{ label: 'Compras' }, { label: 'NF-e' }, { label: 'Histórico' }]}
+        />
+        <TableSkeleton colunas={6} />
       </div>
     )
   }
 
+  const colunas: ColunaDataTable<any>[] = [
+    {
+      id: 'nfe',
+      cabecalho: 'NF-e',
+      fixa: true,
+      semFiltro: true,
+      valor: (n) => `${n.numero_nfe ?? ''} ${n.serie_nfe ?? ''} ${n.fornecedores?.nome ?? ''}`.trim(),
+      valorOrdenacao: (n) => n.numero_nfe ?? '',
+      celula: (n) => (
+        <div className="min-w-0">
+          <div className="font-medium">{n.numero_nfe}</div>
+          <div className="text-xs text-muted-foreground">Série {n.serie_nfe}</div>
+        </div>
+      ),
+    },
+    {
+      id: 'fornecedor',
+      cabecalho: 'Fornecedor',
+      valor: (n) => n.fornecedores?.nome || 'Não informado',
+      celula: (n) => (
+        <div className="min-w-0">
+          <div className="truncate">{n.fornecedores?.nome || 'Não informado'}</div>
+          {n.fornecedores?.cnpj && (
+            <div className="text-xs text-muted-foreground">{formatarCNPJ(n.fornecedores.cnpj)}</div>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'emissao',
+      cabecalho: 'Emissão',
+      semFiltro: true,
+      valor: (n) => formatDate(n.data_emissao),
+      valorOrdenacao: (n) => n.data_emissao ?? '',
+    },
+    {
+      id: 'importacao',
+      cabecalho: 'Importação',
+      semFiltro: true,
+      valor: (n) => (n.data_importacao ? formatDate(n.data_importacao) : '—'),
+      valorOrdenacao: (n) => n.data_importacao ?? '',
+    },
+    {
+      id: 'valor',
+      cabecalho: 'Valor total',
+      semFiltro: true,
+      alinhamento: 'right',
+      valor: (n) => formatCurrency(n.valor_total),
+      valorOrdenacao: (n) => n.valor_total ?? 0,
+    },
+    {
+      id: 'itens',
+      cabecalho: 'Itens',
+      semFiltro: true,
+      alinhamento: 'right',
+      valor: (n) => String(n.nfe_itens?.length ?? 0),
+      valorOrdenacao: (n) => n.nfe_itens?.length ?? 0,
+    },
+    {
+      id: 'status',
+      cabecalho: 'Status',
+      valor: (n) => getStatusLabel(n.status || 'importado'),
+      celula: (n) => <StatusBadge status={n.status || 'importado'} genero="feminino" />,
+    },
+  ]
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/nfe/importacao">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar
-            </Link>
-          </Button>
-          <h1 className="text-2xl font-bold">Histórico de Importações NFe</h1>
-        </div>
+      <PageHeader
+        titulo="Histórico de NF-e"
+        descricao="Notas fiscais importadas e seus itens."
+        migalhas={[{ label: 'Compras' }, { label: 'NF-e' }, { label: 'Histórico' }]}
+        acoes={
+          <>
+            <Button variant="outline" asChild>
+              <Link to="/nfe/importacao">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Importar NF-e
+              </Link>
+            </Button>
+            <Button variant="outline" onClick={fetchImportacoes} disabled={loading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+          </>
+        }
+      />
         <div className="flex items-center space-x-4">
           <Badge variant="secondary">
             {importacoes.length} importação{importacoes.length !== 1 ? 'ões' : ''}
@@ -226,131 +282,61 @@ const HistoricoNFePage = () => {
         </Card>
       </div>
 
-      {importacoes.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Nenhuma importação encontrada</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Você ainda não realizou nenhuma importação de NFe.
-            </p>
-            <Button asChild>
-              <Link to="/nfe/importacao">
-                <Package className="mr-2 h-4 w-4" />
-                Importar NFe
-              </Link>
+      <DataTable
+        dados={importacoes}
+        colunas={colunas}
+        idLinha={(n) => n.id}
+        chaveUrl="nfe"
+        placeholderBusca="Buscar por número, série ou fornecedor..."
+        nomeArquivoCsv="importacoes-nfe"
+        acoesLinha={(nfe) => (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title="Ver detalhes"
+              onClick={() => handleViewDetails(nfe)}
+            >
+              <Eye className="h-4 w-4" />
             </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Importações Realizadas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>NFe</TableHead>
-                    <TableHead>Fornecedor</TableHead>
-                    <TableHead>Data Emissão</TableHead>
-                    <TableHead>Data Importação</TableHead>
-                    <TableHead>Valor Total</TableHead>
-                    <TableHead>Itens</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {importacoes.map((nfe) => (
-                    <TableRow key={nfe.id}>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{nfe.numero_nfe}</span>
-                          <span className="text-xs text-muted-foreground">
-                            Série: {nfe.serie_nfe}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {nfe.fornecedores?.nome || 'Não informado'}
-                          </span>
-                          {nfe.fornecedores?.cnpj && (
-                            <span className="text-xs text-muted-foreground">
-                              {nfe.fornecedores.cnpj}
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span>{formatDate(nfe.data_emissao)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {nfe.data_importacao && formatDate(nfe.data_importacao)}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {formatCurrency(nfe.valor_total)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {nfe.nfe_itens?.length || 0} itens
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusColor(nfe.status || 'importado')}>
-                          {getStatusLabel(nfe.status || 'importado')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleViewDetails(nfe)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              Ver Detalhes
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleViewDetails(nfe)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => handleReprocess(nfe)}
-                              disabled={nfe.status === 'reprocessando'}
-                            >
-                              <RefreshCw className="mr-2 h-4 w-4" />
-                              Reprocessar
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteClick(nfe)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title="Reprocessar"
+              disabled={nfe.status === 'reprocessando'}
+              onClick={() => handleReprocess(nfe)}
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-destructive hover:text-destructive"
+              title="Excluir"
+              onClick={() => handleDeleteClick(nfe)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </>
+        )}
+        vazio={
+          <EmptyState
+            titulo="Nenhuma importação encontrada"
+            descricao="Você ainda não importou nenhuma NF-e."
+            icone={FileText}
+            acao={
+              <Button asChild>
+                <Link to="/nfe/importacao">
+                  <Package className="mr-2 h-4 w-4" />
+                  Importar NF-e
+                </Link>
+              </Button>
+            }
+          />
+        }
+      />
 
       {/* Diálogo de Detalhes/Edição */}
       <NfeImportDetailsDialog

@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ColaboradorSelector } from '@/components/forms/ColaboradorSelector'
-import { Calendar, CalendarIcon, User, Package, AlertTriangle } from 'lucide-react'
+import { Calendar, CalendarIcon, Package, AlertTriangle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { usePermissoes } from '@/contexts/PermissionsContext'
 
 import { supabase } from '@/lib/supabase'
 import { epiService, EPIAtribuicaoInsert } from '@/services/epiService'
@@ -35,8 +36,10 @@ interface EPIAtribuicaoDialogProps {
 
 export function EPIAtribuicaoDialog({ materialId, colaboradorId, onSuccess }: EPIAtribuicaoDialogProps) {
   const { toast } = useToast()
-  // TODO: Implementar sistema de usuário simplificado
-  const user = { id: 'temp-user-id' }
+  // Usuário logado, vindo do contexto de permissões. Antes havia um
+  // placeholder 'temp-user-id' aqui, que o banco rejeitava: atribuido_por é
+  // uuid e referencia usuarios.id.
+  const { usuario } = usePermissoes()
   const [loading, setLoading] = useState(false)
   const [materiais, setMateriais] = useState<Material[]>([])
   const [dataVencimento, setDataVencimento] = useState<Date>()
@@ -108,7 +111,7 @@ export function EPIAtribuicaoDialog({ materialId, colaboradorId, onSuccess }: EP
         quantidade_atribuida: formData.quantidade_atribuida,
         numero_ca: formData.numero_ca || null,
         observacoes: formData.observacoes || null,
-        atribuido_por: user?.id || null,
+        atribuido_por: usuario?.id ?? null,
         status: 'ativo'
       }
 

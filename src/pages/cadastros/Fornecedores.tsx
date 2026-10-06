@@ -1,21 +1,12 @@
 import { useState } from 'react'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { PlusCircle, MoreHorizontal, Edit, Trash2, Search, Building2, User } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { PlusCircle, Edit, Trash2, Building2 } from 'lucide-react'
+import { formatarCNPJ, formatarCPF } from '@/lib/dadosPessoais'
+import { PageHeader } from '@/components/ds/PageHeader'
+import { DataTable, type ColunaDataTable } from '@/components/ds/DataTable'
+import { StatusBadge } from '@/components/ds/StatusBadge'
+import { EmptyState, TableSkeleton } from '@/components/ds/EstadosPagina'
 import {
   Dialog,
   DialogContent,
@@ -58,28 +49,6 @@ const FornecedoresPage = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingFornecedor, setEditingFornecedor] = useState<Fornecedor | null>(null)
   const [deletingFornecedor, setDeletingFornecedor] = useState<Fornecedor | null>(null)
-
-  const filteredFornecedores = fornecedores.filter(fornecedor => {
-    const searchText = normalizeSearchText(search)
-    const searchDigits = onlyDigits(search)
-
-    if (!searchText) return true
-
-    const nome = normalizeSearchText(fornecedor.nome)
-    const email = normalizeSearchText(fornecedor.email)
-    const contato = normalizeSearchText(fornecedor.contato)
-    const tipoFornecimento = normalizeSearchText(fornecedor.tipo_fornecimento)
-    const cnpj = onlyDigits(fornecedor.cnpj)
-    const cpf = onlyDigits(fornecedor.cpf)
-
-    return (
-      nome.includes(searchText) ||
-      email.includes(searchText) ||
-      contato.includes(searchText) ||
-      tipoFornecimento.includes(searchText) ||
-      (searchDigits.length > 0 && (cnpj.includes(searchDigits) || cpf.includes(searchDigits)))
-    )
-  })
 
   const handleCreate = async (data: any) => {
     const result = await create(data)
@@ -127,141 +96,116 @@ const FornecedoresPage = () => {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Cadastro de Fornecedores</h1>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-        </div>
+      <div className="space-y-6">
+        <PageHeader
+          titulo="Fornecedores"
+          descricao="Fornecedores de materiais e serviços."
+          migalhas={[{ label: 'Cadastros' }, { label: 'Fornecedores' }]}
+        />
+        <TableSkeleton colunas={5} />
       </div>
     )
   }
 
+  const colunas: ColunaDataTable<any>[] = [
+    {
+      id: 'nome',
+      cabecalho: 'Fornecedor',
+      fixa: true,
+      semFiltro: true,
+      valor: (f) =>
+        `${f.nome ?? ''} ${f.cnpj ?? ''} ${f.cpf ?? ''} ${f.contato ?? ''} ${f.email ?? ''}`.trim(),
+      valorOrdenacao: (f) => f.nome ?? '',
+      celula: (f) => <span className="font-medium">{f.nome}</span>,
+    },
+    {
+      id: 'documento',
+      cabecalho: 'Documento',
+      semFiltro: true,
+      valor: (f) => (f.cnpj ? formatarCNPJ(f.cnpj) : f.cpf ? formatarCPF(f.cpf) : '—'),
+    },
+    {
+      id: 'tipo_fornecimento',
+      cabecalho: 'Tipo de fornecimento',
+      valor: (f) => f.tipo_fornecimento || '—',
+    },
+    {
+      id: 'contato',
+      cabecalho: 'Contato',
+      semFiltro: true,
+      valor: (f) => f.contato || f.email || '—',
+      celula: (f) => (
+        <div className="space-y-0.5">
+          {f.contato && <div className="truncate">{f.contato}</div>}
+          {f.email && <div className="text-xs text-muted-foreground">{f.email}</div>}
+          {!f.contato && !f.email && <span className="text-muted-foreground">—</span>}
+        </div>
+      ),
+    },
+    {
+      id: 'status',
+      cabecalho: 'Status',
+      valor: (f) => (f.ativo ? 'Ativo' : 'Inativo'),
+      celula: (f) => <StatusBadge status={f.ativo ? 'ativo' : 'inativo'} />,
+    },
+  ]
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Cadastro de Fornecedores</h1>
-        
+    <div className="space-y-6">
+      <PageHeader
+        titulo="Fornecedores"
+        descricao="Fornecedores de materiais e serviços."
+        migalhas={[{ label: 'Cadastros' }, { label: 'Fornecedores' }]}
+        acoes={
           <Button onClick={() => setIsCreateDialogOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Novo Fornecedor
+            Novo fornecedor
           </Button>
-        
-      </div>
+        }
+      />
 
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome, tipo de fornecimento, CNPJ/CPF ou email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8"
+      <DataTable
+        dados={fornecedores}
+        colunas={colunas}
+        idLinha={(f) => f.id}
+        chaveUrl="forn"
+        placeholderBusca="Buscar por nome, tipo, CNPJ/CPF ou e-mail..."
+        nomeArquivoCsv="fornecedores"
+        acoesLinha={(fornecedor) => (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title="Editar"
+              onClick={() => setEditingFornecedor(fornecedor)}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-destructive hover:text-destructive"
+              title="Excluir"
+              onClick={() => setDeletingFornecedor(fornecedor)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </>
+        )}
+        vazio={
+          <EmptyState
+            titulo="Nenhum fornecedor cadastrado"
+            icone={Building2}
+            acao={
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Novo fornecedor
+              </Button>
+            }
           />
-        </div>
-        <Badge variant="secondary">
-          {filteredFornecedores.length} fornecedor{filteredFornecedores.length !== 1 ? 'es' : ''}
-        </Badge>
-      </div>
-
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Fornecedor</TableHead>
-              <TableHead>Documento</TableHead>
-              <TableHead>Tipo de Fornecimento</TableHead>
-              <TableHead>Contato</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredFornecedores.length > 0 ? (
-              filteredFornecedores.map((fornecedor) => (
-                <TableRow key={fornecedor.id}>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      {fornecedor.cnpj ? (
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <User className="h-4 w-4 text-muted-foreground" />
-                      )}
-                      <div>
-                        <div className="font-medium">{fornecedor.nome}</div>
-                        {fornecedor.contato && (
-                          <div className="text-sm text-muted-foreground">{fornecedor.contato}</div>
-                        )}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {fornecedor.cnpj ? (
-                      <div>
-                        <div className="font-medium">CNPJ</div>
-                        <div className="text-sm">{formatCNPJ(fornecedor.cnpj)}</div>
-                      </div>
-                    ) : fornecedor.cpf ? (
-                      <div>
-                        <div className="font-medium">CPF</div>
-                        <div className="text-sm">{formatCPF(fornecedor.cpf)}</div>
-                      </div>
-                    ) : '-'}
-                  </TableCell>
-                  <TableCell>
-                    {fornecedor.tipo_fornecimento ? (
-                      <Badge variant="outline">{fornecedor.tipo_fornecimento}</Badge>
-                    ) : '-'}
-                  </TableCell>
-                  <TableCell>
-                    {fornecedor.telefone ? formatPhone(fornecedor.telefone) : '-'}
-                  </TableCell>
-                  <TableCell>{fornecedor.email || '-'}</TableCell>
-                  <TableCell>
-                    <Badge variant={fornecedor.ativo ? 'default' : 'secondary'}>
-                      {fornecedor.ativo ? 'Ativo' : 'Inativo'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        
-                          <DropdownMenuItem onClick={() => setEditingFornecedor(fornecedor)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Editar
-                          </DropdownMenuItem>
-                        
-                        
-                          <DropdownMenuItem 
-                            className="text-destructive"
-                            onClick={() => setDeletingFornecedor(fornecedor)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Excluir
-                          </DropdownMenuItem>
-                        
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center">
-                  {search ? 'Nenhum fornecedor encontrado com os critérios de busca.' : 'Nenhum fornecedor cadastrado.'}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+        }
+      />
 
       {/* Create Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

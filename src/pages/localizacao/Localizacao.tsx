@@ -1,20 +1,6 @@
 import { useState, useEffect } from 'react'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -32,7 +18,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { MoreHorizontal, PlusCircle, Map, Edit, Trash2, Tag, Search } from 'lucide-react'
+import { PlusCircle, Map, Edit, Trash2, Tag } from 'lucide-react'
+import { PageHeader } from '@/components/ds/PageHeader'
+import { DataTable, type ColunaDataTable } from '@/components/ds/DataTable'
+import { StatusBadge } from '@/components/ds/StatusBadge'
+import { EmptyState, TableSkeleton } from '@/components/ds/EstadosPagina'
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { useSupabaseTable } from '@/hooks/useSupabase'
@@ -121,11 +111,7 @@ const LocalizacaoPage = () => {
     fetchItemCounts()
   }, [localizacoes])
 
-  const filteredLocalizacoes = localizacoes?.filter(localizacao =>
-    localizacao.codigo?.toLowerCase().includes(search.toLowerCase()) ||
-    localizacao.nome?.toLowerCase().includes(search.toLowerCase()) ||
-    (localizacao.descricao && localizacao.descricao.toLowerCase().includes(search.toLowerCase()))
-  ) || []
+
 
   const handleUpdate = async (data: any) => {
     if (!editingLocalizacao) return
@@ -193,134 +179,125 @@ const LocalizacaoPage = () => {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Gestão de Localização</h1>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-        </div>
+      <div className="space-y-6">
+        <PageHeader
+          titulo="Localização"
+          descricao="Posições físicas do almoxarifado e itens armazenados."
+          migalhas={[{ label: 'Operação' }, { label: 'Localização' }]}
+        />
+        <TableSkeleton colunas={5} />
       </div>
     )
   }
 
+  const colunas: ColunaDataTable<any>[] = [
+    {
+      id: 'codigo',
+      cabecalho: 'Código',
+      fixa: true,
+      semFiltro: true,
+      valor: (l) => `${l.codigo ?? ''} ${l.nome ?? ''} ${l.descricao ?? ''}`.trim(),
+      valorOrdenacao: (l) => l.codigo ?? '',
+      celula: (l) => <span className="font-medium">{l.codigo}</span>,
+    },
+    {
+      id: 'nome',
+      cabecalho: 'Nome',
+      semFiltro: true,
+      valor: (l) => l.nome ?? '—',
+      celula: (l) => (
+        <div className="min-w-0">
+          <div className="truncate font-medium">{l.nome}</div>
+          {l.descricao && (
+            <div className="truncate text-xs text-muted-foreground" title={l.descricao}>
+              {l.descricao}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'posicao',
+      cabecalho: 'Posição',
+      valor: (l) => formatLocation(l) || '—',
+    },
+    {
+      id: 'itens',
+      cabecalho: 'Itens',
+      semFiltro: true,
+      alinhamento: 'right',
+      valor: (l) => String(itensCadastrados[l.id] || 0),
+      valorOrdenacao: (l) => itensCadastrados[l.id] || 0,
+    },
+    {
+      id: 'status',
+      cabecalho: 'Status',
+      valor: (l) => (l.ativo ? 'Ativo' : 'Inativo'),
+      celula: (l) => <StatusBadge status={l.ativo ? 'ativo' : 'inativo'} />,
+    },
+  ]
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Gestão de Localização</h1>
-        <div className="space-x-2">
-          <Button asChild variant="outline">
-            <Link to="/localizacao/mapa">
-              <Map className="mr-2 h-4 w-4" />
-              Ver Mapa Visual
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link to="/cadastros/localizacao">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Gerenciar Localizações
-            </Link>
-          </Button>
-        </div>
-      </div>
-      
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por código, nome ou descrição..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8"
+    <div className="space-y-6">
+      <PageHeader
+        titulo="Localização"
+        descricao="Posições físicas do almoxarifado e itens armazenados."
+        migalhas={[{ label: 'Operação' }, { label: 'Localização' }]}
+        acoes={
+          <>
+            <Button asChild variant="outline">
+              <Link to="/localizacao/mapa">
+                <Map className="mr-2 h-4 w-4" />
+                Ver mapa
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link to="/cadastros/localizacao">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Gerenciar localizações
+              </Link>
+            </Button>
+          </>
+        }
+      />
+
+      <DataTable
+        dados={localizacoes ?? []}
+        colunas={colunas}
+        idLinha={(l) => l.id}
+        chaveUrl="loc"
+        placeholderBusca="Buscar por código, nome ou descrição..."
+        nomeArquivoCsv="localizacoes"
+        acoesLinha={(localizacao) => (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title="Editar"
+              onClick={() => setEditingLocalizacao(localizacao)}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-destructive hover:text-destructive"
+              title="Excluir"
+              onClick={() => setDeletingLocalizacao(localizacao)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </>
+        )}
+        vazio={
+          <EmptyState
+            titulo="Nenhuma localização cadastrada"
+            descricao="Cadastre as posições do almoxarifado para localizar os materiais."
+            icone={Tag}
           />
-        </div>
-        <Badge variant="secondary">
-          {filteredLocalizacoes.length} localização{filteredLocalizacoes.length !== 1 ? 'ões' : ''}
-        </Badge>
-      </div>
-      
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Código</TableHead>
-              <TableHead>Nome</TableHead>
-              <TableHead>Localização</TableHead>
-              <TableHead>Itens</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredLocalizacoes.length > 0 ? (
-              filteredLocalizacoes.map((localizacao) => (
-                <TableRow key={localizacao.id}>
-                  <TableCell className="font-medium">{localizacao.codigo}</TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{localizacao.nome}</div>
-                      {localizacao.descricao && (
-                        <div className="text-sm text-muted-foreground">
-                          {localizacao.descricao.length > 50 
-                            ? `${localizacao.descricao.substring(0, 50)}...`
-                            : localizacao.descricao}
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      {formatLocation(localizacao) || '-'}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">
-                      {itensCadastrados[localizacao.id] || 0}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={localizacao.ativo ? 'default' : 'secondary'}>
-                      {localizacao.ativo ? 'Ativo' : 'Inativo'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="z-[10001]">
-                        <DropdownMenuItem onClick={() => setEditingLocalizacao(localizacao)}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleGenerateLabel(localizacao)}>
-                          <Tag className="mr-2 h-4 w-4" />
-                          Gerar Etiqueta
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-destructive"
-                          onClick={() => setDeletingLocalizacao(localizacao)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center">
-                  {search ? 'Nenhuma localização encontrada com os critérios de busca.' : 'Nenhuma localização cadastrada.'}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+        }
+      />
 
       {/* Edit Dialog */}
       <Dialog open={!!editingLocalizacao} onOpenChange={() => setEditingLocalizacao(null)}>
