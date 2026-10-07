@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AlertTriangle,
@@ -55,6 +55,21 @@ interface ResponsavelData {
   displayName?: string
 }
 
+/** Campos que a busca de material precisa trazer, num lugar só */
+const CAMPOS_MATERIAL =
+  'id, codigo, nome, unidade_medida, valor_unitario, estoque_atual, ponto_pedido, estoque_minimo'
+
+interface MaterialBusca {
+  id: string
+  codigo: string
+  nome: string
+  unidade_medida: string | null
+  valor_unitario: number | null
+  estoque_atual: number | null
+  ponto_pedido: number | null
+  estoque_minimo: number | null
+}
+
 interface ItemRetirada {
   id: string
   codigo: string
@@ -85,12 +100,20 @@ export const RetiradaAssistida = () => {
   // Passo 1
   const [responsavel, setResponsavel] = useState<ResponsavelData | undefined>()
   const [centroCustoId, setCentroCustoId] = useState('')
-  const [data, setData] = useState(() => new Date().toISOString().slice(0, 10))
+  // Data e hora, como no formulário completo: a hora da retirada importa.
+  // `toISOString` devolve UTC e empurraria o horário; aqui o valor é local.
+  const [data, setData] = useState(() => {
+    const agora = new Date()
+    agora.setMinutes(agora.getMinutes() - agora.getTimezoneOffset())
+    return agora.toISOString().slice(0, 16)
+  })
 
   // Passo 2
   const [itens, setItens] = useState<ItemRetirada[]>([])
   const [buscando, setBuscando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [termo, setTermo] = useState('')
+  const [sugestoes, setSugestoes] = useState<MaterialBusca[]>([])
 
   // Passo 3
   const [assinatura, setAssinatura] = useState<string | null>(null)
@@ -107,8 +130,52 @@ export const RetiradaAssistida = () => {
   )
 
   /**
-   * Procura o material pelo que foi bipado ou digitado. A ordem importa: o
-   * código de barras é o que o leitor manda, e é o único realmente único.
+   * Põe o material na retirada. Bipar (ou clicar) de novo soma uma unidade: é
+   * como o conferente conta quando passa várias peças iguais.
+   */
+  const adicionarMaterial = useCallback(
+    (material: MaterialBusca) => {
+      const saldo = material.estoque_atual ?? 0
+      const existente = itens.find((item) => item.id === material.id)
+
+      if (existente && existente.quantidade >= saldo) {
+        setAviso(
+          `${material.nome} tem apenas ${saldo} em estoque; a quantidade não foi aumentada.`,
+        )
+        return
+      }
+      if (!existente && saldo <= 0) {
+        setAviso(`${material.nome} está com estoque zerado.`)
+        return
+      }
+
+      setAviso(null)
+      setItens((atuais) =>
+        atuais.some((item) => item.id === material.id)
+          ? atuais.map((item) =>
+              item.id === material.id ? { ...item, quantidade: item.quantidade + 1 } : item,
+            )
+          : [
+              ...atuais,
+              {
+                id: material.id,
+                codigo: material.codigo,
+                nome: material.nome,
+                unidade: material.unidade_medida,
+                valorUnitario: material.valor_unitario ?? 0,
+                estoqueAtual: saldo,
+                pontoPedido: material.ponto_pedido ?? material.estoque_minimo ?? null,
+                quantidade: 1,
+              },
+            ],
+      )
+    },
+    [itens],
+  )
+
+  /**
+   * Caminho do leitor e do Enter: aqui o código precisa casar com um material
+   * só. O código de barras é o que o leitor manda, e é o único realmente único.
    */
   const adicionarPorCodigo = useCallback(
     async (codigo: string) => {
@@ -117,12 +184,8 @@ export const RetiradaAssistida = () => {
       try {
         const { data: achados, error } = await supabase
           .from('materiais_equipamentos')
-          .select(
-            'id, codigo, nome, unidade_medida, valor_unitario, estoque_atual, ponto_pedido, estoque_minimo, ativo',
-          )
-          .or(
-            `codigo_barras.eq.${codigo},codigo.eq.${codigo},nome.ilike.%${codigo}%`,
-          )
+          .select(CAMPOS_MATERIAL)
+          .or(`codigo_barras.eq.${codigo},codigo.eq.${codigo},nome.ilike.%${codigo}%`)
           .eq('ativo', true)
           .limit(2)
 
@@ -133,58 +196,53 @@ export const RetiradaAssistida = () => {
           return
         }
         if (achados.length > 1) {
-          setAviso(
-            `"${codigo}" casou com mais de um material. Bipe o código de barras ou informe o código exato.`,
-          )
+          setAviso(`"${codigo}" casou com mais de um material. Escolha na lista abaixo.`)
           return
         }
 
-        const material = achados[0]
-
-        setItens((atuais) => {
-          const existente = atuais.find((item) => item.id === material.id)
-
-          // Bipar o mesmo item de novo soma uma unidade: é como o conferente
-          // conta quando passa várias peças iguais.
-          if (existente) {
-            if (existente.quantidade >= (material.estoque_atual ?? 0)) {
-              setAviso(
-                `${material.nome} tem apenas ${material.estoque_atual ?? 0} em estoque; a quantidade não foi aumentada.`,
-              )
-              return atuais
-            }
-            return atuais.map((item) =>
-              item.id === material.id ? { ...item, quantidade: item.quantidade + 1 } : item,
-            )
-          }
-
-          if ((material.estoque_atual ?? 0) <= 0) {
-            setAviso(`${material.nome} está com estoque zerado.`)
-            return atuais
-          }
-
-          return [
-            ...atuais,
-            {
-              id: material.id,
-              codigo: material.codigo,
-              nome: material.nome,
-              unidade: material.unidade_medida,
-              valorUnitario: material.valor_unitario ?? 0,
-              estoqueAtual: material.estoque_atual ?? 0,
-              pontoPedido: material.ponto_pedido ?? material.estoque_minimo ?? null,
-              quantidade: 1,
-            },
-          ]
-        })
+        adicionarMaterial(achados[0] as MaterialBusca)
+        setSugestoes([])
+        setTermo('')
       } catch (erro) {
         setAviso(erro instanceof Error ? erro.message : 'Erro ao buscar o material.')
       } finally {
         setBuscando(false)
       }
     },
-    [],
+    [adicionarMaterial],
   )
+
+  /**
+   * Busca ao vivo: a lista aparece conforme se digita, sem precisar de Enter.
+   * O Enter e o leitor continuam valendo para o código exato.
+   */
+  useEffect(() => {
+    const procurado = termo.trim()
+    if (procurado.length < 2) {
+      setSugestoes([])
+      return
+    }
+
+    let cancelado = false
+    const id = setTimeout(async () => {
+      const { data: achados } = await supabase
+        .from('materiais_equipamentos')
+        .select(CAMPOS_MATERIAL)
+        .or(
+          `nome.ilike.%${procurado}%,codigo.ilike.%${procurado}%,codigo_barras.ilike.%${procurado}%`,
+        )
+        .eq('ativo', true)
+        .order('nome')
+        .limit(8)
+
+      if (!cancelado) setSugestoes((achados as MaterialBusca[]) ?? [])
+    }, 250)
+
+    return () => {
+      cancelado = true
+      clearTimeout(id)
+    }
+  }, [termo])
 
   const mudarQuantidade = (id: string, quantidade: number) => {
     setItens((atuais) =>
@@ -336,10 +394,10 @@ export const RetiradaAssistida = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="data-retirada">Data</Label>
+              <Label htmlFor="data-retirada">Data e hora</Label>
               <Input
                 id="data-retirada"
-                type="date"
+                type="datetime-local"
                 value={data}
                 onChange={(e) => setData(e.target.value)}
               />
@@ -352,11 +410,57 @@ export const RetiradaAssistida = () => {
         <div className="space-y-4">
           <Card>
             <CardContent className="space-y-3 p-6">
-              <LeitorCodigo onLer={adicionarPorCodigo} />
+              <LeitorCodigo
+                onLer={adicionarPorCodigo}
+                onDigitar={setTermo}
+                valor={termo}
+              />
               <p className="text-xs text-muted-foreground">
-                Bipar o mesmo item de novo soma uma unidade. Sem leitor, digite o código de barras,
-                o código do material ou parte do nome e aperte Enter.
+                Bipar o mesmo item de novo soma uma unidade. Sem leitor, digite o nome ou o código:
+                a lista aparece conforme você escreve.
               </p>
+
+              {/* Busca ao vivo: clicar já põe o item na retirada */}
+              {sugestoes.length > 0 && (
+                <ul className="divide-y rounded-md border">
+                  {sugestoes.map((material) => {
+                    const saldo = material.estoque_atual ?? 0
+                    const jaNaLista = itens.some((item) => item.id === material.id)
+                    return (
+                      <li key={material.id}>
+                        <button
+                          type="button"
+                          className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted/60 disabled:opacity-50"
+                          disabled={saldo <= 0}
+                          onClick={() => {
+                            adicionarMaterial(material)
+                            setTermo('')
+                            setSugestoes([])
+                          }}
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate text-ds-table font-medium">
+                              {material.nome}
+                            </span>
+                            <span className="block text-xs text-muted-foreground">
+                              {material.codigo}
+                              {jaNaLista && ' · já está na retirada'}
+                            </span>
+                          </span>
+                          <span
+                            className={
+                              'shrink-0 text-xs tabular-nums ' +
+                              (saldo <= 0 ? 'text-destructive' : 'text-muted-foreground')
+                            }
+                          >
+                            {saldo <= 0 ? 'sem estoque' : `${saldo} ${material.unidade_medida ?? ''}`}
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
               {buscando && (
                 <div className="flex items-center gap-2 text-ds-body text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />

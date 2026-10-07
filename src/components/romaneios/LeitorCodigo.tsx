@@ -32,6 +32,10 @@ const temDetector = () =>
 interface LeitorCodigoProps {
   /** Chamado a cada código lido (bipado, digitado ou visto pela câmera) */
   onLer: (codigo: string) => void
+  /** Chamado a cada tecla, para quem quiser buscar enquanto se digita */
+  onDigitar?: (texto: string) => void
+  /** Texto do campo, quando quem usa o componente precisa limpá-lo de fora */
+  valor?: string
   placeholder?: string
   /** Mantém o foco no campo para o leitor físico funcionar sem clique */
   autoFoco?: boolean
@@ -39,10 +43,18 @@ interface LeitorCodigoProps {
 
 export const LeitorCodigo = ({
   onLer,
-  placeholder = 'Bipe o código de barras ou digite e aperte Enter',
+  onDigitar,
+  valor,
+  placeholder = 'Bipe o código de barras, ou digite o nome ou o código',
   autoFoco = true,
 }: LeitorCodigoProps) => {
-  const [texto, setTexto] = useState('')
+  const [textoInterno, setTextoInterno] = useState('')
+  const texto = valor ?? textoInterno
+
+  const escrever = (novo: string) => {
+    setTextoInterno(novo)
+    onDigitar?.(novo)
+  }
   const [camera, setCamera] = useState(false)
   const [iniciandoCamera, setIniciandoCamera] = useState(false)
   const [erroCamera, setErroCamera] = useState<string | null>(null)
@@ -134,12 +146,12 @@ export const LeitorCodigo = ({
             ref={campoRef}
             autoFocus={autoFoco}
             value={texto}
-            onChange={(e) => setTexto(e.target.value)}
+            onChange={(e) => escrever(e.target.value)}
             onKeyDown={(e) => {
               if (e.key !== 'Enter') return
               e.preventDefault()
               emitir(texto)
-              setTexto('')
+              escrever('')
             }}
             // O leitor físico perde o bipe se o foco escapar
             onBlur={() => {

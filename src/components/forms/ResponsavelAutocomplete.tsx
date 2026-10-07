@@ -200,6 +200,16 @@ const ResponsavelAutocomplete = ({
           onBlur={handleBlur}
           placeholder={placeholder}
           disabled={disabled}
+          // O autocomplete do navegador cobria a lista de colaboradores com
+          // e-mails salvos. Aqui a única sugestão válida é a do sistema.
+          autoComplete="off"
+          name="responsavel-busca"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={showSuggestions && filteredColaboradores.length > 0}
+          data-lpignore="true"
+          data-1p-ignore="true"
+          data-form-type="other"
           className={`pr-8 ${showSuggestions && filteredColaboradores.length > 0 ? 'border-blue-300 ring-1 ring-blue-200' : ''}`}
         />
         
