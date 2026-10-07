@@ -98,3 +98,9 @@ integrity_check.md
 architecture_discovery.md
 directories.txt
 tatus
+
+# Chave de serviço da carga do sistema antigo
+.env.carga
+
+# Dados gerados pela carga do sistema antigo (3 MB, regeneráveis pelo gerar-dados.py)
+scripts/carga-legado/dados/
