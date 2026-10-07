@@ -39,7 +39,10 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useToast } from '@/components/ui/use-toast'
-import { KeyRound, Loader2, ShieldAlert, Trash2, UserPlus } from 'lucide-react'
+import { Eye, EyeOff, KeyRound, Loader2, ShieldAlert, Trash2, UserPlus } from 'lucide-react'
+
+/** O mesmo mínimo exigido pela função de administração (Edge Function) */
+const MINIMO_SENHA = 8
 import { supabase } from '@/lib/supabase'
 import { useAdminUsuarios, type UsuarioAdmin } from '@/hooks/useAdminUsuarios'
 import { usePerfisAcesso } from '@/hooks/usePerfisAcesso'
@@ -74,6 +77,7 @@ export const UsuariosAdmin = () => {
   const [salvando, setSalvando] = useState(false)
   const [senhaUsuario, setSenhaUsuario] = useState<UsuarioAdmin | null>(null)
   const [novaSenha, setNovaSenha] = useState('')
+  const [mostrarSenha, setMostrarSenha] = useState(false)
   const [excluindo, setExcluindo] = useState<UsuarioAdmin | null>(null)
 
   const perfisAtivos = useMemo(() => perfis.filter((p) => p.ativo), [perfis])
@@ -112,10 +116,13 @@ export const UsuariosAdmin = () => {
       })
       return
     }
-    if (form.senha.length < 6) {
+    // O mesmo mínimo que a função de administração exige. Estavam diferentes
+    // (6 aqui, 8 lá): a tela deixava salvar, o servidor recusava e a senha não
+    // mudava — fácil de passar despercebido e achar que trocou.
+    if (form.senha.length < MINIMO_SENHA) {
       toast({
         title: 'Senha muito curta',
-        description: 'A senha deve ter ao menos 6 caracteres.',
+        description: `A senha deve ter ao menos ${MINIMO_SENHA} caracteres.`,
         variant: 'destructive',
       })
       return
@@ -179,10 +186,10 @@ export const UsuariosAdmin = () => {
 
   const confirmarSenha = async () => {
     if (!senhaUsuario) return
-    if (novaSenha.length < 6) {
+    if (novaSenha.length < MINIMO_SENHA) {
       toast({
         title: 'Senha muito curta',
-        description: 'A senha deve ter ao menos 6 caracteres.',
+        description: `A senha deve ter ao menos ${MINIMO_SENHA} caracteres.`,
         variant: 'destructive',
       })
       return
@@ -371,14 +378,25 @@ export const UsuariosAdmin = () => {
             </div>
             <div className="space-y-1">
               <Label htmlFor="nova-senha-usuario">Senha inicial</Label>
-              <Input
-                id="nova-senha-usuario"
-                type="password"
-                value={form.senha}
-                onChange={(e) => setForm({ ...form, senha: e.target.value })
-                }
-                placeholder="Mínimo de 6 caracteres"
-              />
+              <div className="relative">
+                <Input
+                  id="nova-senha-usuario"
+                  type={mostrarSenha ? 'text' : 'password'}
+                  value={form.senha}
+                  onChange={(e) => setForm({ ...form, senha: e.target.value.trim() })}
+                  placeholder={`Mínimo de ${MINIMO_SENHA} caracteres`}
+                  className="pr-10"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label={mostrarSenha ? 'Esconder senha' : 'Mostrar senha'}
+                >
+                  {mostrarSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
             <div className="space-y-1">
               <Label>Perfil de acesso</Label>
@@ -449,13 +467,30 @@ export const UsuariosAdmin = () => {
           </DialogHeader>
           <div className="space-y-1">
             <Label htmlFor="senha-reset">Nova senha</Label>
-            <Input
-              id="senha-reset"
-              type="password"
-              value={novaSenha}
-              onChange={(e) => setNovaSenha(e.target.value)}
-              placeholder="Mínimo de 6 caracteres"
-            />
+            <div className="relative">
+              <Input
+                id="senha-reset"
+                type={mostrarSenha ? 'text' : 'password'}
+                value={novaSenha}
+                // Espaço no começo ou no fim é invisível aqui e some na hora de
+                // digitar no login — a pessoa jura que a senha está certa.
+                onChange={(e) => setNovaSenha(e.target.value.trim())}
+                placeholder={`Mínimo de ${MINIMO_SENHA} caracteres`}
+                className="pr-10"
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setMostrarSenha((v) => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={mostrarSenha ? 'Esconder senha' : 'Mostrar senha'}
+              >
+                {mostrarSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Anote a senha antes de salvar: ela não é exibida depois.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSenhaUsuario(null)}>
