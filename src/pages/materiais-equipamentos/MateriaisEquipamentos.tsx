@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Edit, Trash2, Package, Wrench, Eye, RefreshCw, AlertTriangle, Copy, Tag } from 'lucide-react'
+import { PlusCircle, Edit, Trash2, Package, Wrench, Eye, RefreshCw, AlertTriangle, Copy, Tag, FileSpreadsheet } from 'lucide-react'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { verificarStatusCalibracao } from '@/utils/calibracao'
 import {
@@ -39,10 +39,12 @@ import { useAbrirItemDaUrl } from '@/hooks/useAbrirItemDaUrl'
 
 import type { MaterialEquipamentoFormData } from '@/lib/validations'
 import { gerarEtiquetasPDF } from '@/utils/etiquetasPdf'
+import { ImportarCSVDialog } from '@/components/materiais-equipamentos/ImportarCSVDialog'
 import { useToast } from '@/components/ui/use-toast'
 
 const MateriaisEquipamentosPage = () => {
   const { toast } = useToast()
+  const [importarAberto, setImportarAberto] = useState(false)
   const { 
     materiaisEquipamentos, 
     loading, 
@@ -465,6 +467,12 @@ const MateriaisEquipamentosPage = () => {
               <RefreshCw className="mr-2 h-4 w-4" />
               Atualizar
             </Button>
+            {podeEditar && (
+              <Button variant="outline" size="sm" onClick={() => setImportarAberto(true)}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Editar em lote
+              </Button>
+            )}
             {podeCriar && (
               <Button onClick={() => setIsCreateDialogOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -799,6 +807,14 @@ const MateriaisEquipamentosPage = () => {
         materialId={materialWithDependencies?.id}
         materialName={materialWithDependencies?.nome}
         onDeleted={handleDependenciesResolved}
+      />
+
+      {/* RF-11: edição em lote por planilha */}
+      <ImportarCSVDialog
+        aberto={importarAberto}
+        materiais={materiaisEquipamentos as any[]}
+        onFechar={() => setImportarAberto(false)}
+        onImportado={() => fetchMateriais({ includeInactive: showInactive })}
       />
 
     </div>

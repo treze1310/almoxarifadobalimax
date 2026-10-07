@@ -32,6 +32,7 @@ export type AcaoAuditavel =
   | 'nfe.conferir'
   | 'nfe.lancar_estoque'
   | 'romaneio.retirada_assistida'
+  | 'material.importar_csv'
   | 'solicitacoes.reposicao_automatica'
 
 interface RegistroAuditoria {

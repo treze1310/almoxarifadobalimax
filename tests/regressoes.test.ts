@@ -11,6 +11,14 @@ import {
 import { STATUS, normalizarStatus, rotuloStatus } from '../src/lib/status'
 import { materialEquipamentoSchema } from '../src/lib/validations'
 import { barrasDoCodigo, code128b, larguraEmModulos, podeCodificar } from '../src/lib/code128'
+import {
+  detectarSeparador,
+  escreverCSV,
+  lerBooleano,
+  lerCSV,
+  lerCSVComCabecalho,
+  lerNumero,
+} from '../src/lib/csv'
 
 /**
  * Testes das regressões reais encontradas no sistema. Cada bloco cobre um bug
@@ -339,5 +347,72 @@ describe('código de barras das etiquetas (Code 128B)', () => {
         expect(barra.inicio).toBeGreaterThan(anterior.inicio + anterior.largura)
       }
     })
+  })
+})
+
+describe('leitura de planilha para edição em lote (RF-11)', () => {
+  test('lê o CSV do Excel em português: BOM, ponto e vírgula e CRLF', () => {
+    const arquivo = '\uFEFFcodigo;nome;estoque_minimo\r\n10017;Protetor;20\r\n10018;Luva;10\r\n'
+    const { colunas, linhas } = lerCSVComCabecalho(arquivo)
+    expect(colunas).toEqual(['codigo', 'nome', 'estoque_minimo'])
+    expect(linhas).toHaveLength(2)
+    expect(linhas[0]).toEqual({ codigo: '10017', nome: 'Protetor', estoque_minimo: '20' })
+  })
+
+  test('o separador é descoberto, inclusive com vírgula', () => {
+    expect(detectarSeparador('a;b;c')).toBe(';')
+    expect(detectarSeparador('a,b,c')).toBe(',')
+    expect(detectarSeparador('a\tb\tc')).toBe('\t')
+  })
+
+  // O nome do item é o campo que mais tem ponto e vírgula e aspas
+  test('respeita aspas, separador dentro do campo e aspas duplicadas', () => {
+    const linhas = lerCSV('codigo;nome\n1;"Luva; de raspa"\n2;"Óculos ""UV"""')
+    expect(linhas[1]).toEqual(['1', 'Luva; de raspa'])
+    expect(linhas[2]).toEqual(['2', 'Óculos "UV"'])
+  })
+
+  test('quebra de linha dentro do campo entre aspas não divide a linha', () => {
+    const linhas = lerCSV('codigo;nome\n1;"Luva\ncomprida"\n2;Bota')
+    expect(linhas).toHaveLength(3)
+    expect(linhas[1][1]).toBe('Luva\ncomprida')
+  })
+
+  test('cabeçalho com acento e maiúscula chega na mesma chave', () => {
+    const { colunas } = lerCSVComCabecalho('Código;Estoque Mínimo;PONTO_PEDIDO\n1;2;3')
+    expect(colunas).toEqual(['codigo', 'estoque_minimo', 'ponto_pedido'])
+  })
+
+  // Vírgula decimal é o que o Excel em português grava
+  test('número aceita vírgula decimal e ponto de milhar', () => {
+    expect(lerNumero('20')).toBe(20)
+    expect(lerNumero('12,50')).toBe(12.5)
+    expect(lerNumero('1.234,56')).toBe(1234.56)
+    expect(lerNumero('')).toBeNull()
+    expect(Number.isNaN(lerNumero('abc') as number)).toBe(true)
+  })
+
+  test('sim/não da planilha vira booleano, e o resto vira nulo', () => {
+    expect(lerBooleano('sim')).toBe(true)
+    expect(lerBooleano('SIM')).toBe(true)
+    expect(lerBooleano('x')).toBe(true)
+    expect(lerBooleano('não')).toBe(false)
+    expect(lerBooleano('0')).toBe(false)
+    expect(lerBooleano('')).toBeNull()
+    expect(lerBooleano('talvez')).toBeNull()
+  })
+
+  test('o que é escrito volta igual na leitura', () => {
+    const csv = escreverCSV(
+      ['codigo', 'nome'],
+      [['10017', 'Luva; de raspa'], ['10018', 'Óculos "UV"']],
+    )
+    const { linhas } = lerCSVComCabecalho(csv)
+    expect(linhas[0].nome).toBe('Luva; de raspa')
+    expect(linhas[1].nome).toBe('Óculos "UV"')
+  })
+
+  test('linhas em branco no fim do arquivo são descartadas', () => {
+    expect(lerCSV('codigo;nome\n1;Luva\n\n;\n')).toHaveLength(2)
   })
 })

@@ -35,6 +35,7 @@ const ROTULOS: Record<string, string> = {
   'nfe.conferir': 'NF-e conferida',
   'nfe.lancar_estoque': 'NF-e lançada no estoque',
   'romaneio.retirada_assistida': 'Retirada assistida concluída',
+  'material.importar_csv': 'Edição em lote por planilha',
   'solicitacoes.reposicao_automatica': 'Solicitação de reposição automática',
 }
 
