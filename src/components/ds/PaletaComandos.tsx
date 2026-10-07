@@ -40,8 +40,8 @@ interface Grupos {
 const vazio: Grupos = { materiais: [], romaneios: [], solicitacoes: [], colaboradores: [] }
 
 const ATALHOS = [
-  { titulo: 'Retirada assistida (bipar e assinar)', destino: '/romaneios/retirada', modulo: 'romaneios', acao: 'create' as const, icone: ScanLine },
-  { titulo: 'Novo romaneio de retirada', destino: '/romaneios/novo?tipo=retirada', modulo: 'romaneios', acao: 'create' as const, icone: FileText },
+  { titulo: 'Nova retirada (bipar e assinar)', destino: '/romaneios/retirada', modulo: 'romaneios', acao: 'create' as const, icone: ScanLine },
+  { titulo: 'Retirada avançada (formulário completo)', destino: '/romaneios/novo?tipo=retirada', modulo: 'romaneios', acao: 'create' as const, icone: FileText },
   { titulo: 'Nova solicitação de compra', destino: '/solicitacoes/nova', modulo: 'solicitacoes', acao: 'create' as const, icone: ShoppingCart },
   { titulo: 'Materiais e equipamentos', destino: '/materiais-equipamentos', modulo: 'materiais', acao: 'read' as const, icone: Wrench },
   { titulo: 'Colaboradores', destino: '/cadastros/colaboradores', modulo: 'colaboradores', acao: 'read' as const, icone: BookUser },

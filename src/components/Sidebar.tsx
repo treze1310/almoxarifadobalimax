@@ -57,7 +57,7 @@ const gruposDeMenu = [
       { title: 'Dashboard', href: '/dashboard', icon: Home, modulo: 'dashboard' },
       { title: 'Romaneios', href: '/romaneios', icon: FileText, modulo: 'romaneios' },
       {
-        title: 'Retirada assistida',
+        title: 'Nova retirada',
         href: '/romaneios/retirada',
         icon: ScanLine,
         modulo: 'romaneios',

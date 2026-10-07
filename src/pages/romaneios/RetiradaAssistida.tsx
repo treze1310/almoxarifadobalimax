@@ -99,6 +99,7 @@ export const RetiradaAssistida = () => {
 
   // Passo 1
   const [responsavel, setResponsavel] = useState<ResponsavelData | undefined>()
+  const [centroCustoOrigemId, setCentroCustoOrigemId] = useState('')
   const [centroCustoId, setCentroCustoId] = useState('')
   // Data e hora, como no formulário completo: a hora da retirada importa.
   // `toISOString` devolve UTC e empurraria o horário; aqui o valor é local.
@@ -118,6 +119,26 @@ export const RetiradaAssistida = () => {
   // Passo 3
   const [assinatura, setAssinatura] = useState<string | null>(null)
   const [observacoes, setObservacoes] = useState('')
+
+  // A origem de uma retirada é sempre o almoxarifado; vem preenchida e pode ser
+  // trocada. Sem isso o romaneio sai sem origem e destoa dos antigos nos
+  // relatórios por centro de custo.
+  useEffect(() => {
+    let cancelado = false
+    supabase
+      .from('centros_custo')
+      .select('id')
+      .or('descricao.ilike.%almoxarifado%,codigo.ilike.%almox%')
+      .eq('ativo', true)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data: almoxarifado }) => {
+        if (!cancelado && almoxarifado?.id) setCentroCustoOrigemId((atual) => atual || almoxarifado.id)
+      })
+    return () => {
+      cancelado = true
+    }
+  }, [])
 
   const valorTotal = useMemo(
     () => itens.reduce((soma, item) => soma + item.valorUnitario * item.quantidade, 0),
@@ -271,6 +292,7 @@ export const RetiradaAssistida = () => {
         colaborador_id: responsavel?.colaborador_id,
         responsavel_nome: responsavel?.type === 'nome' ? responsavel.nome : undefined,
         responsavel_retirada: responsavel?.displayName || responsavel?.nome || '',
+        centro_custo_origem_id: centroCustoOrigemId || undefined,
         centro_custo_destino_id: centroCustoId,
         observacoes: observacoes || undefined,
         // 'aprovado' faz o estoqueService dar a baixa no estoque
@@ -376,8 +398,8 @@ export const RetiradaAssistida = () => {
 
       {passo === 1 && (
         <Card>
-          <CardContent className="grid grid-cols-1 gap-4 p-6 md:grid-cols-2">
-            <div className="space-y-2 md:col-span-2">
+          <CardContent className="grid grid-cols-1 gap-4 p-6 md:grid-cols-3">
+            <div className="space-y-2 md:col-span-3">
               <Label>Responsável pela retirada</Label>
               <ResponsavelAutocomplete value={responsavel} onChange={setResponsavel} />
               <p className="text-xs text-muted-foreground">
@@ -386,8 +408,20 @@ export const RetiradaAssistida = () => {
             </div>
 
             <div className="space-y-2">
+              <Label>Centro de custo de origem</Label>
+              <CentroCustoSelector
+                label="Centro de custo de origem"
+                placeholder="De onde sai"
+                value={centroCustoOrigemId}
+                onChange={setCentroCustoOrigemId}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Centro de custo de destino</Label>
               <CentroCustoSelector
                 label="Centro de custo de destino"
+                placeholder="Para onde vai"
                 value={centroCustoId}
                 onChange={setCentroCustoId}
               />

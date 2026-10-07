@@ -435,7 +435,9 @@ const RomaneiosPage = () => {
         migalhas={[{ label: 'Operação' }, { label: 'Romaneios' }]}
         acoes={
           <>
-            <Link to="/romaneios/novo?tipo=retirada">
+            {/* A retirada do dia a dia passa pelo assistente; o formulário
+                completo continua acessível como modo avançado. */}
+            <Link to="/romaneios/retirada">
               <Button>
                 <PlusSquare className="mr-2 h-4 w-4" />
                 Nova retirada
@@ -446,6 +448,9 @@ const RomaneiosPage = () => {
                 <ArrowLeftRight className="mr-2 h-4 w-4" />
                 Nova devolução
               </Button>
+            </Link>
+            <Link to="/romaneios/novo?tipo=retirada">
+              <Button variant="ghost">Retirada avançada</Button>
             </Link>
           </>
         }
@@ -467,7 +472,7 @@ const RomaneiosPage = () => {
             descricao="Crie a primeira retirada para começar a movimentar materiais."
             icone={FileText}
             acao={
-              <Link to="/romaneios/novo?tipo=retirada">
+              <Link to="/romaneios/retirada">
                 <Button>
                   <PlusSquare className="mr-2 h-4 w-4" />
                   Nova retirada

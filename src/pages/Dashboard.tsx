@@ -305,10 +305,10 @@ const DashboardPage = () => {
 
   const quickActions = [
     {
-      title: 'Novo Romaneio',
-      description: 'Criar retirada de material',
+      title: 'Nova Retirada',
+      description: 'Bipar os itens e colher a assinatura',
       icon: Plus,
-      href: '/romaneios/novo?tipo=retirada',
+      href: '/romaneios/retirada',
       color: 'bg-blue-500 hover:bg-blue-600',
     },
     {
