@@ -52,6 +52,72 @@ export function useMateriaisEquipamentos() {
     }
   }, [])
 
+  /**
+   * Busca uma página de materiais direto no banco (RNF-01).
+   *
+   * A tela de materiais abre para procurar um item específico, então a busca
+   * é o caminho principal: em vez de baixar os 2.209 itens para filtrar no
+   * navegador, o banco devolve só a página pedida e o total.
+   */
+  const buscarPagina = useCallback(
+    async (consulta: {
+      busca?: string
+      pagina?: number
+      tamanhoPagina?: number
+      ordenarPor?: string
+      ascendente?: boolean
+      filtros?: Record<string, string[]>
+      /** Como na tela: marcado mostra APENAS os inativos */
+      apenasInativos?: boolean
+    }) => {
+      const pagina = Math.max(1, consulta.pagina ?? 1)
+      const tamanho = consulta.tamanhoPagina ?? 25
+      const de = (pagina - 1) * tamanho
+
+      let query = supabase
+        .from('materiais_equipamentos')
+        .select(
+          `
+            id, codigo, nome, tipo, categoria, unidade_medida, modelo,
+            estoque_atual, estoque_minimo, estoque_maximo, ponto_pedido,
+            reposicao_automatica, precisa_repor, situacao_estoque,
+            valor_unitario, codigo_barras, status, ativo, is_epi, validade_ca,
+            requer_calibracao, proxima_calibracao, frequencia_calibracao_meses,
+            marca_id, localizacao_id, centro_custo_id,
+            marcas:marca_id (nome),
+            localizacao:localizacao_id (codigo, nome),
+            centros_custo:centro_custo_id (codigo, descricao, empresas:empresa_id(nome))
+          `,
+          { count: 'exact' },
+        )
+        .order(consulta.ordenarPor || 'codigo', { ascending: consulta.ascendente ?? true })
+        .range(de, de + tamanho - 1)
+
+      query = query.eq('ativo', !consulta.apenasInativos)
+
+      const termo = (consulta.busca ?? '').trim()
+      if (termo) {
+        // Código, código de barras e nome são por onde se procura um item
+        const padrao = `%${termo}%`
+        query = query.or(
+          `codigo.ilike.${padrao},nome.ilike.${padrao},codigo_barras.ilike.${padrao},modelo.ilike.${padrao}`,
+        )
+      }
+
+      for (const [coluna, valores] of Object.entries(consulta.filtros ?? {})) {
+        if (valores.length > 0) query = query.in(coluna, valores)
+      }
+
+      const { data, error, count } = await query
+      if (error) {
+        toast({ title: 'Erro ao buscar', description: error.message, variant: 'destructive' })
+        return { data: [] as any[], total: 0 }
+      }
+      return { data: (data as any[]) ?? [], total: count ?? 0 }
+    },
+    [toast],
+  )
+
   const fetchMateriais = useCallback(async (options?: {
     search?: string
     tipo?: 'material' | 'equipamento'
@@ -673,6 +739,7 @@ export function useMateriaisEquipamentos() {
     movimentacoes,
     loading,
     fetchMateriais,
+    buscarPagina,
     getMaterialById,
     createMaterial,
     updateMaterial,

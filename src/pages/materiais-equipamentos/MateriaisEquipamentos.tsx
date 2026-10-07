@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { PlusCircle, Edit, Trash2, Package, Wrench, Eye, RefreshCw, AlertTriangle, Copy, Tag, FileSpreadsheet } from 'lucide-react'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
@@ -31,12 +31,12 @@ import { useMateriaisEquipamentos } from '@/hooks/useMateriaisEquipamentos'
 import { useCenteredDialog } from '@/hooks/useCenteredDialog'
 import { usePermissoes } from '@/contexts/PermissionsContext'
 import { PageHeader } from '@/components/ds/PageHeader'
-import { DataTable, type ColunaDataTable } from '@/components/ds/DataTable'
+import { DataTable, type ColunaDataTable, type ConsultaServidor } from '@/components/ds/DataTable'
 import { StatusBadge } from '@/components/ds/StatusBadge'
 import { EmptyState, TableSkeleton } from '@/components/ds/EstadosPagina'
 import { useSearchParams } from 'react-router-dom'
-import { useAbrirItemDaUrl } from '@/hooks/useAbrirItemDaUrl'
 import { supabase } from '@/lib/supabase'
+import { buscarTodasAsPaginas } from '@/lib/consultaPaginada'
 
 import type { MaterialEquipamentoFormData } from '@/lib/validations'
 import { gerarEtiquetasPDF } from '@/utils/etiquetasPdf'
@@ -46,16 +46,38 @@ import { useToast } from '@/components/ui/use-toast'
 const MateriaisEquipamentosPage = () => {
   const { toast } = useToast()
   const [importarAberto, setImportarAberto] = useState(false)
+  // A planilha de edição em lote traz todos os itens, não só a página aberta
+  const [materiaisParaPlanilha, setMateriaisParaPlanilha] = useState<any[]>([])
   const { 
-    materiaisEquipamentos, 
     loading, 
     fetchMateriais,
+    buscarPagina,
     createMaterial, 
     updateMaterial, 
     deleteMaterial,
     checkMaterialDependencies,
     deleteMaterialWithDependencies
   } = useMateriaisEquipamentos()
+
+  /**
+   * A tela abre para procurar um item específico, então busca, filtros,
+   * ordenação e paginação acontecem no banco (RNF-01): chegam 25 linhas por
+   * vez, e não os 2.209 itens do cadastro.
+   */
+  const [paginaDeDados, setPaginaDeDados] = useState<{ dados: any[]; total: number }>({
+    dados: [],
+    total: 0,
+  })
+  const [carregandoPagina, setCarregandoPagina] = useState(true)
+  const [consulta, setConsulta] = useState<ConsultaServidor | null>(null)
+
+  // Opções dos filtros por coluna: no modo servidor a página carregada não tem
+  // todos os valores possíveis, então vêm dos próprios cadastros.
+  const [listasDeFiltro, setListasDeFiltro] = useState<{
+    categorias: Array<{ rotulo: string; valor: string }>
+    marcas: Array<{ rotulo: string; valor: string }>
+    localizacoes: Array<{ rotulo: string; valor: string }>
+  }>({ categorias: [], marcas: [], localizacoes: [] })
 
   const { can } = usePermissoes()
   const podeCriar = can('materiais', 'create')
@@ -116,7 +138,28 @@ const MateriaisEquipamentosPage = () => {
 
 
   // Abre o item vindo da paleta de comandos (?item=<id>)
-  useAbrirItemDaUrl(materiaisEquipamentos, (m) => m.id, (m) => abrirCompleto(m, setEditingMaterial))
+  /**
+   * A paleta de comandos e a central de notificações mandam `?item=<id>`. Com
+   * a listagem paginada no banco, o item pode não estar na página carregada —
+   * então é buscado direto pelo id.
+   */
+  const itemDaUrl = searchParams.get('item')
+  useEffect(() => {
+    if (!itemDaUrl) return
+    const abrir = async () => {
+      const { data } = await supabase
+        .from('materiais_equipamentos')
+        .select('*')
+        .eq('id', itemDaUrl)
+        .maybeSingle()
+      if (data) setEditingMaterial(data)
+      const novos = new URLSearchParams(searchParams)
+      novos.delete('item')
+      setSearchParams(novos, { replace: true })
+    }
+    void abrir()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemDaUrl])
 
   // Mantém o filtro de estoque crítico refletido na URL, para o link do
   // Dashboard funcionar e o estado ser compartilhável (RF-08).
@@ -129,59 +172,90 @@ const MateriaisEquipamentosPage = () => {
     setSearchParams(novos, { replace: true })
   }, [filtroEstoqueBaixo, searchParams, setSearchParams])
 
-  // Fetch data with relationships
-  React.useEffect(() => {
-    fetchMateriais({ includeInactive: showInactive })
-  }, [fetchMateriais, showInactive])
-
-  // RF-02: a classificação vem da coluna gerada `situacao_estoque`, calculada no
-  // banco. O Dashboard, este alerta e este filtro leem a mesma fonte.
-  // RF-10 soma aqui o item que chegou no ponto de pedido sem ter chegado no mínimo.
-  const isEstoqueBaixoOuZerado = (material: any) =>
-    material.situacao_estoque === 'zerado' ||
-    material.situacao_estoque === 'baixo' ||
-    material.precisa_repor === true
-
-  /**
-   * Filtros próprios desta tela (inativos, calibração e estoque crítico).
-   * Busca, filtro por coluna e ordenação são responsabilidade do DataTable.
-   */
-  const filteredMateriais = materiaisEquipamentos.filter((material) => {
-    // "Mostrar inativos": quando marcado, exibe APENAS inativos
-    const matchesAtivo = showInactive ? material.ativo === false : material.ativo !== false
-
-    let matchesCalibracaoVencida = true
-    if (filtroCalibracaoVencida) {
-      const statusCalibracao = verificarStatusCalibracao(
-        material.requer_calibracao,
-        material.proxima_calibracao,
-        material.frequencia_calibracao_meses,
-      )
-      matchesCalibracaoVencida =
-        statusCalibracao.status === 'vencida' || statusCalibracao.status === 'proxima_vencimento'
+  // Opções dos filtros, carregadas uma vez
+  useEffect(() => {
+    const carregarListas = async () => {
+      const [cat, mar, loc] = await Promise.all([
+        supabase.from('categorias').select('nome').eq('ativo', true).order('nome'),
+        supabase.from('marcas').select('id, nome').eq('ativo', true).order('nome'),
+        supabase.from('localizacao').select('id, codigo, nome').eq('ativo', true).order('codigo'),
+      ])
+      setListasDeFiltro({
+        categorias: (cat.data ?? []).map((c: any) => ({ rotulo: c.nome, valor: c.nome })),
+        marcas: (mar.data ?? []).map((m: any) => ({ rotulo: m.nome, valor: m.id })),
+        localizacoes: (loc.data ?? []).map((l: any) => ({ rotulo: l.nome, valor: l.id })),
+      })
     }
+    void carregarListas()
+  }, [])
 
-    const matchesEstoqueBaixo = !filtroEstoqueBaixo || isEstoqueBaixoOuZerado(material)
+  // Busca a página sempre que a consulta ou os filtros da tela mudam
+  const recarregarPagina = useCallback(async () => {
+    if (!consulta) return
+    setCarregandoPagina(true)
+    try {
+      const filtros = { ...consulta.filtros }
+      // O filtro de estoque crítico da tela vira filtro de banco; `precisa_repor`
+      // é coluna gerada, então o banco resolve sem trazer linha nenhuma a mais.
+      if (filtroEstoqueBaixo) filtros.precisa_repor = ['true']
 
-    return matchesAtivo && matchesCalibracaoVencida && matchesEstoqueBaixo
-  })
+      const resultado = await buscarPagina({
+        busca: consulta.busca,
+        pagina: consulta.pagina,
+        tamanhoPagina: consulta.tamanhoPagina,
+        ordenarPor: consulta.ordenacao.coluna || undefined,
+        ascendente: consulta.ordenacao.direcao !== 'desc',
+        filtros,
+        apenasInativos: showInactive,
+      })
+      setPaginaDeDados({ dados: resultado.data, total: resultado.total })
+    } finally {
+      setCarregandoPagina(false)
+    }
+  }, [consulta, filtroEstoqueBaixo, showInactive, buscarPagina])
 
-  // Contar itens com estoque baixo ou zerado (apenas ativos)
-  const itensEstoqueBaixo = materiaisEquipamentos.filter(
-    material => material.ativo !== false && isEstoqueBaixoOuZerado(material)
-  )
+  useEffect(() => {
+    void recarregarPagina()
+  }, [recarregarPagina])
 
-  // Contar equipamentos com problemas de calibração
-  const equipamentosComProblemasCalibração = materiaisEquipamentos.filter(material => {
-    if (!material.requer_calibracao) return false
-    const statusCalibracao = verificarStatusCalibracao(
-      material.requer_calibracao,
-      material.proxima_calibracao,
-      material.frequencia_calibracao_meses
-    )
-    return statusCalibracao.status === 'vencida' || 
-           statusCalibracao.status === 'proxima_vencimento'
-  }).length
+  // Contadores dos alertas: contagem no banco, sem trazer as linhas
+  const [contadores, setContadores] = useState({ estoqueBaixo: 0, calibracao: 0 })
+  useEffect(() => {
+    const contar = async () => {
+      const limite = new Date()
+      limite.setDate(limite.getDate() + 30)
+      const [critico, calib] = await Promise.all([
+        supabase
+          .from('materiais_equipamentos')
+          .select('id', { count: 'exact', head: true })
+          .eq('ativo', true)
+          .eq('precisa_repor', true),
+        supabase
+          .from('materiais_equipamentos')
+          .select('id', { count: 'exact', head: true })
+          .eq('ativo', true)
+          .eq('requer_calibracao', true)
+          .lte('proxima_calibracao', limite.toISOString().slice(0, 10)),
+      ])
+      setContadores({ estoqueBaixo: critico.count ?? 0, calibracao: calib.count ?? 0 })
+    }
+    void contar()
+  }, [paginaDeDados])
+
+
+  // A página já vem filtrada e ordenada do banco. O filtro de calibração
+  // continua local: o estado depende de um cálculo (vence em X meses) que não
+  // existe como coluna — e, por ser local, ele vale sobre a página carregada.
+  const filteredMateriais = filtroCalibracaoVencida
+    ? paginaDeDados.dados.filter((material: any) => {
+        const st = verificarStatusCalibracao(
+          material.requer_calibracao,
+          material.proxima_calibracao,
+          material.frequencia_calibracao_meses,
+        )
+        return st.status === 'vencida' || st.status === 'proxima_vencimento'
+      })
+    : paginaDeDados.dados
 
   const handleCreate = async (data: MaterialEquipamentoFormData) => {
     const result = await createMaterial(data)
@@ -328,6 +402,7 @@ const MateriaisEquipamentosPage = () => {
       semFiltro: true,
       valor: (m) => `${m.codigo ?? ''} ${m.nome ?? ''}`.trim(),
       valorOrdenacao: (m) => m.codigo ?? '',
+      campoServidor: 'codigo',
       celula: (m) => (
         <div className="flex items-center gap-2">
           {m.tipo === 'equipamento' ? (
@@ -344,17 +419,36 @@ const MateriaisEquipamentosPage = () => {
         </div>
       ),
     },
-    { id: 'tipo', cabecalho: 'Tipo', valor: (m) => m.tipo ?? '—' },
-    { id: 'categoria', cabecalho: 'Categoria', valor: (m) => m.categoria || 'Sem categoria' },
+    {
+      id: 'tipo',
+      cabecalho: 'Tipo',
+      valor: (m) => m.tipo ?? '—',
+      campoServidor: 'tipo',
+      opcoesFiltro: [
+        { rotulo: 'material', valor: 'material' },
+        { rotulo: 'equipamento', valor: 'equipamento' },
+      ],
+    },
+    {
+      id: 'categoria',
+      cabecalho: 'Categoria',
+      valor: (m) => m.categoria || 'Sem categoria',
+      campoServidor: 'categoria',
+      opcoesFiltro: listasDeFiltro.categorias,
+    },
     {
       id: 'localizacao',
       cabecalho: 'Localização',
       valor: (m) => m.localizacao?.nome || 'Não definida',
+      campoServidor: 'localizacao_id',
+      opcoesFiltro: listasDeFiltro.localizacoes,
     },
     {
       id: 'marca',
       cabecalho: 'Marca/Modelo',
       valor: (m) => m.marcas?.nome || 'Sem marca',
+      campoServidor: 'marca_id',
+      opcoesFiltro: listasDeFiltro.marcas,
       celula: (m) => (
         <div className="min-w-0">
           <div className="truncate">{m.marcas?.nome || '—'}</div>
@@ -383,6 +477,12 @@ const MateriaisEquipamentosPage = () => {
       id: 'estoque',
       cabecalho: 'Estoque',
       alinhamento: 'right',
+      campoServidor: 'situacao_estoque',
+      opcoesFiltro: [
+        { rotulo: 'Zerado', valor: 'zerado' },
+        { rotulo: 'No mínimo', valor: 'baixo' },
+        { rotulo: 'Normal', valor: 'normal' },
+      ],
       // RF-02: situação vem da coluna gerada no banco.
       // RF-10: `precisa_repor` olha o ponto de pedido, que pode estar acima do mínimo.
       valor: (m) =>
@@ -421,10 +521,14 @@ const MateriaisEquipamentosPage = () => {
       alinhamento: 'right',
       valor: (m) => formatCurrency(m.valor_unitario),
       valorOrdenacao: (m) => m.valor_unitario ?? 0,
+      campoServidor: 'valor_unitario',
     },
     {
       id: 'calibracao',
       cabecalho: 'Calibração',
+      // O estado da calibração é calculado (vence em X meses), não existe
+      // como coluna no banco — por isso não filtra nem ordena no servidor.
+      semFiltro: true,
       valor: (m) => {
         const st = verificarStatusCalibracao(
           m.requer_calibracao,
@@ -450,6 +554,13 @@ const MateriaisEquipamentosPage = () => {
     {
       id: 'status',
       cabecalho: 'Status',
+      campoServidor: 'status',
+      opcoesFiltro: [
+        { rotulo: getStatusLabel('ativo'), valor: 'ativo' },
+        { rotulo: getStatusLabel('inativo'), valor: 'inativo' },
+        { rotulo: getStatusLabel('manutencao'), valor: 'manutencao' },
+        { rotulo: getStatusLabel('descartado'), valor: 'descartado' },
+      ],
       valor: (m) => getStatusLabel(m.status),
       celula: (m) => <StatusBadge status={m.status} />,
     },
@@ -485,7 +596,23 @@ const MateriaisEquipamentosPage = () => {
               Atualizar
             </Button>
             {podeEditar && (
-              <Button variant="outline" size="sm" onClick={() => setImportarAberto(true)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  const { data } = await buscarTodasAsPaginas<any>((de, ate) =>
+                    supabase
+                      .from('materiais_equipamentos')
+                      .select(
+                        'id, codigo, nome, unidade_medida, codigo_barras, valor_unitario, estoque_minimo, ponto_pedido, estoque_maximo, reposicao_automatica',
+                      )
+                      .order('codigo')
+                      .range(de, ate),
+                  )
+                  setMateriaisParaPlanilha(data)
+                  setImportarAberto(true)
+                }}
+              >
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
                 Editar em lote
               </Button>
@@ -528,9 +655,9 @@ const MateriaisEquipamentosPage = () => {
                 <span className="flex items-center gap-1">
                   🔴 <span className="hidden sm:inline">Calibração vencida/próxima</span>
                   <span className="sm:hidden">Vencidas</span>
-                  {equipamentosComProblemasCalibração > 0 && (
+                  {contadores.calibracao > 0 && (
                     <Badge variant="destructive" className="text-xs px-1 py-0 h-4">
-                      {equipamentosComProblemasCalibração}
+                      {contadores.calibracao}
                     </Badge>
                   )}
                 </span>
@@ -548,9 +675,9 @@ const MateriaisEquipamentosPage = () => {
                 <span className="flex items-center gap-1">
                   📦 <span className="hidden sm:inline">Estoque baixo/zerado</span>
                   <span className="sm:hidden">Estoque baixo</span>
-                  {itensEstoqueBaixo.length > 0 && (
+                  {contadores.estoqueBaixo > 0 && (
                     <Badge variant="destructive" className="text-xs px-1 py-0 h-4">
-                      {itensEstoqueBaixo.length}
+                      {contadores.estoqueBaixo}
                     </Badge>
                   )}
                 </span>
@@ -558,23 +685,19 @@ const MateriaisEquipamentosPage = () => {
             </div>
           </div>
           <Badge variant="secondary" className="self-start sm:self-auto">
-            {filteredMateriais.length} item{filteredMateriais.length !== 1 ? 's' : ''}
+            {paginaDeDados.total} item{paginaDeDados.total !== 1 ? 's' : ''}
           </Badge>
         </div>
       </div>
 
       {/* Alerta de estoque baixo/zerado */}
-      {itensEstoqueBaixo.length > 0 && (
+      {contadores.estoqueBaixo > 0 && (
         <Alert variant="destructive" className="cursor-pointer" onClick={() => setFiltroEstoqueBaixo(true)}>
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Atenção: estoque baixo ou zerado</AlertTitle>
           <AlertDescription>
-            {itensEstoqueBaixo.length} {itensEstoqueBaixo.length === 1 ? 'item está' : 'itens estão'} com
-            estoque no mínimo ou zerado.{' '}
-            {itensEstoqueBaixo.filter(m => (m.estoque_atual || 0) === 0).length > 0 && (
-              <>({itensEstoqueBaixo.filter(m => (m.estoque_atual || 0) === 0).length} zerado(s)) </>
-            )}
-            Clique para filtrar.
+            {contadores.estoqueBaixo} {contadores.estoqueBaixo === 1 ? 'item está' : 'itens estão'} no
+            ponto de pedido ou com estoque zerado. Clique para filtrar.
           </AlertDescription>
         </Alert>
       )}
@@ -589,8 +712,10 @@ const MateriaisEquipamentosPage = () => {
         colunas={colunas}
         idLinha={(m) => m.id}
         chaveUrl="mat"
-        placeholderBusca="Buscar por código, nome, categoria ou marca..."
+        carregando={carregandoPagina && paginaDeDados.dados.length === 0}
+        placeholderBusca="Buscar por código, código de barras, nome ou modelo..."
         nomeArquivoCsv="materiais-equipamentos"
+        servidor={{ total: paginaDeDados.total, onConsulta: setConsulta }}
         onLinhaClick={(m) => podeEditar && abrirCompleto(m, setEditingMaterial)}
         acoesEmLote={(ids, limparSelecao) => (
           <Button
@@ -829,7 +954,7 @@ const MateriaisEquipamentosPage = () => {
       {/* RF-11: edição em lote por planilha */}
       <ImportarCSVDialog
         aberto={importarAberto}
-        materiais={materiaisEquipamentos as any[]}
+        materiais={materiaisParaPlanilha}
         onFechar={() => setImportarAberto(false)}
         onImportado={() => fetchMateriais({ includeInactive: showInactive })}
       />

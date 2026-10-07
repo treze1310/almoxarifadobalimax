@@ -48,12 +48,49 @@ export interface ColunaDataTable<T> {
   fixa?: boolean
   /** Desliga o filtro de valores distintos nesta coluna */
   semFiltro?: boolean
+  /**
+   * Modo servidor: campo do banco usado para ordenar e filtrar esta coluna.
+   * Sem ele, a coluna não ordena nem filtra quando a tabela é servida pelo
+   * banco (o texto da célula pode vir de junção e não existir como coluna).
+   */
+  campoServidor?: string
+  /**
+   * Modo servidor: opções do filtro desta coluna. São fixas, porque a página
+   * carregada não contém todos os valores possíveis. `valor` é o que vai para
+   * o banco; `rotulo` é o que aparece na lista.
+   */
+  opcoesFiltro?: Array<{ rotulo: string; valor: string }>
   className?: string
   alinhamento?: 'left' | 'right' | 'center'
 }
 
+/**
+ * Consulta enviada ao servidor quando a tabela está em modo servidor.
+ */
+export interface ConsultaServidor {
+  busca: string
+  pagina: number
+  tamanhoPagina: number
+  ordenacao: { coluna: string; direcao: SortDirection }
+  filtros: Record<string, string[]>
+}
+
+/**
+ * Modo servidor: busca, ordenação e paginação acontecem no banco, e `dados`
+ * passa a ser só a página atual. Existe para listagens grandes — com 2.209
+ * materiais, trazer tudo para filtrar no navegador são megabytes a cada
+ * abertura para mostrar 25 linhas.
+ */
+export interface ModoServidor {
+  /** Total de registros que casam com a consulta, para a paginação */
+  total: number
+  onConsulta: (consulta: ConsultaServidor) => void
+}
+
 interface DataTableProps<T> {
   dados: T[]
+  /** Quando presente, a tabela não filtra nem ordena localmente */
+  servidor?: ModoServidor
   colunas: ColunaDataTable<T>[]
   idLinha: (linha: T) => string
   carregando?: boolean
@@ -96,6 +133,7 @@ export function DataTable<T>({
   nomeArquivoCsv = 'dados',
   vazio,
   tamanhoPaginaInicial = 25,
+  servidor,
 }: DataTableProps<T>) {
   const [searchParams, setSearchParams] = useSearchParams()
   const p = (sufixo: string) => `${chaveUrl}_${sufixo}`
@@ -147,12 +185,18 @@ export function DataTable<T>({
     const mapa: Record<string, string[]> = {}
     for (const coluna of colunasEstaveis) {
       if (coluna.semFiltro) continue
+      // No modo servidor a página carregada não tem todos os valores
+      // possíveis, então as opções vêm declaradas na coluna.
+      if (servidor) {
+        if (coluna.opcoesFiltro) mapa[coluna.id] = coluna.opcoesFiltro.map((o) => o.rotulo)
+        continue
+      }
       const valores = new Set<string>()
       for (const linha of dados) valores.add(coluna.valor(linha) || '—')
       mapa[coluna.id] = Array.from(valores).sort((a, b) => a.localeCompare(b, 'pt-BR'))
     }
     return mapa
-  }, [dados, colunasEstaveis])
+  }, [dados, colunasEstaveis, servidor])
 
   useEffect(() => {
     const id = setTimeout(() => setBuscaAplicada(busca), 180)
@@ -160,6 +204,9 @@ export function DataTable<T>({
   }, [busca])
 
   const filtradas = useMemo(() => {
+    // No modo servidor `dados` já é a página pronta, filtrada e ordenada
+    if (servidor) return dados
+
     const termo = buscaAplicada.trim().toLowerCase()
     return dados.filter((linha) => {
       if (termo) {
@@ -173,9 +220,10 @@ export function DataTable<T>({
         return valores.includes(coluna.valor(linha) || '—')
       })
     })
-  }, [dados, colunasEstaveis, buscaAplicada, filtros])
+  }, [dados, colunasEstaveis, buscaAplicada, filtros, servidor])
 
   const ordenadas = useMemo(() => {
+    if (servidor) return filtradas
     if (!ordenacao.direcao) return filtradas
     const coluna = colunasEstaveis.find((c) => c.id === ordenacao.coluna)
     if (!coluna) return filtradas
@@ -187,11 +235,46 @@ export function DataTable<T>({
       if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * fator
       return String(va).localeCompare(String(vb), 'pt-BR') * fator
     })
-  }, [filtradas, colunasEstaveis, ordenacao])
+  }, [filtradas, colunasEstaveis, ordenacao, servidor])
 
-  const totalPaginas = Math.max(1, Math.ceil(ordenadas.length / tamanhoPagina))
+  const totalRegistros = servidor ? servidor.total : ordenadas.length
+  const totalPaginas = Math.max(1, Math.ceil(totalRegistros / tamanhoPagina))
   const paginaAtual = Math.min(pagina, totalPaginas)
-  const visiveis = ordenadas.slice((paginaAtual - 1) * tamanhoPagina, paginaAtual * tamanhoPagina)
+  const visiveis = servidor
+    ? ordenadas
+    : ordenadas.slice((paginaAtual - 1) * tamanhoPagina, paginaAtual * tamanhoPagina)
+
+  // Avisa o servidor sempre que a consulta muda. A busca já chega debounced
+  // por `buscaAplicada`, então digitar não dispara uma requisição por tecla.
+  const aoConsultar = servidor?.onConsulta
+  useEffect(() => {
+    if (!aoConsultar) return
+    // Traduz o que a tabela mostra para o que o banco entende: a coluna
+    // "Marca" filtra por marca_id, e o rótulo escolhido vira o valor gravado.
+    const filtrosDoBanco: Record<string, string[]> = {}
+    for (const [colunaId, rotulos] of Object.entries(filtros)) {
+      if (rotulos.length === 0) continue
+      const coluna = colunasEstaveis.find((c) => c.id === colunaId)
+      if (!coluna?.campoServidor) continue
+      const valores = coluna.opcoesFiltro
+        ? coluna.opcoesFiltro.filter((o) => rotulos.includes(o.rotulo)).map((o) => o.valor)
+        : rotulos
+      if (valores.length > 0) filtrosDoBanco[coluna.campoServidor] = valores
+    }
+
+    const colunaOrdenada = colunasEstaveis.find((c) => c.id === ordenacao.coluna)
+    aoConsultar({
+      busca: buscaAplicada.trim(),
+      pagina: paginaAtual,
+      tamanhoPagina,
+      ordenacao: {
+        coluna: colunaOrdenada?.campoServidor ?? '',
+        direcao: colunaOrdenada?.campoServidor ? ordenacao.direcao : null,
+      },
+      filtros: filtrosDoBanco,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aoConsultar, buscaAplicada, paginaAtual, tamanhoPagina, ordenacao, JSON.stringify(filtros)])
 
   const idsVisiveis = visiveis.map(idLinha)
   const todasSelecionadas = idsVisiveis.length > 0 && idsVisiveis.every((id) => selecionadas.includes(id))
@@ -206,15 +289,18 @@ export function DataTable<T>({
   }
 
   const exportarCsv = () => {
+    // No modo servidor só a página atual está carregada; o CSV diz isso no
+    // nome do arquivo, para ninguém achar que exportou a base inteira.
+    const sufixoPagina = servidor && totalRegistros > visiveis.length ? `-pagina-${paginaAtual}` : ''
     const cabecalho = colunasVisiveis.map((c) => c.cabecalho)
-    const linhas = ordenadas.map((linha) =>
+    const linhas = (servidor ? visiveis : ordenadas).map((linha) =>
       colunasVisiveis.map((c) => `"${c.valor(linha).replace(/"/g, '""')}"`).join(';'),
     )
     const csv = ['﻿' + cabecalho.join(';'), ...linhas].join('\n')
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
     const a = document.createElement('a')
     a.href = url
-    a.download = `${nomeArquivoCsv}-${new Date().toISOString().slice(0, 10)}.csv`
+    a.download = `${nomeArquivoCsv}${sufixoPagina}-${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -438,13 +524,13 @@ export function DataTable<T>({
       {/* Rodapé de paginação */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-muted-foreground">
-          {ordenadas.length === 0
+          {totalRegistros === 0
             ? 'Nenhum registro'
             : `${(paginaAtual - 1) * tamanhoPagina + 1}–${Math.min(
                 paginaAtual * tamanhoPagina,
-                ordenadas.length,
-              )} de ${ordenadas.length}`}
-          {ordenadas.length !== dados.length && ` (${dados.length} no total)`}
+                totalRegistros,
+              )} de ${totalRegistros}`}
+          {!servidor && ordenadas.length !== dados.length && ` (${dados.length} no total)`}
         </p>
 
         <div className="flex items-center gap-2">
