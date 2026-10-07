@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { contar } from '@/lib/plural'
 import { useNavigate } from 'react-router-dom'
 import {
   Bell,
@@ -110,7 +111,7 @@ export const CentralNotificacoes = () => {
           className="relative"
           aria-label={
             naoLidos.length > 0
-              ? `Notificações: ${naoLidos.length} não lida(s)`
+              ? `Notificações: ${contar(naoLidos.length, 'não lida', 'não lidas')}`
               : 'Notificações'
           }
         >

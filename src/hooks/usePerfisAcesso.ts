@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { contar } from '@/lib/plural'
 import { supabase } from '@/lib/supabase'
 import { PerfilAcesso, PerfilFormData } from '@/types/perfil'
 import { registrarAuditoria } from '@/services/auditoriaService'
@@ -113,7 +114,7 @@ export function usePerfisAcesso() {
       if (usuariosError) throw usuariosError
 
       if (usuarios && usuarios.length > 0) {
-        throw new Error(`Este perfil não pode ser excluído pois está sendo usado por ${usuarios.length} usuário(s)`)
+        throw new Error(`Este perfil não pode ser excluído pois está sendo usado por ${contar(usuarios.length, 'usuário', 'usuários')}`)
       }
 
       const { error } = await supabase

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { contar } from '@/lib/plural'
 import { useSearchParams } from 'react-router-dom'
 import {
   ArrowDown,
@@ -380,7 +381,7 @@ export function DataTable<T>({
       {acoesEmLote && selecionadas.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border bg-muted/50 px-3 py-2">
           <span className="text-ds-body">
-            {selecionadas.length} selecionado{selecionadas.length > 1 ? 's' : ''}
+            {contar(selecionadas.length, 'selecionado', 'selecionados')}
           </span>
           <div className="flex items-center gap-2">
             {acoesEmLote(selecionadas, limparSelecao)}

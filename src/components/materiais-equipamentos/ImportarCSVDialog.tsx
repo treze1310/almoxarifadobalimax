@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import { contar } from '@/lib/plural'
 import { AlertTriangle, Check, Download, FileSpreadsheet, Loader2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -251,7 +252,7 @@ export const ImportarCSVDialog = ({
       toast({
         title: falhas.length > 0 ? 'Importação concluída com falhas' : 'Importação concluída',
         description:
-          `${gravados} item(ns) atualizado(s).` +
+          `${contar(gravados, 'item atualizado', 'itens atualizados')}.` +
           (falhas.length > 0 ? ` ${falhas.length} falharam: ${falhas.slice(0, 3).join('; ')}` : ''),
         variant: falhas.length > 0 ? 'destructive' : undefined,
       })
@@ -314,7 +315,7 @@ export const ImportarCSVDialog = ({
         {analisadas.length > 0 && (
           <>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">{comMudanca.length} item(ns) a atualizar</Badge>
+              <Badge variant="outline">{contar(comMudanca.length, 'item', 'itens')} a atualizar</Badge>
               {semMudanca.length > 0 && (
                 <Badge variant="outline" className="text-muted-foreground">
                   {semMudanca.length} sem mudança
@@ -341,7 +342,7 @@ export const ImportarCSVDialog = ({
             {comProblema.length > 0 && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>{comProblema.length} linha(s) não serão importadas</AlertTitle>
+                <AlertTitle>{contar(comProblema.length, 'linha não será importada', 'linhas não serão importadas')}</AlertTitle>
                 <AlertDescription>
                   <ul className="mt-1 space-y-0.5">
                     {comProblema.slice(0, 6).map((item) => (
@@ -406,7 +407,7 @@ export const ImportarCSVDialog = ({
             ) : (
               <Check className="mr-2 h-4 w-4" />
             )}
-            Aplicar {comMudanca.length > 0 ? `em ${comMudanca.length} item(ns)` : ''}
+            Aplicar {comMudanca.length > 0 ? `em ${contar(comMudanca.length, 'item', 'itens')}` : ''}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { contar } from '@/lib/plural'
 import {
   Table,
   TableBody,
@@ -137,7 +138,7 @@ const LocalizacaoPage = () => {
           />
         </div>
         <Badge variant="secondary">
-          {filteredLocalizacoes.length} localização{filteredLocalizacoes.length !== 1 ? 'ões' : ''}
+          {contar(filteredLocalizacoes.length, 'localização', 'localizações')}
         </Badge>
       </div>
 

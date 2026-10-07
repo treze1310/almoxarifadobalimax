@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { contar } from '@/lib/plural'
 import { AlertTriangle, Check, Loader2, PackageCheck, Link2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -190,7 +191,7 @@ export const ConciliacaoNFeDialog = ({
         title: resultado?.ja_lancada ? 'NF-e já estava lançada' : 'Estoque lançado',
         description: resultado?.ja_lancada
           ? 'Nenhuma movimentação foi duplicada.'
-          : `${resultado?.itens_lancados ?? 0} item(ns) deram entrada no estoque.`,
+          : `${contar(resultado?.itens_lancados ?? 0, 'item deu', 'itens deram')} entrada no estoque.`,
       })
       onAtualizado?.()
       onFechar()
@@ -233,7 +234,7 @@ export const ConciliacaoNFeDialog = ({
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>
-              {pendentes} item(ns) sem material vinculado
+              {contar(pendentes, 'item', 'itens')} sem material vinculado
             </AlertTitle>
             <AlertDescription>
               Vincule todos os itens para poder conferir e lançar a nota.

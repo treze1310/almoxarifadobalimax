@@ -1,6 +1,7 @@
 /**
  * Utilitários para verificação de status de calibração
  */
+import { contar } from '@/lib/plural'
 
 export type StatusCalibracao = 
   | 'nao_requer'
@@ -58,7 +59,7 @@ export function verificarStatusCalibracao(
     return {
       status: 'vencida',
       diasVencidos: Math.abs(diferencaDias),
-      mensagem: `Vencida há ${Math.abs(diferencaDias)} dia${Math.abs(diferencaDias) !== 1 ? 's' : ''}`,
+      mensagem: `Vencida há ${contar(Math.abs(diferencaDias), 'dia', 'dias')}`,
       cor: 'destructive',
       icone: '🔴'
     }
@@ -71,7 +72,7 @@ export function verificarStatusCalibracao(
       diasRestantes: diferencaDias,
       mensagem: diferencaDias === 0 
         ? 'Vence hoje!' 
-        : `Vence em ${diferencaDias} dia${diferencaDias !== 1 ? 's' : ''}`,
+        : `Vence em ${contar(diferencaDias, 'dia', 'dias')}`,
       cor: 'warning',
       icone: '🟡'
     }

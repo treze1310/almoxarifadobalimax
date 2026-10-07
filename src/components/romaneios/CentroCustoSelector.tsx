@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { contar } from '@/lib/plural'
 import { Search, Building2, Check } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -262,7 +263,7 @@ export function CentroCustoSelector({
               Limpar Seleção
             </Button>
             <div className="text-sm text-muted-foreground">
-              {filteredCentrosCusto.length} centro(s) de custo encontrado(s)
+              {contar(filteredCentrosCusto.length, 'centro de custo encontrado', 'centros de custo encontrados')}
             </div>
           </div>
         </div>

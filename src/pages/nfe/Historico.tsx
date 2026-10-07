@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { contar } from '@/lib/plural'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { formatarCNPJ } from '@/lib/dadosPessoais'
@@ -227,7 +228,7 @@ const HistoricoNFePage = () => {
       />
         <div className="flex items-center space-x-4">
           <Badge variant="secondary">
-            {importacoes.length} importação{importacoes.length !== 1 ? 'ões' : ''}
+            {contar(importacoes.length, 'importação', 'importações')}
           </Badge>
           <Button variant="outline" size="sm" onClick={fetchImportacoes} disabled={loading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { contar } from '@/lib/plural'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -582,7 +583,7 @@ const NovoRomaneioPage = () => {
                             </div>
                             <div className="flex items-center gap-2">
                               <Package className="h-4 w-4 text-muted-foreground" />
-                              <span>{romaneio.romaneios_itens?.length || 0} item(s)</span>
+                              <span>{contar(romaneio.romaneios_itens?.length || 0, 'item', 'itens')}</span>
                             </div>
 
                             {romaneio.centro_custo_origem && (

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { contar } from '@/lib/plural'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -193,7 +194,7 @@ const DevolucaoSeletivaDialog = ({ romaneio, trigger, onDevolucaoRealizada }: De
         if (resultMarcacao.success) {
           toast({
             title: 'Sucesso',
-            description: `Devolução criada com sucesso! ${itensSelecionados.length} item(ns) devolvido(s).`,
+            description: `Devolução criada com sucesso! ${contar(itensSelecionados.length, 'item devolvido', 'itens devolvidos')}.`,
           })
         } else {
           toast({

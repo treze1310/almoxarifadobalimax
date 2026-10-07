@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { contar } from '@/lib/plural'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { UploadCloud, FileText, History } from 'lucide-react'
@@ -326,7 +327,7 @@ const parseAndValidateNFe = (file: File): Promise<Partial<UploadedNFeFile>> => {
           resolve({
             status: 'warning',
             data: nfeData,
-            message: `${itemsSemNcm.length} produto(s) sem código NCM foram encontrados`,
+            message: `${contar(itemsSemNcm.length, 'produto sem código NCM foi encontrado', 'produtos sem código NCM foram encontrados')}`,
           })
           return
         }

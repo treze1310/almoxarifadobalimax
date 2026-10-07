@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { contar } from '@/lib/plural'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -248,8 +249,8 @@ export const TrilhaAuditoria = () => {
         {!loading && !erro && total > 0 && (
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs text-muted-foreground">
-              {(pagina - 1) * POR_PAGINA + 1}–{Math.min(pagina * POR_PAGINA, total)} de {total}{' '}
-              registro(s)
+              {(pagina - 1) * POR_PAGINA + 1}–{Math.min(pagina * POR_PAGINA, total)} de{' '}
+              {contar(total, 'registro', 'registros')}
             </span>
             <div className="flex items-center gap-2">
               <Button

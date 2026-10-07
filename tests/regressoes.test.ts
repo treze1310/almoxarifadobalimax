@@ -11,6 +11,7 @@ import {
 import { STATUS, normalizarStatus, rotuloStatus } from '../src/lib/status'
 import { materialEquipamentoSchema } from '../src/lib/validations'
 import { buscarTodasAsPaginas } from '../src/lib/consultaPaginada'
+import { contar, plural } from '../src/lib/plural'
 import { barrasDoCodigo, code128b, larguraEmModulos, podeCodificar } from '../src/lib/code128'
 import {
   detectarSeparador,
@@ -480,5 +481,26 @@ describe('limite de 1.000 linhas da API (carga do sistema antigo)', () => {
     )
     expect(error?.message).toBe('falhou')
     expect(data).toHaveLength(1000)
+  })
+})
+
+describe('plural em português', () => {
+  // O jeito antigo emendava o sufixo no singular: "2 importaçãoões"
+  test('palavras terminadas em ão trocam a terminação', () => {
+    expect(contar(2, 'importação', 'importações')).toBe('2 importações')
+    expect(contar(1, 'importação', 'importações')).toBe('1 importação')
+    expect(contar(0, 'localização', 'localizações')).toBe('0 localizações')
+  })
+
+  // "items" não existe em português
+  test('item vira itens', () => {
+    expect(contar(1, 'item', 'itens')).toBe('1 item')
+    expect(contar(3, 'item', 'itens')).toBe('3 itens')
+  })
+
+  test('zero e negativo usam o plural, menos o -1 de contagem regressiva', () => {
+    expect(plural(0, 'dia', 'dias')).toBe('dias')
+    expect(plural(-1, 'dia', 'dias')).toBe('dia')
+    expect(plural(-5, 'dia', 'dias')).toBe('dias')
   })
 })

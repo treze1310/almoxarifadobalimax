@@ -38,7 +38,7 @@ export const NfImportDialog = ({
           <AlertDialogTitle>Confirmar Importação</AlertDialogTitle>
           <AlertDialogDescription>
             Você está prestes a importar{' '}
-            <span className="font-bold">{totalToImport}</span> NF-e(s).
+            <span className="font-bold">{totalToImport}</span> {totalToImport === 1 ? 'NF-e' : 'NF-es'}.
             {warning > 0 && (
               <>
                 {' '}

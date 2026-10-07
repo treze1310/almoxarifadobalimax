@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { contar } from '@/lib/plural'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
@@ -259,7 +260,7 @@ const MapaPage = () => {
       if (successCount === changedLocations.length) {
         toast({
           title: 'Sucesso',
-          description: `${successCount} localização(ões) atualizada(s)!`
+          description: `${contar(successCount, 'localização atualizada', 'localizações atualizadas')}!`
         })
       } else {
         toast({

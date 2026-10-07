@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { contar } from '@/lib/plural'
 import { Button } from '@/components/ui/button'
 import { PlusCircle, Edit, Trash2, Package, Wrench, Eye, RefreshCw, AlertTriangle, Copy, Tag, FileSpreadsheet } from 'lucide-react'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
@@ -380,7 +381,7 @@ const MateriaisEquipamentosPage = () => {
     if (ignorados.length > 0) {
       toast({
         title: 'Alguns itens ficaram de fora',
-        description: `${ignorados.length} item(ns) têm código que não vira código de barras: ${ignorados
+        description: `${contar(ignorados.length, 'item tem', 'itens têm')} código que não vira código de barras: ${ignorados
           .map((i) => i.codigo)
           .join(', ')}`,
         variant: 'destructive',
@@ -390,7 +391,7 @@ const MateriaisEquipamentosPage = () => {
 
     toast({
       title: 'Etiquetas geradas',
-      description: `${gerados} etiqueta(s) na folha. Imprima em escala 100%, sem "ajustar à página".`,
+      description: `${contar(gerados, 'etiqueta', 'etiquetas')} na folha. Imprima em escala 100%, sem "ajustar à página".`,
     })
   }
 
@@ -685,7 +686,7 @@ const MateriaisEquipamentosPage = () => {
             </div>
           </div>
           <Badge variant="secondary" className="self-start sm:self-auto">
-            {paginaDeDados.total} item{paginaDeDados.total !== 1 ? 's' : ''}
+            {contar(paginaDeDados.total, 'item', 'itens')}
           </Badge>
         </div>
       </div>

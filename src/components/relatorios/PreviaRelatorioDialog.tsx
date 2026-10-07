@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { contar } from '@/lib/plural'
 import { AlertTriangle, Download, FileSpreadsheet, FileText, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -99,7 +100,7 @@ export const PreviaRelatorioDialog = ({
           <DialogTitle className="flex items-center gap-2">
             Prévia do relatório
             {registros > 0 && (
-              <Badge variant="outline">{registros} registro(s)</Badge>
+              <Badge variant="outline">{contar(registros, 'registro', 'registros')}</Badge>
             )}
           </DialogTitle>
           <DialogDescription>

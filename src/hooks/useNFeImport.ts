@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { contar } from '@/lib/plural'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/use-toast'
 import { useMateriaisEquipamentos } from './useMateriaisEquipamentos'
@@ -301,7 +302,7 @@ export function useNFeImport() {
           result.success = result.errors.length === 0
           result.message = result.success 
             ? `${fileName}: ${result.materialsCreated} materiais criados, ${result.materialsLinked} vinculados`
-            : `${fileName}: Processado com ${result.errors.length} erro(s)`
+            : `${fileName}: Processado com ${contar(result.errors.length, 'erro', 'erros')}`
 
         } catch (fileError: any) {
           result.errors.push(fileError.message)
@@ -321,7 +322,7 @@ export function useNFeImport() {
 
       toast({
         title: 'Importação Concluída',
-        description: `${totalSuccess} arquivo(s) processado(s), ${totalErrors} erro(s), ${totalMaterialsCreated} material(is) criado(s)`,
+        description: `${contar(totalSuccess, 'arquivo processado', 'arquivos processados')}, ${contar(totalErrors, 'erro', 'erros')}, ${contar(totalMaterialsCreated, 'material criado', 'materiais criados')}`,
         variant: totalErrors > 0 ? 'destructive' : 'default'
       })
 

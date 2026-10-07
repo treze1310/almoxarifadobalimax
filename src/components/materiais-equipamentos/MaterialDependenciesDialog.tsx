@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { contar } from '@/lib/plural'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
@@ -306,7 +307,7 @@ export function MaterialDependenciesDialog({
                         <CardHeader>
                           <CardTitle className="text-sm flex items-center justify-between">
                             <span>Itens de NFe Vinculados</span>
-                            <Badge variant="outline">{nfeDep.count} item(s)</Badge>
+                            <Badge variant="outline">{contar(nfeDep.count, 'item', 'itens')}</Badge>
                           </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -367,7 +368,7 @@ export function MaterialDependenciesDialog({
                         <CardHeader>
                           <CardTitle className="text-sm flex items-center justify-between">
                             <span>Romaneios que Utilizam Este Material</span>
-                            <Badge variant="destructive">{romaneiosDep.count} item(s)</Badge>
+                            <Badge variant="destructive">{contar(romaneiosDep.count, 'item', 'itens')}</Badge>
                           </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -417,7 +418,7 @@ export function MaterialDependenciesDialog({
                         <CardHeader>
                           <CardTitle className="text-sm flex items-center justify-between">
                             <span>Histórico de Movimentações</span>
-                            <Badge variant="destructive">{movimentacoesDep.count} item(s)</Badge>
+                            <Badge variant="destructive">{contar(movimentacoesDep.count, 'item', 'itens')}</Badge>
                           </CardTitle>
                         </CardHeader>
                         <CardContent>
