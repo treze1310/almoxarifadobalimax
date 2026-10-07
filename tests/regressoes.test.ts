@@ -416,3 +416,20 @@ describe('leitura de planilha para edição em lote (RF-11)', () => {
     expect(lerCSV('codigo;nome\n1;Luva\n\n;\n')).toHaveLength(2)
   })
 })
+
+describe('filtro de período da trilha de auditoria (RNF-01)', () => {
+  // O banco guarda timestamptz em UTC e o Pará é UTC-3: mandar a data crua
+  // cortaria o dia às 21h locais, escondendo o fim da tarde.
+  test('o limite do dia vira instante no fuso de quem olha', () => {
+    const inicio = new Date('2026-10-07T00:00:00')
+    const fim = new Date('2026-10-07T23:59:59.999')
+
+    expect(inicio.getHours()).toBe(0)
+    expect(fim.getHours()).toBe(23)
+    // Um registro das 21h locais do dia 7 tem que caber no filtro do dia 7
+    expect(new Date('2026-10-07T21:00:00') >= inicio).toBe(true)
+    expect(new Date('2026-10-07T21:00:00') <= fim).toBe(true)
+    // E um do dia seguinte, não
+    expect(new Date('2026-10-08T00:30:00') <= fim).toBe(false)
+  })
+})

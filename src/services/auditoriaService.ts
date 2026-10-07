@@ -95,14 +95,56 @@ export interface EntradaAuditoria {
   usuarios?: { nome: string; email: string } | null
 }
 
-/** Consulta a trilha (requer permissão de leitura no módulo "usuarios") */
-export const consultarAuditoria = async (limite = 100) => {
-  const { data, error } = await supabase
-    .from('log_sistema')
-    .select('id, acao, tabela, registro_id, dados_anteriores, dados_novos, timestamp, usuarios:usuario_id(nome, email)')
-    .order('timestamp', { ascending: false })
-    .limit(limite)
+export interface ConsultaAuditoria {
+  pagina?: number
+  porPagina?: number
+  /** Prefixo da ação, como "romaneio" ou "usuario" */
+  modulo?: string
+  /** Período, em data ISO (yyyy-mm-dd) */
+  de?: string
+  ate?: string
+}
 
-  if (error) return { data: [] as EntradaAuditoria[], error: error.message }
-  return { data: (data as unknown as EntradaAuditoria[]) || [], error: null }
+/**
+ * Consulta a trilha (requer permissão de leitura no módulo "usuarios").
+ *
+ * Esta é a única listagem do sistema que cresce sem parar — um registro por
+ * ação sensível, para sempre — então a paginação e os filtros acontecem no
+ * banco (RNF-01), e não trazendo tudo para o navegador.
+ */
+export const consultarAuditoria = async (consulta: ConsultaAuditoria = {}) => {
+  const pagina = Math.max(1, consulta.pagina ?? 1)
+  const porPagina = consulta.porPagina ?? 50
+  const inicio = (pagina - 1) * porPagina
+
+  let query = supabase
+    .from('log_sistema')
+    .select(
+      'id, acao, tabela, registro_id, dados_anteriores, dados_novos, timestamp, usuarios:usuario_id(nome, email)',
+      { count: 'exact' },
+    )
+    .order('timestamp', { ascending: false })
+    .range(inicio, inicio + porPagina - 1)
+
+  if (consulta.modulo) query = query.like('acao', `${consulta.modulo}.%`)
+
+  // O `timestamp` é timestamptz e o banco roda em UTC. Mandar "2026-10-07"
+  // cru faria o banco cortar o dia às 21h daqui (UTC-3) — uma retirada do fim
+  // da tarde sumiria do filtro. Por isso o limite vai como instante, montado
+  // no fuso de quem está olhando.
+  if (consulta.de) {
+    query = query.gte('timestamp', new Date(`${consulta.de}T00:00:00`).toISOString())
+  }
+  if (consulta.ate) {
+    query = query.lte('timestamp', new Date(`${consulta.ate}T23:59:59.999`).toISOString())
+  }
+
+  const { data, error, count } = await query
+
+  if (error) return { data: [] as EntradaAuditoria[], total: 0, error: error.message }
+  return {
+    data: (data as unknown as EntradaAuditoria[]) || [],
+    total: count ?? 0,
+    error: null,
+  }
 }
