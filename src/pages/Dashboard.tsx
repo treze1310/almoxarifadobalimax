@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { buscarTodasAsPaginas } from '@/lib/consultaPaginada'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Card,
@@ -98,155 +97,44 @@ const DashboardPage = () => {
     try {
       setLoading(true)
 
-      // Limites de mês usados nas comparações (RF-01)
-      const agora = new Date()
-      const inicioMesAtual = new Date(agora.getFullYear(), agora.getMonth(), 1)
-      const inicioMesAnterior = new Date(agora.getFullYear(), agora.getMonth() - 1, 1)
+      // Os indicadores são calculados no banco (RF-01/RNF-01). A tela antes
+      // baixava 2.209 materiais e 870 movimentações para somar no navegador —
+      // cerca de 400 kB por abertura, contra 400 bytes agora.
+      const { data: indicadores, error: erroIndicadores } = await supabase.rpc('painel_indicadores')
+      if (erroIndicadores) throw erroIndicadores
 
-      // Buscar dados em paralelo para melhor performance
-      const [
-        materiaisResult,
-        romaneiosHojeResult,
-        solicitacoesResult,
-        colaboradoresResult,
-        empresasResult,
-        movimentacaoResult,
-        movMesAtualResult,
-        movMesAnteriorResult
-      ] = await Promise.all([
-        // Materiais e estoque. situacao_estoque e coluna gerada no banco (RF-02).
-        // Paginado: a API corta em 1.000 linhas e o total do estoque sairia
-        // somando só parte do cadastro.
-        buscarTodasAsPaginas<any>((de, ate) =>
-          supabase
-            .from('materiais_equipamentos')
-            .select('estoque_atual, estoque_minimo, valor_unitario, ativo, situacao_estoque, created_at')
-            .order('id')
-            .range(de, ate)),
-        
-        // Romaneios de hoje
-        supabase
-          .from('romaneios')
-          .select('id, created_at, valor_total')
-          .gte('created_at', new Date().toISOString().split('T')[0]),
-        
-        // Solicitações pendentes
-        supabase
-          .from('solicitacoes')
-          .select('id, status')
-          .in('status', ['pendente', 'em_andamento']),
-        
-        // Colaboradores ativos
-        supabase
-          .from('colaboradores')
-          .select('id')
-          .eq('ativo', true),
-        
-        // Empresas ativas
-        supabase
-          .from('empresas')
-          .select('id')
-          .eq('ativo', true),
-        
-        // Movimentações dos últimos 30 dias. O filtro é por `data_movimentacao`,
-        // a data em que o movimento aconteceu — `created_at` é quando a linha
-        // entrou no banco, e para o histórico importado isso é o dia da carga.
-        buscarTodasAsPaginas<any>((de, ate) =>
-          supabase
-            .from('movimentacao_estoque')
-            .select('valor_unitario, quantidade, tipo_movimentacao, data_movimentacao')
-            .gte('data_movimentacao', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-            .order('data_movimentacao')
-            .range(de, ate)),
+      const i = (indicadores ?? {}) as Record<string, number>
 
-        // RF-01: base de comparação real — movimentações do mês atual e do anterior
-        supabase
-          .from('movimentacao_estoque')
-          .select('id', { count: 'exact', head: true })
-          .gte('data_movimentacao', inicioMesAtual.toISOString()),
-
-        supabase
-          .from('movimentacao_estoque')
-          .select('id', { count: 'exact', head: true })
-          .gte('data_movimentacao', inicioMesAnterior.toISOString())
-          .lt('data_movimentacao', inicioMesAtual.toISOString())
-      ])
-
-      // Processar dados dos materiais
-      const materiais = materiaisResult.data || []
-      const materiaisAtivos = materiais.filter(m => m.ativo).length
-      
-      let estoqueTotal = 0
-      let valorTotal = 0
-      let itensZerados = 0
-      let itensAbaixoMinimo = 0
-      let materiaisAteMesAnterior = 0
-
-      materiais.forEach((material: any) => {
-        if (material.created_at && new Date(material.created_at) < inicioMesAtual) {
-          materiaisAteMesAnterior++
-        }
-
-        if (material.ativo) {
-          const estoque = material.estoque_atual || 0
-          const valor = material.valor_unitario || 0
-
-          estoqueTotal += estoque
-          valorTotal += estoque * valor
-
-          // RF-02: classificação vem do banco, não de regra local
-          if (material.situacao_estoque === 'zerado') itensZerados++
-          else if (material.situacao_estoque === 'baixo') itensAbaixoMinimo++
-        }
-      })
-
-      const itensEstoqueCritico = itensZerados + itensAbaixoMinimo
+      const itensEstoqueCritico = (i.itens_zerados ?? 0) + (i.itens_abaixo_minimo ?? 0)
 
       // RF-01: variação só existe quando há base de comparação real
-      const movMesAtual = movMesAtualResult.count ?? 0
-      const movMesAnterior = movMesAnteriorResult.count ?? 0
       const variacaoMovimentacoes =
-        movMesAnterior > 0 ? ((movMesAtual - movMesAnterior) / movMesAnterior) * 100 : null
-
-      const variacaoMateriais =
-        materiaisAteMesAnterior > 0
-          ? ((materiais.length - materiaisAteMesAnterior) / materiaisAteMesAnterior) * 100
+        i.movimentacoes_mes_anterior > 0
+          ? ((i.movimentacoes_mes_atual - i.movimentacoes_mes_anterior) /
+              i.movimentacoes_mes_anterior) * 100
           : null
 
-      // Processar outros dados
-      const romaneiosHoje = romaneiosHojeResult.data?.length || 0
-      const solicitacoesPendentes = solicitacoesResult.data?.length || 0
-      const colaboradoresAtivos = colaboradoresResult.data?.length || 0
-      const empresasAtivas = empresasResult.data?.length || 0
+      const variacaoMateriais =
+        i.materiais_ate_mes_anterior > 0
+          ? ((i.total_materiais - i.materiais_ate_mes_anterior) / i.materiais_ate_mes_anterior) * 100
+          : null
 
-      // Calcular valor movimentado nos últimos 30 dias
-      const movimentacoes = movimentacaoResult.data || []
-      // Volume movimentado: a saída é negativa por convenção do sistema, então
-      // sem o módulo as saídas abateriam as entradas e o valor ficaria negativo
-      // — visível agora que o histórico importado tem 21 mil saídas.
-      const valorMovimentado30d = movimentacoes.reduce((total, mov) => {
-        return total + (mov.valor_unitario || 0) * Math.abs(mov.quantidade || 0)
-      }, 0)
-
-      // Calcular percentual de ocupação do estoque
-      const capacidadeTotal = materiais.reduce((total, m) => {
-        return total + (m.estoque_minimo || 0) * 10 // Assumindo capacidade 10x o mínimo
-      }, 0)
-      const percentualOcupacao = capacidadeTotal > 0 ? (estoqueTotal / capacidadeTotal) * 100 : 0
+      const percentualOcupacao =
+        i.capacidade_estimada > 0 ? (i.estoque_total / i.capacidade_estimada) * 100 : 0
 
       setMetrics({
-        totalMateriais: materiais.length,
-        materiaisAtivos,
-        estoqueTotal,
-        valorTotal,
+        totalMateriais: i.total_materiais ?? 0,
+        materiaisAtivos: i.materiais_ativos ?? 0,
+        estoqueTotal: i.estoque_total ?? 0,
+        valorTotal: i.valor_total ?? 0,
         itensEstoqueCritico,
-        itensZerados,
-        itensAbaixoMinimo,
-        romaneiosHoje,
-        solicitacoesPendentes,
-        colaboradoresAtivos,
-        empresasAtivas,
-        valorMovimentado30d,
+        itensZerados: i.itens_zerados ?? 0,
+        itensAbaixoMinimo: i.itens_abaixo_minimo ?? 0,
+        romaneiosHoje: i.romaneios_hoje ?? 0,
+        solicitacoesPendentes: i.solicitacoes_pendentes ?? 0,
+        colaboradoresAtivos: i.colaboradores_ativos ?? 0,
+        empresasAtivas: i.empresas_ativas ?? 0,
+        valorMovimentado30d: i.valor_movimentado_30d ?? 0,
         percentualOcupacao: Math.min(percentualOcupacao, 100),
         variacaoMateriais,
         variacaoMovimentacoes,
