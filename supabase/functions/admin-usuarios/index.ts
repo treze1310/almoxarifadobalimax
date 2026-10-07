@@ -13,11 +13,23 @@ const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!
  */
 const ORIGENS_PERMITIDAS = (
   Deno.env.get("ORIGENS_PERMITIDAS") ??
-  "https://balimax.com.br,https://www.balimax.com.br,http://localhost:5173"
+  "https://balimax.com.br,https://www.balimax.com.br," +
+    "https://almoxarifadobalimax.vercel.app,http://localhost:5173"
 )
   .split(",")
   .map((o) => o.trim())
   .filter(Boolean)
+
+/**
+ * Deploys de previa da Vercel nascem com um endereco novo a cada push
+ * (almoxarifadobalimax-git-main-treze1310.vercel.app). Liberar o projeto pelo
+ * prefixo evita ter que reconfigurar a cada previa, sem abrir para qualquer
+ * site hospedado na vercel.app.
+ */
+const PREVIA_VERCEL = /^https:\/\/almoxarifadobalimax(-[a-z0-9-]+)?\.vercel\.app$/
+
+const origemAutorizada = (origin: string | null) =>
+  !origin || ORIGENS_PERMITIDAS.includes(origin) || PREVIA_VERCEL.test(origin)
 
 /** Limites por janela de tempo: [maximo, minutos] */
 const LIMITES: Record<string, [number, number]> = {
@@ -28,8 +40,7 @@ const LIMITES: Record<string, [number, number]> = {
 }
 
 const corsHeaders = (origin: string | null) => {
-  const permitida = !origin || ORIGENS_PERMITIDAS.includes(origin)
-  if (!permitida) return null
+  if (!origemAutorizada(origin)) return null
   return {
     "Access-Control-Allow-Origin": origin ?? ORIGENS_PERMITIDAS[0],
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
