@@ -49,6 +49,27 @@ const corsHeaders = (origin: string | null) => {
   }
 }
 
+/**
+ * Procura no Auth a conta de um e-mail. O Auth nao tem busca direta por
+ * e-mail, entao a lista e paginada; com a quantidade de usuarios do
+ * almoxarifado isso cabe em uma ou duas paginas.
+ */
+const contaDoEmail = async (
+  admin: ReturnType<typeof createClient>,
+  email: string | null,
+): Promise<string | null> => {
+  if (!email) return null
+  const alvo = email.trim().toLowerCase()
+  for (let pagina = 1; pagina <= 10; pagina++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page: pagina, perPage: 200 })
+    if (error || !data?.users?.length) return null
+    const achado = data.users.find((u) => (u.email ?? "").toLowerCase() === alvo)
+    if (achado) return achado.id
+    if (data.users.length < 200) return null
+  }
+  return null
+}
+
 const json = (body: unknown, status: number, cors: Record<string, string> | null) =>
   new Response(JSON.stringify(body), {
     status,
@@ -252,6 +273,20 @@ Deno.serve(async (req: Request) => {
         .eq("id", usuario_id)
         .maybeSingle()
       if (!usuario) return json({ error: "Usuario nao encontrado" }, 404, cors)
+
+      // O vinculo pode estar apontando para uma conta que nao existe mais
+      // (login recriado pelo painel, por exemplo). Nesse estado a pessoa
+      // entra no sistema mas nao consegue ler o proprio cadastro, e fica
+      // sem perfil. Aqui o vinculo e refeito pelo e-mail, que e unico no
+      // Auth, antes de qualquer coisa.
+      const contaReal = await contaDoEmail(admin, usuario.email)
+      if (contaReal && contaReal !== usuario.auth_user_id) {
+        await admin
+          .from("usuarios")
+          .update({ auth_user_id: contaReal })
+          .eq("id", usuario_id)
+        usuario.auth_user_id = contaReal
+      }
 
       if (usuario.auth_user_id) {
         const { error } = await admin.auth.admin.updateUserById(usuario.auth_user_id, {
