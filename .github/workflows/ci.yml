@@ -19,7 +19,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          # Mesma versão da máquina de desenvolvimento. Com o Node 22 o cliente
+          # do Supabase quebra ao ser criado ("native WebSocket not found"), e
+          # o CI falhava em toda execução enquanto os testes passavam local.
+          node-version: 24
           cache: pnpm
 
       - name: Instalar dependências
