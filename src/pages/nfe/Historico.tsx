@@ -41,6 +41,15 @@ const HistoricoNFePage = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [importacaoToDelete, setImportacaoToDelete] = useState<NFEImportacao | null>(null)
 
+  // RF-13: conciliação item a item, conferência e lançamento no estoque.
+  // Hooks ficam todos antes do `return` de carregamento: declarados depois, a
+  // ordem muda quando o carregamento termina e o React derruba a tela.
+  const [conciliando, setConciliando] = useState<any | null>(null)
+
+  // A central de notificações manda `?item=<id>` para abrir a conciliação da
+  // nota direto, e não só a listagem.
+  useAbrirItemDaUrl(importacoes as any[], (nfe) => nfe.id, (nfe) => setConciliando(nfe))
+
   useEffect(() => {
     fetchImportacoes()
     fetchStats()
@@ -127,13 +136,6 @@ const HistoricoNFePage = () => {
       </div>
     )
   }
-
-  // RF-13: conciliação item a item, conferência e lançamento no estoque
-  const [conciliando, setConciliando] = useState<any | null>(null)
-
-  // A central de notificações manda `?item=<id>` para abrir a conciliação da
-  // nota direto, e não só a listagem.
-  useAbrirItemDaUrl(importacoes as any[], (nfe) => nfe.id, (nfe) => setConciliando(nfe))
 
   const colunas: ColunaDataTable<any>[] = [
     {

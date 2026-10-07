@@ -116,10 +116,15 @@ const ConfiguracoesPage = () => {
             <Building2 className="h-4 w-4 mr-2" />
             Empresa
           </TabsTrigger>
-          <TabsTrigger value="perfis">
-            <ShieldCheck className="h-4 w-4 mr-2" />
-            Perfis de Acesso
-          </TabsTrigger>
+          {/* Quem pode o que é configuração de segurança: só administrador.
+              A aba aparecia para todo mundo que conseguia abrir Configurações,
+              inclusive o almoxarife. */}
+          {isAdmin && (
+            <TabsTrigger value="perfis">
+              <ShieldCheck className="h-4 w-4 mr-2" />
+              Perfis de Acesso
+            </TabsTrigger>
+          )}
           {isAdmin && (
             <TabsTrigger value="usuarios">
               <Users className="h-4 w-4 mr-2" />
@@ -229,9 +234,11 @@ const ConfiguracoesPage = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="perfis">
-          <PerfisAcesso />
-        </TabsContent>
+        {isAdmin && (
+          <TabsContent value="perfis">
+            <PerfisAcesso />
+          </TabsContent>
+        )}
 
         {isAdmin && (
           <TabsContent value="usuarios">
