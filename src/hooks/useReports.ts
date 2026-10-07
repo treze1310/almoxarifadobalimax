@@ -40,7 +40,9 @@ export function useReports(options?: UseReportsOptions) {
         .from('centros_custo')
         .select('id, codigo, descricao')
         .eq('ativo', true)
-        .order('codigo')
+        // Mais recente primeiro, como nas demais telas de centro de custo
+        .order('created_at', { ascending: false })
+        .order('codigo', { ascending: false })
 
       if (centrosCustoData) {
         setCentrosCusto(centrosCustoData.map(centro => ({

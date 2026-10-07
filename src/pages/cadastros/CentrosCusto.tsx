@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { PlusCircle, Pencil, Trash2, Landmark } from 'lucide-react'
 import { PageHeader } from '@/components/ds/PageHeader'
 import { DataTable, type ColunaDataTable } from '@/components/ds/DataTable'
@@ -34,7 +34,24 @@ import { supabase } from '@/lib/supabase'
 
 
 export default function CentrosCusto() {
-  const { data: centrosCusto, loading, fetchData: refetchCentrosCusto } = useSupabaseTable('centros_custo')
+  const { data: centrosCusto, loading, fetchData: buscarCentrosCusto } = useSupabaseTable('centros_custo')
+
+  /**
+   * Mais recente primeiro: o centro de custo cadastrado por último aparece no
+   * topo, que é o que normalmente se procura depois de criar uma obra. O
+   * código desempata e, como ele carrega a data no padrão do sistema anterior
+   * (2601131544 = 13/01/26), a ordem dentro do mesmo dia também fica do mais
+   * novo para o mais velho.
+   */
+  const refetchCentrosCusto = useCallback(
+    () => buscarCentrosCusto({ order: { column: 'created_at', ascending: false } }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
+
+  useEffect(() => {
+    refetchCentrosCusto()
+  }, [refetchCentrosCusto])
   const { data: empresas } = useSupabaseTable('empresas')
   const { toast } = useToast()
   

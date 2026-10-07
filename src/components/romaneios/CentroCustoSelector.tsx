@@ -63,7 +63,12 @@ export function CentroCustoSelector({
             empresas:empresa_id(nome)
           `)
           .eq('ativo', true)
-          .order('codigo', { ascending: true })
+          // Mais recente primeiro: a obra cadastrada por último aparece no topo,
+          // que é a que normalmente se procura. O código desempata, e como ele
+          // carrega a data no padrão do sistema antigo (2601131544 = 13/01/26),
+          // a ordem dentro do mesmo dia também sai do mais novo para o mais velho.
+          .order('created_at', { ascending: false })
+          .order('codigo', { ascending: false })
         
         if (error) {
           console.error('Error loading centros de custo:', error)

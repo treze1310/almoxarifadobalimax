@@ -86,7 +86,9 @@ export const UsuariosAdmin = () => {
     supabase
       .from('centros_custo')
       .select('id, codigo, descricao')
-      .order('codigo')
+      // Mais recente primeiro, como nas demais telas de centro de custo
+      .order('created_at', { ascending: false })
+      .order('codigo', { ascending: false })
       .then(({ data }) => setCentrosCusto((data as CentroCusto[]) || []))
   }, [])
 
