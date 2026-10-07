@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Edit, Trash2, Package, Wrench, Eye, RefreshCw, AlertTriangle, Copy } from 'lucide-react'
+import { PlusCircle, Edit, Trash2, Package, Wrench, Eye, RefreshCw, AlertTriangle, Copy, Tag } from 'lucide-react'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { verificarStatusCalibracao } from '@/utils/calibracao'
 import {
@@ -38,8 +38,11 @@ import { useSearchParams } from 'react-router-dom'
 import { useAbrirItemDaUrl } from '@/hooks/useAbrirItemDaUrl'
 
 import type { MaterialEquipamentoFormData } from '@/lib/validations'
+import { gerarEtiquetasPDF } from '@/utils/etiquetasPdf'
+import { useToast } from '@/components/ui/use-toast'
 
 const MateriaisEquipamentosPage = () => {
+  const { toast } = useToast()
   const { 
     materiaisEquipamentos, 
     loading, 
@@ -264,6 +267,40 @@ const MateriaisEquipamentosPage = () => {
   }
 
   /** Colunas da listagem, no padrão do design system */
+  /**
+   * Etiqueta do item: o código do cadastro vira código de barras, que é o que
+   * o leitor da retirada assistida procura. Equipamento sem etiqueta é o que
+   * impede o controle por número de item.
+   */
+  const imprimirEtiquetas = (lista: any[]) => {
+    const { gerados, ignorados } = gerarEtiquetasPDF(
+      lista.map((m) => ({
+        codigo: m.codigo,
+        nome: m.nome,
+        unidade: m.unidade_medida,
+        localizacao: m.localizacao?.nome
+          ? `${m.localizacao.codigo ?? ''} ${m.localizacao.nome}`.trim()
+          : null,
+      })),
+    )
+
+    if (ignorados.length > 0) {
+      toast({
+        title: 'Alguns itens ficaram de fora',
+        description: `${ignorados.length} item(ns) têm código que não vira código de barras: ${ignorados
+          .map((i) => i.codigo)
+          .join(', ')}`,
+        variant: 'destructive',
+      })
+      return
+    }
+
+    toast({
+      title: 'Etiquetas geradas',
+      description: `${gerados} etiqueta(s) na folha. Imprima em escala 100%, sem "ajustar à página".`,
+    })
+  }
+
   const colunas: ColunaDataTable<any>[] = [
     {
       id: 'item',
@@ -530,8 +567,31 @@ const MateriaisEquipamentosPage = () => {
         placeholderBusca="Buscar por código, nome, categoria ou marca..."
         nomeArquivoCsv="materiais-equipamentos"
         onLinhaClick={(m) => podeEditar && setEditingMaterial(m)}
+        acoesEmLote={(ids, limparSelecao) => (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              imprimirEtiquetas(filteredMateriais.filter((m) => ids.includes(m.id)))
+              limparSelecao()
+            }}
+          >
+            <Tag className="mr-2 h-4 w-4" />
+            Gerar etiquetas
+          </Button>
+        )}
         acoesLinha={(material) => (
           <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title="Etiqueta do item"
+              aria-label="Etiqueta do item"
+              onClick={() => imprimirEtiquetas([material])}
+            >
+              <Tag className="h-4 w-4" />
+            </Button>
             {podeEditar && (
               <Button
                 variant="ghost"

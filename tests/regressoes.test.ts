@@ -10,6 +10,7 @@ import {
 } from '../src/lib/dadosPessoais'
 import { STATUS, normalizarStatus, rotuloStatus } from '../src/lib/status'
 import { materialEquipamentoSchema } from '../src/lib/validations'
+import { barrasDoCodigo, code128b, larguraEmModulos, podeCodificar } from '../src/lib/code128'
 
 /**
  * Testes das regressões reais encontradas no sistema. Cada bloco cobre um bug
@@ -293,5 +294,50 @@ describe('níveis de estoque e ponto de pedido (RF-10)', () => {
 
   test('os três campos são opcionais', () => {
     expect(materialEquipamentoSchema.safeParse(base).success).toBe(true)
+  })
+})
+
+describe('código de barras das etiquetas (Code 128B)', () => {
+  // Conferido pela regra da norma: start B (104) + soma dos valores pela
+  // posição, módulo 103. "ABC" = 33, 34, 35 →
+  // (104 + 33*1 + 34*2 + 35*3) % 103 = 310 % 103 = 1
+  test('o dígito verificador segue a regra da norma', () => {
+    const PADRAO_VALOR_1 = '11001101100'
+    const codificado = code128b('ABC')
+    const verificador = codificado.slice(-11 - 13, -13)
+    expect(verificador).toBe(PADRAO_VALOR_1)
+  })
+
+  test('o tamanho é 11 módulos por símbolo mais a parada', () => {
+    // start + 3 caracteres + verificador = 5 símbolos, mais 13 da parada
+    expect(larguraEmModulos('ABC')).toBe(5 * 11 + 13)
+    expect(larguraEmModulos('10017')).toBe(7 * 11 + 13)
+  })
+
+  test('começa com barra e termina com a parada do Code 128', () => {
+    const codificado = code128b('10017')
+    expect(codificado.startsWith('11010010000')).toBe(true) // start B
+    expect(codificado.endsWith('1100011101011')).toBe(true) // stop
+  })
+
+  // Os códigos do almoxarifado são numéricos, mas o cadastro aceita texto
+  test('aceita os códigos usados no cadastro e recusa o que não representa', () => {
+    expect(podeCodificar('10017')).toBe(true)
+    expect(podeCodificar('EPI-001')).toBe(true)
+    expect(podeCodificar('')).toBe(false)
+    expect(podeCodificar('café')).toBe(false) // fora do conjunto B
+  })
+
+  test('as barras não se encostam nem saem da largura total', () => {
+    const barras = barrasDoCodigo('10017')
+    const total = larguraEmModulos('10017')
+    expect(barras.length).toBeGreaterThan(0)
+    barras.forEach((barra, i) => {
+      expect(barra.inicio + barra.largura).toBeLessThanOrEqual(total)
+      if (i > 0) {
+        const anterior = barras[i - 1]
+        expect(barra.inicio).toBeGreaterThan(anterior.inicio + anterior.largura)
+      }
+    })
   })
 })
