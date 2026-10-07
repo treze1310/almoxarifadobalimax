@@ -18,6 +18,7 @@ import LoginPage from './pages/Login'
 const DashboardPage = lazy(() => import('./pages/Dashboard'))
 const NovoRomaneioPage = lazy(() => import('./pages/romaneios/NovoRomaneio'))
 const RomaneiosPage = lazy(() => import('./pages/romaneios/Romaneios'))
+const RetiradaAssistidaPage = lazy(() => import('./pages/romaneios/RetiradaAssistida'))
 const ImportacaoNFePage = lazy(() => import('./pages/nfe/Importacao'))
 const HistoricoPage = lazy(() => import('./pages/nfe/Historico'))
 const MateriaisEquipamentosPage = lazy(() => import('./pages/materiais-equipamentos/MateriaisEquipamentos'))
@@ -71,6 +72,7 @@ const App = () => (
           <Route path="romaneios" element={<RequirePermission modulo="romaneios" acao="read"><RomaneiosPage /></RequirePermission>} />
           <Route path="novo-romaneio" element={<RequirePermission modulo="romaneios" acao="create"><NovoRomaneioPage /></RequirePermission>} />
           <Route path="romaneios/novo" element={<RequirePermission modulo="romaneios" acao="create"><NovoRomaneioPage /></RequirePermission>} />
+          <Route path="romaneios/retirada" element={<RequirePermission modulo="romaneios" acao="create"><RetiradaAssistidaPage /></RequirePermission>} />
           <Route path="romaneios/:id" element={<RequirePermission modulo="romaneios" acao="read"><RomaneiosPage /></RequirePermission>} />
 
           {/* 📄 Integração NF-e */}

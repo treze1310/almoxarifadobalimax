@@ -34,6 +34,8 @@ const ROTULOS: Record<string, string> = {
   'romaneio.cancelar': 'Romaneio cancelado',
   'nfe.conferir': 'NF-e conferida',
   'nfe.lancar_estoque': 'NF-e lançada no estoque',
+  'romaneio.retirada_assistida': 'Retirada assistida concluída',
+  'solicitacoes.reposicao_automatica': 'Solicitação de reposição automática',
 }
 
 const destrutiva = (acao: string) =>

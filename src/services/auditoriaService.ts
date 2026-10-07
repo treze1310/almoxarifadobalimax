@@ -31,6 +31,8 @@ export type AcaoAuditavel =
   | 'romaneio.cancelar'
   | 'nfe.conferir'
   | 'nfe.lancar_estoque'
+  | 'romaneio.retirada_assistida'
+  | 'solicitacoes.reposicao_automatica'
 
 interface RegistroAuditoria {
   acao: AcaoAuditavel

@@ -168,12 +168,38 @@ geração, e a ação entra na trilha de auditoria como `solicitacoes.reposicao_
 Coerente com a decisão de 05/10: a solicitação de compra **continua sendo só entrada** — ela não
 movimenta estoque. A entrada acontece no lançamento da NF-e.
 
+### RF-09 — Retirada assistida em 3 passos
+Entregue, em `/romaneios/retirada`. O formulário completo de romaneio continua existindo para
+devolução, transferência e ajustes; o assistente cobre o caminho do dia a dia.
+
+1. **Quem retira** — colaborador cadastrado ou nome avulso, centro de custo de destino e data.
+2. **Itens** — leitura por código de barras/QR, com o saldo item a item: saldo atual, quanto sai e
+   **saldo depois**, destacado quando a retirada zera o item ou o leva ao ponto de pedido. A
+   quantidade não passa do saldo, nem pelos botões nem digitada, e bipar o mesmo item de novo soma
+   uma unidade — é como o conferente conta várias peças iguais.
+3. **Conferência** — resumo, observações e **assinatura** do recebedor, obrigatória para confirmar.
+
+A leitura funciona nos três cenários do almoxarifado sem depender de qual a empresa usa: **leitor
+físico** USB/bluetooth (ele digita e manda Enter, e o campo se mantém focado para bastar bipar),
+**câmera do celular** quando o navegador tem a `BarcodeDetector` nativa, e **digitação manual** do
+código de barras, do código do material ou de parte do nome. Nada de dependência nova no projeto.
+
+A assinatura é desenhada com Pointer Events — funciona igual com dedo, caneta e mouse — e fica
+guardada no romaneio como PNG, com data e hora e o usuário que conferiu. O PDF do romaneio passou a
+imprimir a assinatura no campo "Responsável pelo Recebimento", com a marca de assinado
+digitalmente; sem assinatura, o PDF continua com a linha para assinar à mão. A listagem marca os
+romaneios assinados.
+
+Ao confirmar, o estoque é baixado pelo caminho que já existia (aprovação do romaneio), o que
+encadeia o RF-10: a retirada que leva um item ao ponto de pedido abre a solicitação de reposição
+sozinha. O aviso disso aparece ainda no passo 2, antes de confirmar.
+
 ## Pendente
 
 ### P1 (RF-08 a RF-15)
-Busca/filtros/paginação no servidor em todas as listagens, fluxo de retirada em 3 passos com código
-de barras, importação CSV em lote, revisão da matriz de perfis, pré-visualização e agendamento de
-relatórios. **RF-10, RF-12 e RF-13 entregues** (ver Fase 3).
+Busca/filtros/paginação no servidor em todas as listagens, importação CSV em lote, revisão da
+matriz de perfis, pré-visualização e agendamento de relatórios. **RF-09, RF-10, RF-12 e RF-13
+entregues** (ver Fase 3).
 
 ### P2 (RF-16 a RF-19)
 Hierarquia de localização com etiqueta QR, inventário cíclico pelo celular, central de

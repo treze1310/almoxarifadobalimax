@@ -17,6 +17,7 @@ import {
   Ban,
   Download,
   Copy,
+  PenLine,
 } from 'lucide-react'
 import { useRomaneios } from '@/hooks/useRomaneios'
 
@@ -316,7 +317,15 @@ const RomaneiosPage = () => {
       valorOrdenacao: (r) => r.numero ?? '',
       celula: (r) => (
         <div className="min-w-0">
-          <div className="font-medium">{r.numero}</div>
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{r.numero}</span>
+            {/* RF-09: romaneio com assinatura colhida na retirada assistida */}
+            {(r as any).assinatura_retirada && (
+              <span title="Assinado digitalmente" aria-label="Assinado digitalmente">
+                <PenLine className="h-3.5 w-3.5 shrink-0 text-status-concluido" />
+              </span>
+            )}
+          </div>
           <div className="text-xs text-muted-foreground">
             {formatDate(r.data_romaneio || r.created_at)}
           </div>

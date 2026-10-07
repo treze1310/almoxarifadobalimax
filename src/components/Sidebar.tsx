@@ -26,6 +26,7 @@ import {
   User,
   Settings,
   HardHat,
+  ScanLine,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissoes } from '@/contexts/PermissionsContext'
@@ -55,6 +56,13 @@ const gruposDeMenu = [
     itens: [
       { title: 'Dashboard', href: '/dashboard', icon: Home, modulo: 'dashboard' },
       { title: 'Romaneios', href: '/romaneios', icon: FileText, modulo: 'romaneios' },
+      {
+        title: 'Retirada assistida',
+        href: '/romaneios/retirada',
+        icon: ScanLine,
+        modulo: 'romaneios',
+        acao: 'create',
+      },
       {
         title: 'Materiais e Equipamentos',
         href: '/materiais-equipamentos',

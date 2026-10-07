@@ -264,6 +264,21 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
             margin: 80px 0 8px 0;
           }
           
+          /* Assinatura colhida na retirada assistida (RF-09) */
+          .signature-image {
+            width: 100%;
+            height: 80px;
+            object-fit: contain;
+            object-position: bottom;
+          }
+
+          .signature-stamp {
+            font-size: 8px;
+            color: #666;
+            font-weight: normal;
+            margin-top: 2px;
+          }
+
           .signature-title {
             font-size: 9px;
             color: #666;
@@ -406,7 +421,13 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
             </div>
             <div class="signature-box">
               <div>RESPONSÁVEL</div>
-              <div class="signature-line"></div>
+              ${romaneio.assinatura_retirada ? `
+                <img src="${romaneio.assinatura_retirada}" class="signature-image" alt="Assinatura do recebedor" />
+                <div style="width: 100%; height: 1px; background-color: #333; margin-bottom: 4px;"></div>
+                <div class="signature-stamp">Assinado digitalmente${romaneio.assinatura_em ? ` em ${new Date(romaneio.assinatura_em).toLocaleString('pt-BR')}` : ''}</div>
+              ` : `
+                <div class="signature-line"></div>
+              `}
               <div class="signature-title">${romaneio.tipo === 'devolucao' ? 'Responsável pela Devolução' : 'Responsável pelo Recebimento'}</div>
             </div>
             <div class="signature-box">
