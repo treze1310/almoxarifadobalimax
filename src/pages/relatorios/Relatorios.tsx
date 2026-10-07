@@ -25,12 +25,14 @@ import {
   AlertTriangle,
   FileDown,
   Filter,
-  Download
+  Download,
+  Eye
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { useReports } from '@/hooks/useReports'
 import { ReportRequest, REPORT_CONFIGS } from '@/types/reports'
+import { PreviaRelatorioDialog } from '@/components/relatorios/PreviaRelatorioDialog'
 
 type ReportSelectOption = {
   value: string
@@ -198,6 +200,38 @@ const RelatoriosPage = () => {
     }
 
     return defaultFilters
+  }
+
+  // RF-15: a prévia abre antes do download; o download sai de dentro dela.
+  const [previa, setPrevia] = useState<ReportRequest | null>(null)
+
+  const montarRequisicao = (formato: 'pdf' | 'excel' | 'csv'): ReportRequest | null => {
+    if (!selectedReport) return null
+
+    const reportConfig = REPORT_CONFIGS.find((config) => config.id === selectedReport)
+    if (!reportConfig) return null
+
+    const validationError = validateFilters(selectedReport, filters)
+    if (validationError) {
+      toast({
+        title: 'Dados inválidos',
+        description: validationError,
+        variant: 'destructive',
+      })
+      return null
+    }
+
+    return {
+      reportId: selectedReport,
+      filtros: filters,
+      formato,
+      titulo: reportConfig.titulo,
+    }
+  }
+
+  const handlePreview = () => {
+    const requisicao = montarRequisicao(format)
+    if (requisicao) setPrevia(requisicao)
   }
 
   const handleGenerateReport = async () => {
@@ -757,6 +791,17 @@ const RelatoriosPage = () => {
                           Cancelar
                         </Button>
                         <Button
+                          variant="secondary"
+                          className="flex-1"
+                          onClick={handlePreview}
+                          disabled={isGenerating}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Eye className="h-4 w-4" />
+                            Ver prévia
+                          </div>
+                        </Button>
+                        <Button
                           className="flex-1"
                           onClick={handleGenerateReport}
                           disabled={isGenerating}
@@ -769,7 +814,7 @@ const RelatoriosPage = () => {
                           ) : (
                             <div className="flex items-center gap-2">
                               <Download className="h-4 w-4" />
-                              Gerar
+                              Baixar
                             </div>
                           )}
                         </Button>
@@ -784,6 +829,25 @@ const RelatoriosPage = () => {
       </div>
         </div>
       </div>
+
+      {/* RF-15: prévia na tela antes de baixar */}
+      <PreviaRelatorioDialog
+        requisicao={previa}
+        onFechar={() => setPrevia(null)}
+        formatosDisponiveis={
+          REPORT_CONFIGS.find((c) => c.id === previa?.reportId)?.formatosDisponiveis
+        }
+        onBaixar={async (formato) => {
+          const requisicao = montarRequisicao(formato)
+          if (!requisicao) return
+          const sucesso = await generateReport(requisicao)
+          if (sucesso) {
+            setPrevia(null)
+            setSelectedReport(null)
+            setFilters({})
+          }
+        }}
+      />
     </div>
   )
 }

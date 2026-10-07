@@ -2770,49 +2770,61 @@ class ReportService {
     }
   }
 
+  /**
+   * Busca os dados do relatório, sem gerar arquivo nenhum.
+   *
+   * Separado de `generateReport` para a pré-visualização (RF-15) poder mostrar
+   * o relatório na tela antes de baixar: antes disso, a única forma de saber se
+   * o filtro estava certo era baixar o PDF e abrir.
+   */
+  private async montarDados(request: ReportRequest): Promise<ReportData> {
+    switch (request.reportId) {
+      case 'test-report':
+        return this.generateTestReport()
+      case 'inventario-geral':
+        return this.generateInventarioGeral(request.filtros as InventarioGeralFilter)
+      case 'movimentacao':
+        return this.generateMovimentacaoCorrigida(request.filtros as MovimentacaoFilter)
+      case 'vencimento-validade':
+        return this.generateVencimentoValidade(request.filtros as VencimentoValidadeFilter)
+      case 'consumo-centro-custo':
+        return this.generateConsumoCentroCustoCorrigido(request.filtros as ConsumoCentroCustoFilter)
+      case 'fornecedores':
+        return this.generateFornecedoresCorrigido(request.filtros as FornecedoresFilter)
+      case 'requisicoes-pendentes':
+        return this.generateRequisicoesPendentesCorrigido(request.filtros as RequisicoesFilter)
+      case 'analise-abc-xyz':
+        return this.generateAnaliseABCXYZCorrigida(request.filtros as AnaliseABCXYZFilter)
+      case 'inventario-rotativo':
+        return this.generateInventarioRotativoCorrigido(request.filtros as InventarioRotativoFilter)
+      default:
+        throw new Error(`Tipo de relatório '${request.reportId}' não encontrado`)
+    }
+  }
+
+  /**
+   * Pré-visualização (RF-15): devolve os dados e o HTML do relatório para a
+   * tela mostrar, sem baixar arquivo. Relatório vazio não é erro aqui — ver
+   * "nenhum registro" na tela é justamente a informação que se quer.
+   */
+  async previewReport(
+    request: ReportRequest,
+  ): Promise<{ success: boolean; data?: ReportData; html?: string; error?: string }> {
+    try {
+      const reportData = await this.montarDados(request)
+      if (request.titulo) reportData.titulo = request.titulo
+
+      return { success: true, data: reportData, html: this.generateHTMLReport(reportData) }
+    } catch (error: any) {
+      return { success: false, error: error.message || 'Erro ao montar o relatório' }
+    }
+  }
+
   async generateReport(request: ReportRequest): Promise<ReportResponse> {
     const inicioExecucao = Date.now()
-    
+
     try {
-      console.log(' Iniciando geração de relatório:', {
-        reportId: request.reportId,
-        formato: request.formato,
-        filtros: request.filtros
-      })
-
-      let reportData: ReportData
-
-      switch (request.reportId) {
-        case 'test-report':
-          reportData = await this.generateTestReport()
-          break
-        case 'inventario-geral':
-          reportData = await this.generateInventarioGeral(request.filtros as InventarioGeralFilter)
-          break
-        case 'movimentacao':
-          reportData = await this.generateMovimentacaoCorrigida(request.filtros as MovimentacaoFilter)
-          break
-        case 'vencimento-validade':
-          reportData = await this.generateVencimentoValidade(request.filtros as VencimentoValidadeFilter)
-          break
-        case 'consumo-centro-custo':
-          reportData = await this.generateConsumoCentroCustoCorrigido(request.filtros as ConsumoCentroCustoFilter)
-          break
-        case 'fornecedores':
-          reportData = await this.generateFornecedoresCorrigido(request.filtros as FornecedoresFilter)
-          break
-        case 'requisicoes-pendentes':
-          reportData = await this.generateRequisicoesPendentesCorrigido(request.filtros as RequisicoesFilter)
-          break
-        case 'analise-abc-xyz':
-          reportData = await this.generateAnaliseABCXYZCorrigida(request.filtros as AnaliseABCXYZFilter)
-          break
-        case 'inventario-rotativo':
-          reportData = await this.generateInventarioRotativoCorrigido(request.filtros as InventarioRotativoFilter)
-          break
-        default:
-          throw new Error(`Tipo de relatório '${request.reportId}' não encontrado`)
-      }
+      const reportData = await this.montarDados(request)
 
       console.log(' Dados do relatório gerados:', {
         totalRegistros: reportData.summary.totalRegistros,
