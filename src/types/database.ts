@@ -367,6 +367,32 @@ export type Database = {
         }
         Relationships: []
       }
+      alertas_lidos: {
+        Row: {
+          chave: string
+          lido_em: string
+          usuario_id: string
+        }
+        Insert: {
+          chave: string
+          lido_em?: string
+          usuario_id: string
+        }
+        Update: {
+          chave?: string
+          lido_em?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alertas_lidos_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categorias: {
         Row: {
           ativo: boolean | null

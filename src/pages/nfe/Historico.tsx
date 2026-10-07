@@ -6,6 +6,7 @@ import { DataTable, type ColunaDataTable } from '@/components/ds/DataTable'
 import { StatusBadge } from '@/components/ds/StatusBadge'
 import { PageHeader } from '@/components/ds/PageHeader'
 import { ConciliacaoNFeDialog } from '@/components/nfe/ConciliacaoNFeDialog'
+import { useAbrirItemDaUrl } from '@/hooks/useAbrirItemDaUrl'
 import { EmptyState, TableSkeleton } from '@/components/ds/EstadosPagina'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -129,6 +130,10 @@ const HistoricoNFePage = () => {
 
   // RF-13: conciliação item a item, conferência e lançamento no estoque
   const [conciliando, setConciliando] = useState<any | null>(null)
+
+  // A central de notificações manda `?item=<id>` para abrir a conciliação da
+  // nota direto, e não só a listagem.
+  useAbrirItemDaUrl(importacoes as any[], (nfe) => nfe.id, (nfe) => setConciliando(nfe))
 
   const colunas: ColunaDataTable<any>[] = [
     {

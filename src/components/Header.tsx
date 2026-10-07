@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
 import { ThemeToggle } from '@/components/ds/ThemeToggle'
+import { CentralNotificacoes } from '@/components/ds/CentralNotificacoes'
 
 export const Header = () => {
   const [searchOpen, setSearchOpen] = useState(false)
@@ -80,6 +81,7 @@ export const Header = () => {
 
         {/* Ações do topo, alinhadas à direita */}
         <div className="ml-auto flex shrink-0 items-center gap-1 pl-2">
+          <CentralNotificacoes />
           <ThemeToggle />
         </div>
       </div>
