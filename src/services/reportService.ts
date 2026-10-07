@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { executarPaginado } from '@/lib/consultaPaginada'
 import { pdfService } from './pdfService'
 import {
   CORES_PADRAO,
@@ -295,7 +296,7 @@ class ReportService {
       query = query.lte('valor_unitario', filtros.valorMaximo)
     }
 
-    const { data, error } = await query
+    const { data, error } = await executarPaginado<any>(query)
 
     if (error) {
       console.error(' Erro na query do inventário geral:', error)
@@ -435,7 +436,7 @@ class ReportService {
       query = query.eq('usuario_id', filtros.responsavel)
     }
 
-    const { data, error } = await query
+    const { data, error } = await executarPaginado<any>(query)
 
     if (error) throw error
     if (!data || data.length === 0) {
@@ -592,7 +593,7 @@ class ReportService {
       query = query.eq('localizacao_id', filtros.localizacao)
     }
 
-    const { data, error } = await query
+    const { data, error } = await executarPaginado<any>(query)
 
     if (error) throw error
     if (!data || data.length === 0) {
@@ -766,7 +767,7 @@ class ReportService {
       query = query.eq('materiais_equipamentos.categoria', filtros.categoria)
     }
 
-    const { data, error } = (await query) as any
+    const { data, error } = (await executarPaginado<any>(query)) as any
 
     if (error) throw error
     if (!data || data.length === 0) {
@@ -1345,7 +1346,7 @@ class ReportService {
       query = query.eq('id', filtros.fornecedor)
     }
 
-    const { data, error } = await query
+    const { data, error } = await executarPaginado<any>(query)
 
     if (error) throw error
     if (!data || data.length === 0) {
@@ -1481,7 +1482,7 @@ class ReportService {
       query = query.lte('data_solicitacao', filtros.dataFim)
     }
 
-    const { data, error } = await query.order('data_solicitacao', { ascending: true })
+    const { data, error } = await executarPaginado<any>(query.order('data_solicitacao', { ascending: true }))
 
     if (error) throw error
     if (!data || data.length === 0) {
@@ -1642,7 +1643,7 @@ class ReportService {
       query = query.eq('localizacao_id', filtros.localizacao)
     }
 
-    const { data, error } = await query
+    const { data, error } = await executarPaginado<any>(query)
 
     if (error) throw error
     if (!data || data.length === 0) {
@@ -1850,7 +1851,7 @@ class ReportService {
       query = query.eq('localizacao_id', filtros.localizacao)
     }
 
-    const { data, error } = await query
+    const { data, error } = await executarPaginado<any>(query)
 
     if (error) throw error
     if (!data || data.length === 0) {
@@ -2126,7 +2127,7 @@ class ReportService {
       query = query.eq('usuario_id', filtros.responsavel)
     }
 
-    const { data, error } = (await query) as any
+    const { data, error } = (await executarPaginado<any>(query)) as any
     if (error) throw error
 
     let movimentacoes = data || []
@@ -2335,7 +2336,7 @@ class ReportService {
     let query = supabase.from('fornecedores').select('*').eq('ativo', true)
     if (filtros.fornecedor && filtros.fornecedor !== 'todos') query = query.eq('id', filtros.fornecedor)
 
-    const { data: fornecedores, error } = await query
+    const { data: fornecedores, error } = await executarPaginado<any>(query)
     if (error) throw error
     if (!fornecedores || fornecedores.length === 0) throw new Error(VALIDACAO_REGRAS.mensagens.nenhumRegistro)
 
@@ -2467,7 +2468,7 @@ class ReportService {
     if (filtros.dataInicio) query = query.gte('data_solicitacao', filtros.dataInicio)
     if (filtros.dataFim) query = query.lte('data_solicitacao', filtros.dataFim)
 
-    const { data, error } = (await query.order('data_solicitacao', { ascending: true })) as any
+    const { data, error } = (await executarPaginado<any>(query.order('data_solicitacao', { ascending: true }))) as any
     if (error) throw error
 
     const prioridadeMap: Record<string, string[]> = {
@@ -2573,7 +2574,7 @@ class ReportService {
     if (filtros.categoria && filtros.categoria !== 'todas') query = query.eq('categoria', filtros.categoria)
     if (filtros.localizacao && filtros.localizacao !== 'todas') query = query.eq('localizacao_id', filtros.localizacao)
 
-    const { data, error } = (await query) as any
+    const { data, error } = (await executarPaginado<any>(query)) as any
     if (error) throw error
     if (!data || data.length === 0) throw new Error(VALIDACAO_REGRAS.mensagens.nenhumRegistro)
 
@@ -2683,7 +2684,7 @@ class ReportService {
     if (filtros.categoria && filtros.categoria !== 'todas') query = query.eq('categoria', filtros.categoria)
     if (filtros.localizacao && filtros.localizacao !== 'todas') query = query.eq('localizacao_id', filtros.localizacao)
 
-    const { data, error } = (await query) as any
+    const { data, error } = (await executarPaginado<any>(query)) as any
     if (error) throw error
     if (!data || data.length === 0) throw new Error(VALIDACAO_REGRAS.mensagens.nenhumRegistro)
 

@@ -154,13 +154,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
+  /**
+   * "Auth session missing" quer dizer que já não havia sessão para encerrar —
+   * a sessão expirou, o token foi renovado em outra aba ou a inatividade já
+   * tinha deslogado. O resultado que a pessoa queria (sair) já é verdade, e
+   * mostrar erro vermelho nesse caso só assusta.
+   */
+  const sessaoJaEncerrada = (mensagem?: string) =>
+    /session (missing|not found)|sessão não encontrada/i.test(mensagem ?? '')
+
   const signOut = async () => {
     try {
       setLoading(true)
 
       const { error } = await supabase.auth.signOut()
 
-      if (error) {
+      if (error && !sessaoJaEncerrada(error.message)) {
         toast({
           title: 'Erro ao fazer logout',
           description: error.message,
@@ -168,13 +177,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
         })
       }
     } catch (error) {
-      console.error('Erro durante o logout:', error)
-      toast({
-        title: 'Erro ao fazer logout',
-        description: 'Ocorreu um erro inesperado',
-        variant: 'destructive',
-      })
+      const mensagem = error instanceof Error ? error.message : ''
+      if (!sessaoJaEncerrada(mensagem)) {
+        console.error('Erro durante o logout:', error)
+        toast({
+          title: 'Erro ao fazer logout',
+          description: 'Ocorreu um erro inesperado',
+          variant: 'destructive',
+        })
+      }
     } finally {
+      // Sem sessão no servidor não chega evento de mudança de autenticação,
+      // então a tela ficaria presa como se ainda estivesse logada.
+      setUser(null)
+      setSession(null)
       setLoading(false)
     }
   }

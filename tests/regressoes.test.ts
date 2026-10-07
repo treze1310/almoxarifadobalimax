@@ -10,6 +10,7 @@ import {
 } from '../src/lib/dadosPessoais'
 import { STATUS, normalizarStatus, rotuloStatus } from '../src/lib/status'
 import { materialEquipamentoSchema } from '../src/lib/validations'
+import { buscarTodasAsPaginas } from '../src/lib/consultaPaginada'
 import { barrasDoCodigo, code128b, larguraEmModulos, podeCodificar } from '../src/lib/code128'
 import {
   detectarSeparador,
@@ -431,5 +432,53 @@ describe('filtro de período da trilha de auditoria (RNF-01)', () => {
     expect(new Date('2026-10-07T21:00:00') <= fim).toBe(true)
     // E um do dia seguinte, não
     expect(new Date('2026-10-08T00:30:00') <= fim).toBe(false)
+  })
+})
+
+describe('limite de 1.000 linhas da API (carga do sistema antigo)', () => {
+  // O PostgREST corta a resposta em 1.000 linhas sem devolver erro: a tela de
+  // materiais passou a mostrar 1.000 dos 2.209 itens, e os relatórios a somar
+  // só parte do estoque.
+  const fingirTabela = (total: number) => {
+    const linhas = Array.from({ length: total }, (_, i) => ({ id: i }))
+    return (de: number, ate: number) =>
+      Promise.resolve({ data: linhas.slice(de, Math.min(ate + 1, de + 1000)), error: null })
+  }
+
+  test('traz a tabela inteira, atravessando as páginas', async () => {
+    const { data, error } = await buscarTodasAsPaginas(fingirTabela(2209))
+    expect(error).toBeNull()
+    expect(data).toHaveLength(2209)
+  })
+
+  test('uma página cheia exata não entra em laço infinito', async () => {
+    const { data } = await buscarTodasAsPaginas(fingirTabela(2000))
+    expect(data).toHaveLength(2000)
+  })
+
+  test('tabela menor que a página faz uma consulta só', async () => {
+    let consultas = 0
+    const { data } = await buscarTodasAsPaginas((de, ate) => {
+      consultas++
+      return fingirTabela(78)(de, ate)
+    })
+    expect(data).toHaveLength(78)
+    expect(consultas).toBe(1)
+  })
+
+  test('tabela vazia devolve lista vazia', async () => {
+    const { data } = await buscarTodasAsPaginas(fingirTabela(0))
+    expect(data).toEqual([])
+  })
+
+  // Erro no meio não pode passar por completo: quem chamou precisa saber
+  test('erro numa página interrompe e é devolvido', async () => {
+    const { data, error } = await buscarTodasAsPaginas((de) =>
+      de === 0
+        ? Promise.resolve({ data: Array.from({ length: 1000 }, (_, i) => ({ id: i })), error: null })
+        : Promise.resolve({ data: null, error: { message: 'falhou' } }),
+    )
+    expect(error?.message).toBe('falhou')
+    expect(data).toHaveLength(1000)
   })
 })

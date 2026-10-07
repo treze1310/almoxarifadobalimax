@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { buscarTodasAsPaginas, executarPaginado } from '@/lib/consultaPaginada'
 import { useToast } from '@/components/ui/use-toast'
 import type { Tables } from '@/types/database'
 import type { MaterialEquipamentoFormData } from '@/lib/validations'
@@ -62,42 +63,45 @@ export function useMateriaisEquipamentos() {
     try {
       console.log('🔍 Buscando materiais com opções:', options)
       
-      let query = supabase
-        .from('materiais_equipamentos')
-        .select(`
-          *,
-          marcas:marca_id (nome),
-          fornecedores:fornecedor_id (nome, cnpj),
-          localizacao:localizacao_id (codigo, nome),
-          centros_custo:centro_custo_id (codigo, descricao, empresas:empresa_id(nome))
-        `)
-        .order('codigo', { ascending: true })
+      // A API corta a resposta em 1.000 linhas sem avisar, e o cadastro passou
+      // disso: a busca atravessa as páginas até a última.
+      const montarConsulta = (de: number, ate: number) => {
+        let query = supabase
+          .from('materiais_equipamentos')
+          .select(`
+            *,
+            marcas:marca_id (nome),
+            fornecedores:fornecedor_id (nome, cnpj),
+            localizacao:localizacao_id (codigo, nome),
+            centros_custo:centro_custo_id (codigo, descricao, empresas:empresa_id(nome))
+          `)
+          .order('codigo', { ascending: true })
 
-      // Filtrar por ativo apenas se não foi solicitado incluir inativos
-      if (!options?.includeInactive) {
-        console.log('📋 Filtrando apenas materiais ativos')
-        query = query.eq('ativo', true)
-      } else {
-        console.log('📋 Incluindo materiais inativos')
+        // Filtrar por ativo apenas se não foi solicitado incluir inativos
+        if (!options?.includeInactive) {
+          query = query.eq('ativo', true)
+        }
+
+        if (options?.tipo) {
+          query = query.eq('tipo', options.tipo)
+        }
+
+        if (options?.categoria) {
+          query = query.ilike('categoria', `%${options.categoria}%`)
+        }
+
+        if (options?.status) {
+          query = query.eq('status', options.status)
+        }
+
+        if (options?.search) {
+          query = query.or(`codigo.ilike.%${options.search}%,nome.ilike.%${options.search}%,descricao.ilike.%${options.search}%`)
+        }
+
+        return query.range(de, ate)
       }
 
-      if (options?.tipo) {
-        query = query.eq('tipo', options.tipo)
-      }
-
-      if (options?.categoria) {
-        query = query.ilike('categoria', `%${options.categoria}%`)
-      }
-
-      if (options?.status) {
-        query = query.eq('status', options.status)
-      }
-
-      if (options?.search) {
-        query = query.or(`codigo.ilike.%${options.search}%,nome.ilike.%${options.search}%,descricao.ilike.%${options.search}%`)
-      }
-
-      const { data, error } = await query
+      const { data, error } = await buscarTodasAsPaginas<any>(montarConsulta)
 
       if (error) {
         console.error('❌ Erro na consulta:', error)
@@ -403,7 +407,12 @@ export function useMateriaisEquipamentos() {
         query = query.eq('material_equipamento_id', materialId)
       }
 
-      const { data, error } = await query
+      // O histórico de um item é trazido inteiro; sem item escolhido, a tabela
+      // tem dezenas de milhares de linhas desde a carga do sistema antigo e só
+      // as mais recentes interessam na tela.
+      const { data, error } = materialId
+        ? await executarPaginado<any>(query)
+        : await query.limit(500)
 
       if (error) throw error
 
