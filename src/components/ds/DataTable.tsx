@@ -101,6 +101,10 @@ export function DataTable<T>({
   const p = (sufixo: string) => `${chaveUrl}_${sufixo}`
 
   const [busca, setBusca] = useState(searchParams.get(p('q')) ?? '')
+  // Filtrar a cada tecla custa caro em tabela grande (percorre todas as linhas
+  // em todas as colunas), então o campo responde na hora e o filtro espera a
+  // digitação parar.
+  const [buscaAplicada, setBuscaAplicada] = useState(busca)
   const [filtros, setFiltros] = useState<Record<string, string[]>>({})
   const [ordenacao, setOrdenacao] = useState<{ coluna: string; direcao: SortDirection }>({
     coluna: searchParams.get(p('sort')) ?? '',
@@ -132,36 +136,48 @@ export function DataTable<T>({
 
   const colunasVisiveis = colunas.filter((c) => c.fixa || !ocultas.includes(c.id))
 
+  // As páginas montam `colunas` como literal, então o array muda de identidade
+  // a cada render e invalidaria todos os memos abaixo — com 2.209 itens isso
+  // significa refazer tudo a cada tecla. A assinatura por id mantém o cache.
+  const assinaturaColunas = colunas.map((c) => c.id).join('|')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const colunasEstaveis = useMemo(() => colunas, [assinaturaColunas])
+
   const opcoesPorColuna = useMemo(() => {
     const mapa: Record<string, string[]> = {}
-    for (const coluna of colunas) {
+    for (const coluna of colunasEstaveis) {
       if (coluna.semFiltro) continue
       const valores = new Set<string>()
       for (const linha of dados) valores.add(coluna.valor(linha) || '—')
       mapa[coluna.id] = Array.from(valores).sort((a, b) => a.localeCompare(b, 'pt-BR'))
     }
     return mapa
-  }, [dados, colunas])
+  }, [dados, colunasEstaveis])
+
+  useEffect(() => {
+    const id = setTimeout(() => setBuscaAplicada(busca), 180)
+    return () => clearTimeout(id)
+  }, [busca])
 
   const filtradas = useMemo(() => {
-    const termo = busca.trim().toLowerCase()
+    const termo = buscaAplicada.trim().toLowerCase()
     return dados.filter((linha) => {
       if (termo) {
-        const casa = colunas.some((c) => c.valor(linha).toLowerCase().includes(termo))
+        const casa = colunasEstaveis.some((c) => c.valor(linha).toLowerCase().includes(termo))
         if (!casa) return false
       }
       return Object.entries(filtros).every(([colunaId, valores]) => {
         if (valores.length === 0) return true
-        const coluna = colunas.find((c) => c.id === colunaId)
+        const coluna = colunasEstaveis.find((c) => c.id === colunaId)
         if (!coluna) return true
         return valores.includes(coluna.valor(linha) || '—')
       })
     })
-  }, [dados, colunas, busca, filtros])
+  }, [dados, colunasEstaveis, buscaAplicada, filtros])
 
   const ordenadas = useMemo(() => {
     if (!ordenacao.direcao) return filtradas
-    const coluna = colunas.find((c) => c.id === ordenacao.coluna)
+    const coluna = colunasEstaveis.find((c) => c.id === ordenacao.coluna)
     if (!coluna) return filtradas
     const fator = ordenacao.direcao === 'asc' ? 1 : -1
     const chave = coluna.valorOrdenacao ?? coluna.valor
@@ -171,7 +187,7 @@ export function DataTable<T>({
       if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * fator
       return String(va).localeCompare(String(vb), 'pt-BR') * fator
     })
-  }, [filtradas, colunas, ordenacao])
+  }, [filtradas, colunasEstaveis, ordenacao])
 
   const totalPaginas = Math.max(1, Math.ceil(ordenadas.length / tamanhoPagina))
   const paginaAtual = Math.min(pagina, totalPaginas)

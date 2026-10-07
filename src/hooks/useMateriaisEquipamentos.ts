@@ -66,12 +66,19 @@ export function useMateriaisEquipamentos() {
       // A API corta a resposta em 1.000 linhas sem avisar, e o cadastro passou
       // disso: a busca atravessa as páginas até a última.
       const montarConsulta = (de: number, ate: number) => {
+        // Só as colunas que a listagem usa: com 2.209 itens, trazer a linha
+        // inteira são megabytes a cada abertura da tela. Quem precisa do
+        // registro completo (editar, clonar) busca na hora de abrir.
         let query = supabase
           .from('materiais_equipamentos')
           .select(`
-            *,
+            id, codigo, nome, tipo, categoria, unidade_medida, modelo,
+            estoque_atual, estoque_minimo, estoque_maximo, ponto_pedido,
+            reposicao_automatica, precisa_repor, situacao_estoque,
+            valor_unitario, codigo_barras, status, ativo, is_epi, validade_ca,
+            requer_calibracao, proxima_calibracao, frequencia_calibracao_meses,
+            marca_id, localizacao_id, centro_custo_id,
             marcas:marca_id (nome),
-            fornecedores:fornecedor_id (nome, cnpj),
             localizacao:localizacao_id (codigo, nome),
             centros_custo:centro_custo_id (codigo, descricao, empresas:empresa_id(nome))
           `)

@@ -36,6 +36,7 @@ import { StatusBadge } from '@/components/ds/StatusBadge'
 import { EmptyState, TableSkeleton } from '@/components/ds/EstadosPagina'
 import { useSearchParams } from 'react-router-dom'
 import { useAbrirItemDaUrl } from '@/hooks/useAbrirItemDaUrl'
+import { supabase } from '@/lib/supabase'
 
 import type { MaterialEquipamentoFormData } from '@/lib/validations'
 import { gerarEtiquetasPDF } from '@/utils/etiquetasPdf'
@@ -70,6 +71,20 @@ const MateriaisEquipamentosPage = () => {
   )
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingMaterial, setEditingMaterial] = useState<any>(null)
+
+  /**
+   * A listagem traz só as colunas que a tabela mostra — com 2.209 itens, trazer
+   * tudo são megabytes a cada abertura. O formulário precisa do registro
+   * inteiro, então ele é buscado na hora de abrir.
+   */
+  const abrirCompleto = async (material: any, destino: (m: any) => void) => {
+    const { data } = await supabase
+      .from('materiais_equipamentos')
+      .select('*')
+      .eq('id', material.id)
+      .maybeSingle()
+    destino(data ?? material)
+  }
   const [deletingMaterial, setDeletingMaterial] = useState<any>(null)
   const [movimentacaoMaterial, setMovimentacaoMaterial] = useState<any>(null)
   const [cloningMaterial, setCloningMaterial] = useState<any>(null)
@@ -101,7 +116,7 @@ const MateriaisEquipamentosPage = () => {
 
 
   // Abre o item vindo da paleta de comandos (?item=<id>)
-  useAbrirItemDaUrl(materiaisEquipamentos, (m) => m.id, (m) => setEditingMaterial(m))
+  useAbrirItemDaUrl(materiaisEquipamentos, (m) => m.id, (m) => abrirCompleto(m, setEditingMaterial))
 
   // Mantém o filtro de estoque crítico refletido na URL, para o link do
   // Dashboard funcionar e o estado ser compartilhável (RF-08).
@@ -176,13 +191,15 @@ const MateriaisEquipamentosPage = () => {
   }
 
   // Clonar: abre o formulário de criação pré-preenchido com os dados do item
-  const handleCloneClick = (material: any) => {
-    const { id, codigo, created_at, updated_at, ...rest } = material
-    setCloningMaterial({
-      ...rest,
-      nome: `${material.nome} (Cópia)`,
-      numero_serie: '',
-      estoque_atual: 0,
+  const handleCloneClick = (materialDaLista: any) => {
+    void abrirCompleto(materialDaLista, (material: any) => {
+      const { id, codigo, created_at, updated_at, ...rest } = material
+      setCloningMaterial({
+        ...rest,
+        nome: `${material.nome} (Cópia)`,
+        numero_serie: '',
+        estoque_atual: 0,
+      })
     })
   }
 
@@ -574,7 +591,7 @@ const MateriaisEquipamentosPage = () => {
         chaveUrl="mat"
         placeholderBusca="Buscar por código, nome, categoria ou marca..."
         nomeArquivoCsv="materiais-equipamentos"
-        onLinhaClick={(m) => podeEditar && setEditingMaterial(m)}
+        onLinhaClick={(m) => podeEditar && abrirCompleto(m, setEditingMaterial)}
         acoesEmLote={(ids, limparSelecao) => (
           <Button
             variant="outline"
@@ -607,7 +624,7 @@ const MateriaisEquipamentosPage = () => {
                 className="h-7 w-7"
                 title="Editar"
                 aria-label="Editar"
-                onClick={() => setEditingMaterial(material)}
+                onClick={() => abrirCompleto(material, setEditingMaterial)}
               >
                 <Edit className="h-4 w-4" />
               </Button>

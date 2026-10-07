@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { buscarTodasAsPaginas } from '@/lib/consultaPaginada'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Card,
@@ -113,10 +114,15 @@ const DashboardPage = () => {
         movMesAtualResult,
         movMesAnteriorResult
       ] = await Promise.all([
-        // Materiais e estoque. situacao_estoque e coluna gerada no banco (RF-02)
-        supabase
-          .from('materiais_equipamentos')
-          .select('estoque_atual, estoque_minimo, valor_unitario, ativo, situacao_estoque, created_at'),
+        // Materiais e estoque. situacao_estoque e coluna gerada no banco (RF-02).
+        // Paginado: a API corta em 1.000 linhas e o total do estoque sairia
+        // somando só parte do cadastro.
+        buscarTodasAsPaginas<any>((de, ate) =>
+          supabase
+            .from('materiais_equipamentos')
+            .select('estoque_atual, estoque_minimo, valor_unitario, ativo, situacao_estoque, created_at')
+            .order('id')
+            .range(de, ate)),
         
         // Romaneios de hoje
         supabase
@@ -142,23 +148,28 @@ const DashboardPage = () => {
           .select('id')
           .eq('ativo', true),
         
-        // Movimentações dos últimos 30 dias
-        supabase
-          .from('movimentacao_estoque')
-          .select('valor_unitario, quantidade, tipo_movimentacao, created_at')
-          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+        // Movimentações dos últimos 30 dias. O filtro é por `data_movimentacao`,
+        // a data em que o movimento aconteceu — `created_at` é quando a linha
+        // entrou no banco, e para o histórico importado isso é o dia da carga.
+        buscarTodasAsPaginas<any>((de, ate) =>
+          supabase
+            .from('movimentacao_estoque')
+            .select('valor_unitario, quantidade, tipo_movimentacao, data_movimentacao')
+            .gte('data_movimentacao', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+            .order('data_movimentacao')
+            .range(de, ate)),
 
         // RF-01: base de comparação real — movimentações do mês atual e do anterior
         supabase
           .from('movimentacao_estoque')
           .select('id', { count: 'exact', head: true })
-          .gte('created_at', inicioMesAtual.toISOString()),
+          .gte('data_movimentacao', inicioMesAtual.toISOString()),
 
         supabase
           .from('movimentacao_estoque')
           .select('id', { count: 'exact', head: true })
-          .gte('created_at', inicioMesAnterior.toISOString())
-          .lt('created_at', inicioMesAtual.toISOString())
+          .gte('data_movimentacao', inicioMesAnterior.toISOString())
+          .lt('data_movimentacao', inicioMesAtual.toISOString())
       ])
 
       // Processar dados dos materiais
@@ -210,9 +221,11 @@ const DashboardPage = () => {
 
       // Calcular valor movimentado nos últimos 30 dias
       const movimentacoes = movimentacaoResult.data || []
+      // Volume movimentado: a saída é negativa por convenção do sistema, então
+      // sem o módulo as saídas abateriam as entradas e o valor ficaria negativo
+      // — visível agora que o histórico importado tem 21 mil saídas.
       const valorMovimentado30d = movimentacoes.reduce((total, mov) => {
-        const valor = (mov.valor_unitario || 0) * (mov.quantidade || 0)
-        return total + valor
+        return total + (mov.valor_unitario || 0) * Math.abs(mov.quantidade || 0)
       }, 0)
 
       // Calcular percentual de ocupação do estoque
