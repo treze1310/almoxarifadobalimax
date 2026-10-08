@@ -107,3 +107,6 @@ scripts/carga-legado/dados/
 
 # Propostas extraídas do cronológico (regeneráveis com o extrair.py)
 scripts/cronologico-orcamentos/propostas.json
+
+# Scripts de diagnostico temporarios
+.tmp-diag/
