@@ -37,14 +37,19 @@ export default function CentrosCusto() {
   const { data: centrosCusto, loading, fetchData: buscarCentrosCusto } = useSupabaseTable('centros_custo')
 
   /**
-   * Mais recente primeiro: o centro de custo cadastrado por último aparece no
-   * topo, que é o que normalmente se procura depois de criar uma obra. O
-   * código desempata e, como ele carrega a data no padrão do sistema anterior
-   * (2601131544 = 13/01/26), a ordem dentro do mesmo dia também fica do mais
-   * novo para o mais velho.
+   * Mais recente primeiro pela **data da obra**, não pela data de cadastro:
+   * uma carga em lote joga tudo para o topo de uma vez e embaralha a ordem.
+   * Sem data vai para o fim, e o código desempata — ele carrega a data no
+   * padrão do sistema anterior (2601131544 = 13/01/26).
    */
   const refetchCentrosCusto = useCallback(
-    () => buscarCentrosCusto({ order: { column: 'created_at', ascending: false } }),
+    () =>
+      buscarCentrosCusto({
+        order: [
+          { column: 'data', ascending: false, nullsFirst: false },
+          { column: 'codigo', ascending: false },
+        ],
+      }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   )

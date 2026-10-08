@@ -63,11 +63,11 @@ export function CentroCustoSelector({
             empresas:empresa_id(nome)
           `)
           .eq('ativo', true)
-          // Mais recente primeiro: a obra cadastrada por último aparece no topo,
-          // que é a que normalmente se procura. O código desempata, e como ele
-          // carrega a data no padrão do sistema antigo (2601131544 = 13/01/26),
-          // a ordem dentro do mesmo dia também sai do mais novo para o mais velho.
-          .order('created_at', { ascending: false })
+          // Mais recente primeiro pela data da obra, não pela data de cadastro: uma
+          // carga em lote joga tudo para o topo de uma vez e embaralha a ordem.
+          // Sem data vai para o fim; o código desempata e carrega a data no
+          // padrão do sistema anterior (2601131544 = 13/01/26).
+          .order('data', { ascending: false, nullsFirst: false })
           .order('codigo', { ascending: false })
         
         if (error) {

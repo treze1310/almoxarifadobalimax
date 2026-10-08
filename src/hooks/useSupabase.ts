@@ -14,7 +14,7 @@ export function useSupabaseTable<T extends keyof Database['public']['Tables']>(t
   const fetchData = async (queryParams?: {
     select?: string
     filter?: { column: string; value: any; operator?: string }[]
-    order?: { column: string; ascending?: boolean }
+    order?: { column: string; ascending?: boolean; nullsFirst?: boolean }[] | { column: string; ascending?: boolean; nullsFirst?: boolean }
   }) => {
     try {
       setLoading(true)
@@ -43,9 +43,14 @@ export function useSupabaseTable<T extends keyof Database['public']['Tables']>(t
       }
 
       if (queryParams?.order) {
-        supabaseQuery = supabaseQuery.order(queryParams.order.column, { 
-          ascending: queryParams.order.ascending ?? true 
-        })
+        // Aceita mais de uma coluna: a segunda desempata a primeira
+        const ordens = Array.isArray(queryParams.order) ? queryParams.order : [queryParams.order]
+        for (const ordem of ordens) {
+          supabaseQuery = supabaseQuery.order(ordem.column, {
+            ascending: ordem.ascending ?? true,
+            nullsFirst: ordem.nullsFirst,
+          })
+        }
       }
 
       const { data: result, error } = await supabaseQuery
