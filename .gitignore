@@ -104,3 +104,6 @@ tatus
 
 # Dados gerados pela carga do sistema antigo (3 MB, regeneráveis pelo gerar-dados.py)
 scripts/carga-legado/dados/
+
+# Propostas extraídas do cronológico (regeneráveis com o extrair.py)
+scripts/cronologico-orcamentos/propostas.json
