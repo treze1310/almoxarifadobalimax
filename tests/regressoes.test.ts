@@ -504,3 +504,47 @@ describe('plural em português', () => {
     expect(plural(-5, 'dia', 'dias')).toBe('dias')
   })
 })
+
+describe('código de novo centro de custo', () => {
+  // Reproduz a regra que o banco aplica, para documentar por que ela precisa
+  // descartar parte dos códigos. O gerador antigo pegava o "maior código"
+  // ordenando como texto — e o maior texto é "TI", porque letra vem depois de
+  // número; o parseInt disso dava NaN e caía num 1495 fixo.
+  const sequenciaDoPadraoAtual = (codigos: string[]) => {
+    const validos = codigos.filter((c) => {
+      if (!/^[1-9]\d{9}$/.test(c)) return false
+      const mes = Number(c.slice(2, 4))
+      const dia = Number(c.slice(4, 6))
+      return mes >= 1 && mes <= 12 && dia >= 1 && dia <= 31
+    })
+    return validos.reduce((maior, c) => Math.max(maior, Number(c.slice(6))), 0)
+  }
+
+  const CODIGOS = [
+    '2609241612', // o mais recente de verdade
+    '2605051585',
+    '0211029941', // antigo de 9 dígitos com zero à esquerda: 0+211029+941
+    '4600009381', // número de contrato da Hydro, não é sequência
+    'TI',
+    'ALMOXARIFADO',
+    '2909301520', // dígito trocado: "29" daria 2029
+  ]
+
+  test('a sequência vem do padrão atual, ignorando o resto', () => {
+    expect(sequenciaDoPadraoAtual(CODIGOS)).toBe(1612)
+  })
+
+  test('o código antigo com zero à esquerda não entra na conta', () => {
+    expect(sequenciaDoPadraoAtual(['0211029941'])).toBe(0)
+  })
+
+  test('texto não vira número nem derruba a conta', () => {
+    expect(sequenciaDoPadraoAtual(['TI', 'RH', 'SISTEMA'])).toBe(0)
+  })
+
+  test('o próximo código junta a data de hoje com a sequência seguinte', () => {
+    const proxima = sequenciaDoPadraoAtual(CODIGOS) + 1
+    const codigo = '261008' + String(proxima).padStart(4, '0')
+    expect(codigo).toBe('2610081613')
+  })
+})
