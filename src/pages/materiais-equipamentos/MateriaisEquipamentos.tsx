@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { generateMaterialCode } from '@/services/materialCodeService'
 import { contar } from '@/lib/plural'
 import { Button } from '@/components/ui/button'
 import { PlusCircle, Edit, Trash2, Package, Wrench, Eye, RefreshCw, AlertTriangle, Copy, Tag, FileSpreadsheet } from 'lucide-react'
@@ -280,9 +281,9 @@ const MateriaisEquipamentosPage = () => {
 
   const handleCloneSubmit = async (data: MaterialEquipamentoFormData) => {
     const payload = { ...data }
-    // O formulário só gera código automático em cadastros sem dados iniciais
+    // Clonar copia tudo menos o código: o item novo precisa do seu próprio.
     if (!payload.codigo) {
-      payload.codigo = String(Math.floor(Math.random() * 90000) + 10000)
+      payload.codigo = (await generateMaterialCode()).codigo
     }
     const result = await createMaterial(payload)
     if (result.error === null) {

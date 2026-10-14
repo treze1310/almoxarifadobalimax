@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { verificarStatusCalibracao } from '@/utils/calibracao'
@@ -26,10 +26,11 @@ import { materialEquipamentoSchema, type MaterialEquipamentoFormData } from '@/l
 import { useSupabaseTable } from '@/hooks/useSupabase'
 import type { Tables } from '@/types/database'
 import { buscarNCMPorDescricao } from '@/services/ncmService'
-import { Search, AlertTriangle, Upload, X, Image as ImageIcon } from 'lucide-react'
+import { Search, AlertTriangle, Upload, X, Image as ImageIcon, RefreshCw, Loader2 } from 'lucide-react'
 import { MarcaComboboxWithAdd } from './MarcaComboboxWithAdd'
 import { CategoriaComboboxWithAdd } from './CategoriaComboboxWithAdd'
 import { uploadService } from '@/services/uploadService'
+import { codigoEmUso, generateMaterialCode } from '@/services/materialCodeService'
 import { useToast } from '@/hooks/use-toast'
 
 interface MaterialEquipamentoFormProps {
@@ -44,11 +45,13 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
   const [ncmSuggestions, setNcmSuggestions] = useState<Array<{ codigo: string; descricao: string; confianca: number }>>([])
   const [loadingNCM, setLoadingNCM] = useState(false)
   const [uploadingFoto, setUploadingFoto] = useState(false)
+  const [gerandoCodigo, setGerandoCodigo] = useState(false)
   const { toast } = useToast()
   
   const form = useForm<MaterialEquipamentoFormData>({
     resolver: zodResolver(materialEquipamentoSchema),
     defaultValues: {
+      codigo: initialData?.codigo || '',
       nome: initialData?.nome || '',
       tipo: (initialData?.tipo as any) || 'material',
       categoria: initialData?.categoria || '',
@@ -89,6 +92,7 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
   useEffect(() => {
     if (initialData) {
       form.reset({
+        codigo: initialData.codigo || '',
         nome: initialData.nome,
         tipo: (initialData.tipo as any) || 'material',
         categoria: initialData.categoria || '',
@@ -127,14 +131,53 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
     }
   }, [initialData, form])
 
-  const handleSubmit = async (data: MaterialEquipamentoFormData) => {
-    // Auto-gerar código se não existir (5 dígitos)
-    if (!data.codigo && !initialData) {
-      const nextNumber = Math.floor(Math.random() * 90000) + 10000 // 5 dígitos entre 10000-99999
-      data.codigo = nextNumber.toString()
+  /**
+   * Sugere o próximo código livre. A conta é feita no banco: aqui ela era um
+   * sorteio entre 10000 e 99999, que ignorava a sequência do cadastro e ainda
+   * podia repetir um código já usado.
+   */
+  const sugerirCodigo = useCallback(async () => {
+    setGerandoCodigo(true)
+    try {
+      const { codigo } = await generateMaterialCode()
+      form.setValue('codigo', codigo, { shouldValidate: true })
+    } catch (error) {
+      toast({
+        title: 'Não foi possível sugerir o código',
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: 'destructive',
+      })
+    } finally {
+      setGerandoCodigo(false)
     }
-    
-    await onSubmit(data)
+  }, [form, toast])
+
+  /**
+   * O código já vem preenchido quando não há um, para a pessoa ver e poder
+   * trocar antes de salvar. Vale para cadastro novo e para clonagem (que copia
+   * o item menos o código); na edição o código existente nunca é tocado.
+   */
+  useEffect(() => {
+    if (!form.getValues('codigo')) void sugerirCodigo()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData])
+
+  const handleSubmit = async (data: MaterialEquipamentoFormData) => {
+    const codigo = (data.codigo ?? '').trim()
+    if (!codigo) {
+      form.setError('codigo', { message: 'Informe o código ou clique em Sugerir' })
+      return
+    }
+
+    // O código é único no banco; conferir antes evita o erro cru de chave
+    // duplicada e diz qual item já usa aquele número.
+    const emUso = await codigoEmUso(codigo, initialData?.id)
+    if (emUso) {
+      form.setError('codigo', { message: `O código ${codigo} já está em uso por "${emUso}"` })
+      return
+    }
+
+    await onSubmit({ ...data, codigo })
   }
 
   const handleBuscarNCM = async (event?: React.MouseEvent) => {
@@ -221,6 +264,49 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
             />
           </div>
         )}
+
+        {/* Código (TAG) do item: sugerido pelo sistema, mas editável. Dois itens
+            podem ter o mesmo nome — é o código que os distingue. */}
+        <FormField
+          control={form.control}
+          name="codigo"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Código / TAG do item *</FormLabel>
+              <div className="flex gap-2">
+                <FormControl>
+                  <Input
+                    placeholder="Ex: 02371"
+                    className="font-mono"
+                    {...field}
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(e.target.value.trim())}
+                  />
+                </FormControl>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={sugerirCodigo}
+                  disabled={gerandoCodigo}
+                  title="Sugerir o próximo código livre"
+                >
+                  {gerandoCodigo ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  <span className="ml-2 hidden sm:inline">Sugerir</span>
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {initialData
+                  ? 'Mudar o código invalida as etiquetas já impressas deste item.'
+                  : 'Pode repetir o nome de outro item; o código é que não se repete.'}
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         {/* Nome do Material/Equipamento - Campo Principal */}
         <FormField

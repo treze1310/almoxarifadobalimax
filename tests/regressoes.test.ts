@@ -548,3 +548,38 @@ describe('código de novo centro de custo', () => {
     expect(codigo).toBe('2610081613')
   })
 })
+
+describe('código (TAG) de material e equipamento', () => {
+  // Reproduz a regra que o banco aplica. O formulário sorteava um número
+  // entre 10000 e 99999: saía da sequência do cadastro (00001 a 02370) e dois
+  // sorteios podiam cair no mesmo número, derrubando o cadastro.
+  const proximoCodigo = (codigos: string[]) => {
+    const sequencia = codigos
+      .filter((c) => /^\d+$/.test(c) && Number(c) < 10000)
+      .reduce((maior, c) => Math.max(maior, Number(c)), 0)
+    let proximo = sequencia
+    let codigo = ''
+    do {
+      proximo += 1
+      codigo = String(proximo).padStart(5, '0')
+    } while (codigos.includes(codigo))
+    return codigo
+  }
+
+  test('continua a sequência do cadastro', () => {
+    expect(proximoCodigo(['00001', '02370', '01500'])).toBe('02371')
+  })
+
+  // 16993 nasceu do sorteio; contá-lo faria a numeração pular de 02370 para 16994
+  test('o código fora da faixa não puxa a sequência', () => {
+    expect(proximoCodigo(['02370', '16993'])).toBe('02371')
+  })
+
+  test('pula código já usado em vez de repetir', () => {
+    expect(proximoCodigo(['02370', '02371', '02372'])).toBe('02373')
+  })
+
+  test('cadastro vazio começa em 00001', () => {
+    expect(proximoCodigo([])).toBe('00001')
+  })
+})
