@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { ExternalLink } from 'lucide-react'
+import { enderecoWeb, enderecoWebLegivel } from '@/lib/enderecoWeb'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PlusCircle, Edit, Trash2, Building2 } from 'lucide-react'
@@ -128,6 +130,30 @@ const FornecedoresPage = () => {
       id: 'tipo_fornecimento',
       cabecalho: 'Tipo de fornecimento',
       valor: (f) => f.tipo_fornecimento || '—',
+    },
+    {
+      id: 'site',
+      cabecalho: 'Site',
+      semFiltro: true,
+      valor: (f) => enderecoWebLegivel(f.site) || '—',
+      celula: (f) => {
+        const url = enderecoWeb(f.site)
+        if (!url) return <span className="text-muted-foreground">—</span>
+        return (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            // A linha inteira abre o cadastro; o link não pode disparar os dois
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex max-w-[220px] items-center gap-1 text-primary hover:underline"
+            title={url}
+          >
+            <span className="truncate">{enderecoWebLegivel(f.site)}</span>
+            <ExternalLink className="h-3 w-3 shrink-0" aria-hidden />
+          </a>
+        )
+      },
     },
     {
       id: 'contato',

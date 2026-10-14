@@ -13,6 +13,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { ExternalLink } from 'lucide-react'
+import { enderecoWeb } from '@/lib/enderecoWeb'
 import { DialogFooter } from '@/components/ui/dialog'
 import { fornecedorSchema, formatCNPJ, formatCPF, formatPhone, type FornecedorFormData } from '@/lib/validations'
 import type { Tables } from '@/types/database'
@@ -48,6 +50,8 @@ export function FornecedorForm({ initialData, onSubmit, onCancel }: FornecedorFo
       email: initialData?.email || '',
       contato: initialData?.contato || '',
       tipo_fornecimento: initialData?.tipo_fornecimento || '',
+      site: initialData?.site || '',
+      observacoes: initialData?.observacoes || '',
       ativo: initialData?.ativo ?? true,
     },
   })
@@ -63,6 +67,8 @@ export function FornecedorForm({ initialData, onSubmit, onCancel }: FornecedorFo
         email: initialData.email || '',
         contato: initialData.contato || '',
         tipo_fornecimento: initialData.tipo_fornecimento || '',
+        site: initialData.site || '',
+        observacoes: initialData.observacoes || '',
         ativo: initialData.ativo,
       })
     }
@@ -76,6 +82,8 @@ export function FornecedorForm({ initialData, onSubmit, onCancel }: FornecedorFo
       cpf: data.cpf ? data.cpf.replace(/\D/g, '') : null,
       telefone: data.telefone ? data.telefone.replace(/\D/g, '') : null,
       tipo_fornecimento: data.tipo_fornecimento?.trim() || null,
+      site: data.site?.trim() || null,
+      observacoes: data.observacoes?.trim() || null,
     }
     await onSubmit(cleanData)
   }
@@ -247,6 +255,60 @@ export function FornecedorForm({ initialData, onSubmit, onCancel }: FornecedorFo
                   placeholder="Endereço completo do fornecedor"
                   className="resize-none"
                   {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Site: fica clicável já no formulário, para conferir sem sair da tela */}
+        <FormField
+          control={form.control}
+          name="site"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Site</FormLabel>
+              <div className="flex gap-2">
+                <FormControl>
+                  <Input
+                    placeholder="www.fornecedor.com.br"
+                    inputMode="url"
+                    {...field}
+                    value={field.value ?? ''}
+                  />
+                </FormControl>
+                {enderecoWeb(field.value) && (
+                  <Button variant="outline" size="icon" asChild title="Abrir em nova aba">
+                    <a
+                      href={enderecoWeb(field.value)!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Abrir o site do fornecedor em nova aba"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </Button>
+                )}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="observacoes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Observações</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Condições de pagamento, prazo de entrega, contatos extras…"
+                  className="resize-none"
+                  rows={4}
+                  {...field}
+                  value={field.value ?? ''}
                 />
               </FormControl>
               <FormMessage />

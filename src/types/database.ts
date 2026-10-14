@@ -243,6 +243,8 @@ export type Database = {
           endereco: string | null
           id: string
           nome: string
+          observacoes: string | null
+          site: string | null
           telefone: string | null
           tipo_fornecimento: string | null
           updated_at: string | null
@@ -257,6 +259,8 @@ export type Database = {
           endereco?: string | null
           id?: string
           nome: string
+          observacoes?: string | null
+          site?: string | null
           telefone?: string | null
           tipo_fornecimento?: string | null
           updated_at?: string | null
@@ -271,6 +275,8 @@ export type Database = {
           endereco?: string | null
           id?: string
           nome?: string
+          observacoes?: string | null
+          site?: string | null
           telefone?: string | null
           tipo_fornecimento?: string | null
           updated_at?: string | null

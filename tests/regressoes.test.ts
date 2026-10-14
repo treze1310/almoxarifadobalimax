@@ -12,6 +12,7 @@ import { STATUS, normalizarStatus, rotuloStatus } from '../src/lib/status'
 import { materialEquipamentoSchema } from '../src/lib/validations'
 import { buscarTodasAsPaginas } from '../src/lib/consultaPaginada'
 import { contar, plural } from '../src/lib/plural'
+import { enderecoWeb, enderecoWebLegivel } from '../src/lib/enderecoWeb'
 import { barrasDoCodigo, code128b, larguraEmModulos, podeCodificar } from '../src/lib/code128'
 import {
   detectarSeparador,
@@ -581,5 +582,31 @@ describe('código (TAG) de material e equipamento', () => {
 
   test('cadastro vazio começa em 00001', () => {
     expect(proximoCodigo([])).toBe('00001')
+  })
+})
+
+describe('site do fornecedor', () => {
+  // Sem protocolo, o navegador trata o href como caminho relativo e o link
+  // levaria para dentro do próprio sistema em vez do site do fornecedor.
+  test('completa o protocolo quando não vem digitado', () => {
+    expect(enderecoWeb('www.fornecedor.com.br')).toBe('https://www.fornecedor.com.br')
+    expect(enderecoWeb('fornecedor.com.br/pecas')).toBe('https://fornecedor.com.br/pecas')
+  })
+
+  test('mantém o protocolo que já veio', () => {
+    expect(enderecoWeb('http://antigo.com.br')).toBe('http://antigo.com.br')
+    expect(enderecoWeb('https://loja.com')).toBe('https://loja.com')
+  })
+
+  // Melhor não mostrar link nenhum do que mostrar um quebrado
+  test('recusa o que não é endereço', () => {
+    expect(enderecoWeb('')).toBeNull()
+    expect(enderecoWeb(null)).toBeNull()
+    expect(enderecoWeb('fornecedor')).toBeNull()
+    expect(enderecoWeb('(91) 99999-9999')).toBeNull()
+  })
+
+  test('exibe sem protocolo e sem barra final', () => {
+    expect(enderecoWebLegivel('https://www.fornecedor.com.br/')).toBe('www.fornecedor.com.br')
   })
 })

@@ -63,6 +63,22 @@ export const fornecedorSchema = z.object({
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   contato: z.string().max(255, 'Contato muito longo').optional(),
   tipo_fornecimento: z.string().max(255, 'Tipo de fornecimento muito longo').optional().or(z.literal('')).transform(val => val || undefined),
+  /**
+   * Endereço do site. Aceita com ou sem "https://" — a tela completa na hora
+   * de abrir, porque ninguém digita o protocolo.
+   */
+  site: z
+    .string()
+    .trim()
+    .max(255, 'Endereço muito longo')
+    .optional()
+    .or(z.literal(''))
+    .refine(
+      (valor) => !valor || /^(https?:\/\/)?[a-z0-9][a-z0-9.-]*\.[a-z]{2,}(\/.*)?$/i.test(valor),
+      'Endereço inválido. Ex.: www.fornecedor.com.br',
+    )
+    .transform((valor) => valor || undefined),
+  observacoes: z.string().max(2000, 'Observações muito longas').optional().or(z.literal('')).transform(val => val || undefined),
   ativo: z.boolean().default(true),
 })
 
