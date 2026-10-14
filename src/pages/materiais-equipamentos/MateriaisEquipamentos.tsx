@@ -266,13 +266,20 @@ const MateriaisEquipamentosPage = () => {
     }
   }
 
-  // Clonar: abre o formulário de criação pré-preenchido com os dados do item
+  /**
+   * Clonar: abre o cadastro pré-preenchido com os dados do item.
+   *
+   * O nome é mantido igual, sem "(Cópia)": dois itens podem ter o mesmo nome e
+   * é o código que os distingue, então renomear só dava trabalho de apagar o
+   * sufixo. O que não vem junto é o que pertence à peça original — o código,
+   * o número de série e o saldo.
+   */
   const handleCloneClick = (materialDaLista: any) => {
     void abrirCompleto(materialDaLista, (material: any) => {
       const { id, codigo, created_at, updated_at, ...rest } = material
       setCloningMaterial({
         ...rest,
-        nome: `${material.nome} (Cópia)`,
+        clonadoDe: { codigo, nome: material.nome },
         numero_serie: '',
         estoque_atual: 0,
       })
@@ -859,8 +866,15 @@ const MateriaisEquipamentosPage = () => {
           <DialogHeader>
             <DialogTitle>Clonar Material/Equipamento</DialogTitle>
             <DialogDescription>
-              Os dados foram copiados do item original. Revise e salve para criar um novo item
-              (um novo código será gerado automaticamente).
+              {cloningMaterial?.clonadoDe ? (
+                <>
+                  Copiado de <strong>{cloningMaterial.clonadoDe.codigo}</strong> —{' '}
+                  {cloningMaterial.clonadoDe.nome}. O código já vem sugerido e pode ser trocado;
+                  número de série e saldo entram zerados.
+                </>
+              ) : (
+                'Os dados foram copiados do item original. Revise o código sugerido e salve.'
+              )}
             </DialogDescription>
           </DialogHeader>
           {cloningMaterial && (
