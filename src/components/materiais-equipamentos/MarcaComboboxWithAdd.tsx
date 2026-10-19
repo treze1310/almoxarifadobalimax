@@ -46,7 +46,7 @@ export function MarcaComboboxWithAdd({
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState('')
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const { data: marcas, fetchData: refetchMarcas } = useSupabaseTable('marcas')
+  const { data: marcas, fetchData: refetchMarcas } = useSupabaseTable('marcas', { order: { column: 'nome' } })
   const { toast } = useToast()
 
   // Hook para centralização inteligente do dialog (igual ao de Material/Equipamento)

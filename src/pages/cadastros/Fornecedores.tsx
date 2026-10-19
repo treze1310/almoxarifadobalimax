@@ -45,7 +45,7 @@ const normalizeSearchText = (value?: string | null) =>
 const onlyDigits = (value?: string | null) => (value || '').replace(/\D/g, '')
 
 const FornecedoresPage = () => {
-  const { data: fornecedores, loading, create, update, remove } = useSupabaseTable('fornecedores')
+  const { data: fornecedores, loading, create, update, remove } = useSupabaseTable('fornecedores', { order: { column: 'nome' } })
   
   const [search, setSearch] = useState('')
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)

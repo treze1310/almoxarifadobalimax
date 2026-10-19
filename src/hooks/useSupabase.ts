@@ -4,21 +4,35 @@ import { useToast } from '@/components/ui/use-toast'
 
 import type { Database, Tables, TablesInsert, TablesUpdate } from '@/types/database'
 
-export function useSupabaseTable<T extends keyof Database['public']['Tables']>(tableName: T) {
+interface ConsultaTabela {
+  select?: string
+  filter?: { column: string; value: any; operator?: string }[]
+  order?: { column: string; ascending?: boolean; nullsFirst?: boolean }[] | { column: string; ascending?: boolean; nullsFirst?: boolean }
+}
+
+/**
+ * Listagem simples de uma tabela, com criar, editar e excluir.
+ *
+ * `consultaPadrao` vale para a busca inicial e para a rebusca depois de cada
+ * alteração — é o que mantém a ordem da lista. Sem isso, `create` acrescentava
+ * o registro novo no fim do array local e a lista saía da ordem até recarregar
+ * a página.
+ */
+export function useSupabaseTable<T extends keyof Database['public']['Tables']>(
+  tableName: T,
+  consultaPadrao?: ConsultaTabela,
+) {
   const [data, setData] = useState<Tables<T>[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
   // Usar supabase diretamente
 
-  const fetchData = async (queryParams?: {
-    select?: string
-    filter?: { column: string; value: any; operator?: string }[]
-    order?: { column: string; ascending?: boolean; nullsFirst?: boolean }[] | { column: string; ascending?: boolean; nullsFirst?: boolean }
-  }) => {
+  const fetchData = async (parametros?: ConsultaTabela) => {
+    const queryParams = parametros ?? consultaPadrao
     try {
       setLoading(true)
-      
+
       let supabaseQuery = supabase.from(tableName).select(queryParams?.select || '*')
 
       if (queryParams?.filter) {
@@ -87,7 +101,9 @@ export function useSupabaseTable<T extends keyof Database['public']['Tables']>(t
         throw error
       }
 
-      setData(prev => [...prev, result])
+      // Rebusca em vez de acrescentar no fim: assim a lista continua na ordem
+      // que a consulta padrão define (alfabética, por exemplo).
+      await fetchData()
       toast({
         title: 'Sucesso',
         description: 'Registro criado com sucesso!',
@@ -122,9 +138,9 @@ export function useSupabaseTable<T extends keyof Database['public']['Tables']>(t
         throw error
       }
 
-      setData(prev => prev.map(item => 
-        (item as any).id === id ? result : item
-      ))
+      // Editar pode mudar justamente o campo que ordena (o nome, por exemplo),
+      // então a lista é rebuscada em vez de ter o item trocado no lugar.
+      await fetchData()
       toast({
         title: 'Sucesso',
         description: 'Registro atualizado com sucesso!',

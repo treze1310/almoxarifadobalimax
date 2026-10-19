@@ -36,7 +36,7 @@ export function CategoriaComboboxWithAdd({
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState('')
   const [creating, setCreating] = useState(false)
-  const { data: categorias, fetchData: refetchCategorias } = useSupabaseTable('categorias')
+  const { data: categorias, fetchData: refetchCategorias } = useSupabaseTable('categorias', { order: { column: 'nome' } })
   const { toast } = useToast()
 
   const activeCategorias = (categorias || []).filter((c) => c.ativo)

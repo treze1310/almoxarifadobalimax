@@ -29,7 +29,7 @@ import type { Tables } from '@/types/database'
 type Categoria = Tables<'categorias'>
 
 const CategoriasPage = () => {
-  const { data: categorias, loading, create, update, remove } = useSupabaseTable('categorias')
+  const { data: categorias, loading, create, update, remove } = useSupabaseTable('categorias', { order: { column: 'nome' } })
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingCategoria, setEditingCategoria] = useState<Categoria | null>(null)

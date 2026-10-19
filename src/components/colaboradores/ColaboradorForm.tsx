@@ -31,7 +31,7 @@ interface ColaboradorFormProps {
 }
 
 export function ColaboradorForm({ initialData, onSubmit, onCancel }: ColaboradorFormProps) {
-  const { data: empresas } = useSupabaseTable('empresas')
+  const { data: empresas } = useSupabaseTable('empresas', { order: { column: 'nome' } })
   const { data: centrosCusto } = useSupabaseTable('centros_custo')
   
   const form = useForm<ColaboradorFormData>({

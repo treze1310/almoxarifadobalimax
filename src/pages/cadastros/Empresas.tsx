@@ -35,7 +35,7 @@ import { supabase } from '@/lib/supabase'
 
 
 export default function Empresas() {
-  const { data: empresas, loading, fetchData: refetchEmpresas } = useSupabaseTable('empresas')
+  const { data: empresas, loading, fetchData: refetchEmpresas } = useSupabaseTable('empresas', { order: { column: 'nome' } })
   const { toast } = useToast()
   
   // Estados para diálogos

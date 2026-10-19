@@ -40,8 +40,8 @@ interface MaterialEquipamentoFormProps {
 }
 
 export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: MaterialEquipamentoFormProps) {
-  const { data: fornecedores } = useSupabaseTable('fornecedores')
-  const { data: localizacoes } = useSupabaseTable('localizacao')
+  const { data: fornecedores } = useSupabaseTable('fornecedores', { order: { column: 'nome' } })
+  const { data: localizacoes } = useSupabaseTable('localizacao', { order: { column: 'codigo' } })
   const [ncmSuggestions, setNcmSuggestions] = useState<Array<{ codigo: string; descricao: string; confianca: number }>>([])
   const [loadingNCM, setLoadingNCM] = useState(false)
   const [uploadingFoto, setUploadingFoto] = useState(false)

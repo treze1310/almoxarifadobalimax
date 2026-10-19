@@ -57,7 +57,7 @@ export default function CentrosCusto() {
   useEffect(() => {
     refetchCentrosCusto()
   }, [refetchCentrosCusto])
-  const { data: empresas } = useSupabaseTable('empresas')
+  const { data: empresas } = useSupabaseTable('empresas', { order: { column: 'nome' } })
   const { toast } = useToast()
   
   // Estados para diálogos

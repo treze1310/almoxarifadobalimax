@@ -29,7 +29,7 @@ interface CentroCustoFormProps {
 }
 
 export function CentroCustoForm({ initialData, onSubmit, onCancel }: CentroCustoFormProps) {
-  const { data: empresas } = useSupabaseTable('empresas')
+  const { data: empresas } = useSupabaseTable('empresas', { order: { column: 'nome' } })
   const { toast } = useToast()
   const [generatingCode, setGeneratingCode] = useState(false)
   

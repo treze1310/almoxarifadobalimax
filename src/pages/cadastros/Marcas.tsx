@@ -30,7 +30,7 @@ import type { Tables } from '@/types/database'
 type Marca = Tables<'marcas'>
 
 const MarcasPage = () => {
-  const { data: marcas, loading, create, update, remove } = useSupabaseTable('marcas')
+  const { data: marcas, loading, create, update, remove } = useSupabaseTable('marcas', { order: { column: 'nome' } })
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingMarca, setEditingMarca] = useState<Marca | null>(null)

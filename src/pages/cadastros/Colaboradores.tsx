@@ -83,7 +83,7 @@ const ColaboradoresPage = () => {
     update, 
     remove,
     fetchData 
-  } = useSupabaseTable('colaboradores')
+  } = useSupabaseTable('colaboradores', { order: { column: 'nome' } })
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [selectedColaborador, setSelectedColaborador] = useState<ColaboradorDetalhado | null>(null)
