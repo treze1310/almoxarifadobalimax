@@ -29,6 +29,7 @@ import type { Tables } from '@/types/database'
 import { buscarNCMPorDescricao } from '@/services/ncmService'
 import { Search, AlertTriangle, Upload, X, Image as ImageIcon, RefreshCw, Loader2 } from 'lucide-react'
 import { MarcaComboboxWithAdd } from './MarcaComboboxWithAdd'
+import { LocalizacaoComboboxWithAdd } from './LocalizacaoComboboxWithAdd'
 import { CategoriaComboboxWithAdd } from './CategoriaComboboxWithAdd'
 import { uploadService } from '@/services/uploadService'
 import { codigoEmUso, generateMaterialCode } from '@/services/materialCodeService'
@@ -42,7 +43,6 @@ interface MaterialEquipamentoFormProps {
 
 export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: MaterialEquipamentoFormProps) {
   const { data: fornecedores } = useSupabaseTable('fornecedores', { order: { column: 'nome' } })
-  const { data: localizacoes } = useSupabaseTable('localizacao', { order: { column: 'codigo' } })
   const [ncmSuggestions, setNcmSuggestions] = useState<Array<{ codigo: string; descricao: string; confianca: number }>>([])
   const [loadingNCM, setLoadingNCM] = useState(false)
   const [uploadingFoto, setUploadingFoto] = useState(false)
@@ -251,7 +251,6 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
 
   // Filter only active records
   const activeFornecedores = fornecedores?.filter(fornecedor => fornecedor.ativo) || []
-  const activeLocalizacoes = localizacoes?.filter(localizacao => localizacao.ativo) || []
 
   return (
     <Form {...form}>
@@ -594,20 +593,16 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Localização</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma localização" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent className="z-[10001]">
-                    {activeLocalizacoes.map((localizacao) => (
-                      <SelectItem key={localizacao.id} value={localizacao.id}>
-                        {localizacao.codigo} - {localizacao.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <LocalizacaoComboboxWithAdd
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    placeholder="Selecione uma localização"
+                  />
+                </FormControl>
+                <p className="text-xs text-muted-foreground">
+                  Dá para criar uma localização nova ou corrigir a existente aqui mesmo.
+                </p>
                 <FormMessage />
               </FormItem>
             )}
