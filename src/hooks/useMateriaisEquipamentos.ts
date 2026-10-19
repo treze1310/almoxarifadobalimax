@@ -97,10 +97,12 @@ export function useMateriaisEquipamentos() {
 
       const termo = (consulta.busca ?? '').trim()
       if (termo) {
-        // Código, código de barras e nome são por onde se procura um item
+        // Por onde se procura um item: código, código de barras, nome, modelo
+        // e a descrição longa, que é onde fica a especificação técnica.
         const padrao = `%${termo}%`
         query = query.or(
-          `codigo.ilike.${padrao},nome.ilike.${padrao},codigo_barras.ilike.${padrao},modelo.ilike.${padrao}`,
+          `codigo.ilike.${padrao},nome.ilike.${padrao},codigo_barras.ilike.${padrao},` +
+            `modelo.ilike.${padrao},descricao.ilike.${padrao}`,
         )
       }
 

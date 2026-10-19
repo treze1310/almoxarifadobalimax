@@ -722,7 +722,7 @@ const MateriaisEquipamentosPage = () => {
         idLinha={(m) => m.id}
         chaveUrl="mat"
         carregando={carregandoPagina && paginaDeDados.dados.length === 0}
-        placeholderBusca="Buscar por código, código de barras, nome ou modelo..."
+        placeholderBusca="Buscar por código, nome, modelo ou descrição..."
         nomeArquivoCsv="materiais-equipamentos"
         servidor={{ total: paginaDeDados.total, onConsulta: setConsulta }}
         onLinhaClick={(m) => podeEditar && abrirCompleto(m, setEditingMaterial)}

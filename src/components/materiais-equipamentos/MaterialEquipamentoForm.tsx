@@ -12,6 +12,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import {
   Select,
@@ -53,6 +54,7 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
     defaultValues: {
       codigo: initialData?.codigo || '',
       nome: initialData?.nome || '',
+      descricao: initialData?.descricao || '',
       tipo: (initialData?.tipo as any) || 'material',
       categoria: initialData?.categoria || '',
       marca_id: initialData?.marca_id || undefined,
@@ -94,6 +96,7 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
       form.reset({
         codigo: initialData.codigo || '',
         nome: initialData.nome,
+        descricao: initialData.descricao || '',
         tipo: (initialData.tipo as any) || 'material',
         categoria: initialData.categoria || '',
         marca_id: initialData.marca_id || undefined,
@@ -320,6 +323,28 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
                   placeholder="Ex: Parafuso Phillips, Furadeira Elétrica, Capacete de Segurança" 
                   className="text-lg p-4" 
                   {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Descrição longa: o detalhamento que não cabe no nome — especificação
+            técnica, medidas, referência do fabricante. */}
+        <FormField
+          control={form.control}
+          name="descricao"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Descrição Longa</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Descrição detalhada do material: especificação técnica, medidas, material de fabricação, referência do fabricante, aplicação…"
+                  className="resize-y"
+                  rows={5}
+                  {...field}
+                  value={field.value ?? ''}
                 />
               </FormControl>
               <FormMessage />
