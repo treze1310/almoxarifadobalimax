@@ -772,3 +772,22 @@ describe('normalização do termo de busca', () => {
     }
   })
 })
+
+/**
+ * Etiqueta de unidade individual.
+ *
+ * Quem vai para a mão do colaborador é a peça, não o cadastro: o código que
+ * entra na etiqueta é o da unidade (`00125-1`), com hífen. Se o Code 128B não
+ * representasse o hífen, a etiqueta sairia ilegível para o leitor.
+ */
+describe('código de unidade na etiqueta', () => {
+  test('o hífen do código do filho é representável', () => {
+    expect(podeCodificar('00125-1')).toBe(true)
+    expect(podeCodificar('01764-12')).toBe(true)
+  })
+
+  test('o código do filho vira barras e é mais largo que o do pai', () => {
+    expect(barrasDoCodigo('00125-1').length).toBeGreaterThan(0)
+    expect(larguraEmModulos('00125-1')).toBeGreaterThan(larguraEmModulos('00125'))
+  })
+})

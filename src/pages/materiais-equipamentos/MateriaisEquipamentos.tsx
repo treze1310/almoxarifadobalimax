@@ -41,7 +41,7 @@ import { supabase } from '@/lib/supabase'
 import { buscarTodasAsPaginas } from '@/lib/consultaPaginada'
 
 import type { MaterialEquipamentoFormData } from '@/lib/validations'
-import { gerarEtiquetasPDF } from '@/utils/etiquetasPdf'
+import { gerarEtiquetasPDF, type ItemEtiqueta } from '@/utils/etiquetasPdf'
 import { ImportarCSVDialog } from '@/components/materiais-equipamentos/ImportarCSVDialog'
 import { useToast } from '@/components/ui/use-toast'
 
@@ -384,17 +384,89 @@ const MateriaisEquipamentosPage = () => {
    * o leitor da retirada assistida procura. Equipamento sem etiqueta é o que
    * impede o controle por número de item.
    */
-  const imprimirEtiquetas = (lista: any[]) => {
-    const { gerados, ignorados } = gerarEtiquetasPDF(
-      lista.map((m) => ({
-        codigo: m.codigo,
-        nome: m.nome,
-        unidade: m.unidade_medida,
-        localizacao: m.localizacao?.nome
-          ? `${m.localizacao.codigo ?? ''} ${m.localizacao.nome}`.trim()
-          : null,
-      })),
-    )
+  const imprimirEtiquetas = async (lista: any[]) => {
+    const etiquetaDoItem = (m: any): ItemEtiqueta => ({
+      codigo: m.codigo,
+      nome: m.nome,
+      unidade: m.unidade_medida,
+      localizacao: m.localizacao?.nome
+        ? `${m.localizacao.codigo ?? ''} ${m.localizacao.nome}`.trim()
+        : null,
+    })
+
+    // Item com controle peça a peça: a etiqueta é de cada unidade, porque é a
+    // peça que vai para a mão do colaborador, não o cadastro.
+    const comFilhos = lista.filter((m) => m.exige_identificacao_individual)
+    const itens: ItemEtiqueta[] = lista
+      .filter((m) => !m.exige_identificacao_individual)
+      .map(etiquetaDoItem)
+    const semUnidades: string[] = []
+
+    if (comFilhos.length > 0) {
+      const ids = comFilhos.map((m) => m.id)
+      const { data: unidades, error } = await buscarTodasAsPaginas<any>((de, ate) =>
+        supabase
+          .from('material_unidades')
+          .select(
+            `codigo, status, material_equipamento_id, numero_serie,
+             localizacao:localizacao_id (codigo, nome)`,
+          )
+          .in('material_equipamento_id', ids)
+          // Peça baixada ou extraviada não existe mais para etiquetar
+          .not('status', 'in', '(baixado,extraviado)')
+          .order('codigo')
+          .range(de, ate),
+      )
+
+      if (error) {
+        toast({
+          title: 'Erro ao buscar as unidades',
+          description: error.message,
+          variant: 'destructive',
+        })
+        return
+      }
+
+      const porMaterial = new Map<string, any[]>()
+      for (const unidade of unidades) {
+        const lote = porMaterial.get(unidade.material_equipamento_id) ?? []
+        lote.push(unidade)
+        porMaterial.set(unidade.material_equipamento_id, lote)
+      }
+
+      for (const pai of comFilhos) {
+        const doPai = porMaterial.get(pai.id) ?? []
+        if (doPai.length === 0) {
+          semUnidades.push(pai.codigo)
+          continue
+        }
+        for (const unidade of doPai) {
+          itens.push({
+            codigo: unidade.codigo,
+            nome: pai.nome,
+            unidade: pai.unidade_medida,
+            localizacao: unidade.localizacao?.nome
+              ? `${unidade.localizacao.codigo ?? ''} ${unidade.localizacao.nome}`.trim()
+              : etiquetaDoItem(pai).localizacao,
+          })
+        }
+      }
+    }
+
+    // Nada a imprimir: só itens marcados para controle individual e sem
+    // unidade nenhuma cadastrada
+    if (itens.length === 0) {
+      toast({
+        title: 'Nenhuma etiqueta a gerar',
+        description: semUnidades.length
+          ? `${contar(semUnidades.length, 'item exige', 'itens exigem')} identificação individual e ainda não ${semUnidades.length === 1 ? 'tem unidade' : 'têm unidades'} cadastradas (${semUnidades.join(', ')}). Gere as unidades dentro do item.`
+          : 'Selecione ao menos um item.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const { gerados, ignorados } = gerarEtiquetasPDF(itens)
 
     if (ignorados.length > 0) {
       toast({
@@ -407,9 +479,21 @@ const MateriaisEquipamentosPage = () => {
       return
     }
 
+    const unidadesEtiquetadas = itens.length - lista.filter(
+      (m) => !m.exige_identificacao_individual,
+    ).length
+
     toast({
       title: 'Etiquetas geradas',
-      description: `${contar(gerados, 'etiqueta', 'etiquetas')} na folha. Imprima em escala 100%, sem "ajustar à página".`,
+      description:
+        `${contar(gerados, 'etiqueta', 'etiquetas')} na folha` +
+        (unidadesEtiquetadas > 0
+          ? `, ${contar(unidadesEtiquetadas, 'delas de unidade', 'delas de unidades')} individuais`
+          : '') +
+        (semUnidades.length > 0
+          ? `. Sem unidade cadastrada, ficaram de fora: ${semUnidades.join(', ')}`
+          : '') +
+        '. Imprima em escala 100%, sem "ajustar à página".',
     })
   }
 
@@ -749,8 +833,8 @@ const MateriaisEquipamentosPage = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              imprimirEtiquetas(filteredMateriais.filter((m) => ids.includes(m.id)))
+            onClick={async () => {
+              await imprimirEtiquetas(filteredMateriais.filter((m) => ids.includes(m.id)))
               limparSelecao()
             }}
           >
@@ -766,7 +850,7 @@ const MateriaisEquipamentosPage = () => {
               className="h-7 w-7"
               title="Etiqueta do item"
               aria-label="Etiqueta do item"
-              onClick={() => imprimirEtiquetas([material])}
+              onClick={() => void imprimirEtiquetas([material])}
             >
               <Tag className="h-4 w-4" />
             </Button>

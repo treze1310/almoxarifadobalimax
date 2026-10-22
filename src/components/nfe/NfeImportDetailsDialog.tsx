@@ -44,6 +44,7 @@ import {
   X,
   ExternalLink
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useNFeImportCrud } from '@/hooks/useNFeImportCrud'
 import type { NFEImportacao } from '@/services/nfeImportService'
 
@@ -61,6 +62,19 @@ export function NfeImportDetailsDialog({
   onSave
 }: NfeImportDetailsDialogProps) {
   const { updateImportacao, loading } = useNFeImportCrud()
+  const navigate = useNavigate()
+
+  /**
+   * Abre o item no cadastro de Materiais/Equipamentos.
+   *
+   * A tela de materiais já sabe abrir `?item=<id>` (é o caminho que a paleta
+   * de comandos usa), então daqui basta levar o id. O diálogo fecha para a
+   * navegação não ficar atrás dele.
+   */
+  const abrirNoCadastro = (materialId: string) => {
+    onOpenChange(false)
+    navigate(`/materiais-equipamentos?item=${materialId}`)
+  }
   const [editedData, setEditedData] = useState<Partial<NFEImportacao>>({})
   const [isEditing, setIsEditing] = useState(false)
 
@@ -295,9 +309,23 @@ export function NfeImportDetailsDialog({
                             </TableCell>
                             <TableCell>
                               <div className="max-w-xs">
-                                <p className="text-sm font-medium truncate">
-                                  {item.descricao_produto}
-                                </p>
+                                {item.materiais_equipamentos?.id ? (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      abrirNoCadastro(item.materiais_equipamentos!.id)
+                                    }
+                                    className="flex max-w-full items-center gap-1 text-left text-sm font-medium text-primary underline-offset-2 hover:underline"
+                                    title={`Abrir ${item.materiais_equipamentos.codigo} no cadastro`}
+                                  >
+                                    <span className="truncate">{item.descricao_produto}</span>
+                                    <ExternalLink className="h-3 w-3 shrink-0" />
+                                  </button>
+                                ) : (
+                                  <p className="truncate text-sm font-medium">
+                                    {item.descricao_produto}
+                                  </p>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell className="font-mono text-xs">
@@ -309,12 +337,19 @@ export function NfeImportDetailsDialog({
                             <TableCell className="text-right">{formatCurrency(item.valor_total)}</TableCell>
                             <TableCell>
                               {item.materiais_equipamentos ? (
-                                <div className="flex items-center space-x-2">
-                                  <Badge variant="outline">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    abrirNoCadastro(item.materiais_equipamentos!.id)
+                                  }
+                                  className="flex items-center space-x-2"
+                                  title={`Abrir ${item.materiais_equipamentos.codigo} no cadastro`}
+                                >
+                                  <Badge variant="outline" className="hover:bg-accent">
                                     {item.materiais_equipamentos.codigo}
                                   </Badge>
                                   <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                                </div>
+                                </button>
                               ) : (
                                 <Badge variant="secondary">Não vinculado</Badge>
                               )}
