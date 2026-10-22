@@ -610,3 +610,49 @@ describe('site do fornecedor', () => {
     expect(enderecoWebLegivel('https://www.fornecedor.com.br/')).toBe('www.fornecedor.com.br')
   })
 })
+
+describe('códigos em lote na importação de NF-e', () => {
+  /**
+   * Reproduz a regra do banco. A versão antiga buscava todos os códigos para
+   * achar o maior, mas a API corta em 1.000 linhas e a consulta não tinha
+   * ordenação: nenhuma linha devolvida tinha código alto, caía num 10039 fixo
+   * e gerava 10040, 10041 — que já existiam. O primeiro item da nota entrava e
+   * os demais falhavam por código duplicado.
+   */
+  const codigosEmLote = (existentes: string[], quantidade: number) => {
+    const base = existentes
+      .filter((c) => /^\d+$/.test(c) && Number(c) < 10000)
+      .reduce((maior, c) => Math.max(maior, Number(c)), 0)
+    const codigos: string[] = []
+    let proximo = base
+    while (codigos.length < quantidade) {
+      proximo += 1
+      const codigo = String(proximo).padStart(5, '0')
+      if (!existentes.includes(codigo)) codigos.push(codigo)
+    }
+    return codigos
+  }
+
+  test('gera a quantidade pedida, em sequência', () => {
+    expect(codigosEmLote(['02370'], 5)).toEqual(['02371', '02372', '02373', '02374', '02375'])
+  })
+
+  // Buraco na numeração não é reaproveitado: a sequência segue do maior em
+  // diante, para um código nunca apontar para duas peças diferentes ao longo
+  // do tempo (é o que o PRD pede e o que faz etiqueta velha não mentir).
+  test('parte do maior código e não reaproveita buraco', () => {
+    const existentes = ['02370', '02371', '02373']
+    const gerados = codigosEmLote(existentes, 3)
+    expect(gerados).toEqual(['02374', '02375', '02376'])
+    expect(gerados.some((c) => existentes.includes(c))).toBe(false)
+  })
+
+  // 10040 e 10041 existem de verdade no cadastro; era neles que a importação batia
+  test('códigos altos existentes não puxam a sequência', () => {
+    expect(codigosEmLote(['02370', '10040', '10041', '28920'], 2)).toEqual(['02371', '02372'])
+  })
+
+  test('pedido de zero itens não gera nada', () => {
+    expect(codigosEmLote(['02370'], 0)).toEqual([])
+  })
+})

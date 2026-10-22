@@ -175,7 +175,9 @@ export function useNFeImport() {
           // 5. Gerar códigos sequenciais para os itens que serão criados
           const itemsToCreate: typeof nfeData.items = []
           // isExisting = material já cadastrado (somar estoque); false = recém-criado (estoque já definido)
-          const itemsToLink: Array<{ item: typeof nfeData.items[0], materialId: string, isExisting: boolean }> = []
+          // materialId nulo = o item entra na nota sem vínculo, para ser
+          // resolvido na conciliação em vez de sumir
+          const itemsToLink: Array<{ item: typeof nfeData.items[0], materialId: string | null, isExisting: boolean }> = []
 
           for (const item of nfeData.items) {
             console.log(`🔍 Verificando item: ${item.code} - ${item.description}`)
@@ -243,18 +245,25 @@ export function useNFeImport() {
               })
 
               if (materialResult.data) {
-                console.log(`   ✅ Material criado com sucesso: ID ${materialResult.data.id}`)
                 itemsToLink.push({ item, materialId: materialResult.data.id, isExisting: false })
                 result.materialsCreated++
               } else {
-                console.log(`   ❌ Erro ao criar material: ${materialResult.error}`)
-                result.errors.push(`Erro ao criar material ${item.code}: ${materialResult.error}`)
-                continue
+                // O item entra na nota mesmo sem material: some-lo era o que
+                // fazia o histórico mostrar só um produto. Sem vínculo, ele
+                // aparece na conciliação como "sem material vinculado", que é
+                // onde se resolve — e nada se perde.
+                result.errors.push(
+                  `${item.code} — ${item.description}: material não criado (${materialResult.error}). ` +
+                    'O item foi registrado na nota para ser vinculado na conciliação.',
+                )
+                itemsToLink.push({ item, materialId: null, isExisting: false })
               }
             } catch (error) {
-              console.log(`   ❌ Exceção ao criar material: ${error}`)
-              result.errors.push(`Erro ao criar material ${item.code}: ${error}`)
-              continue
+              result.errors.push(
+                `${item.code} — ${item.description}: material não criado (${error}). ` +
+                  'O item foi registrado na nota para ser vinculado na conciliação.',
+              )
+              itemsToLink.push({ item, materialId: null, isExisting: false })
             }
           }
 
@@ -286,7 +295,9 @@ export function useNFeImport() {
                 .insert(nfeItemData)
 
               if (itemError) {
-                result.errors.push(`Erro ao salvar item ${item.code}: ${itemError.message}`)
+                result.errors.push(
+                  `${item.code} — ${item.description}: não foi possível registrar o item na nota (${itemError.message})`,
+                )
                 continue
               }
 
