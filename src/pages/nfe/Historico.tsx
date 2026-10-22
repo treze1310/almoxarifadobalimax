@@ -21,7 +21,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { ArrowLeft, FileText, Package, Eye, Trash2, RefreshCw, TrendingUp, Link2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  FileText,
+  Package,
+  Eye,
+  Trash2,
+  RefreshCw,
+  TrendingUp,
+  Link2,
+  PackageCheck,
+  Loader2,
+} from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { useToast } from '@/components/ui/use-toast'
+import { supabase } from '@/lib/supabase'
+import { registrarAuditoria } from '@/services/auditoriaService'
 import { useNFeImportCrud } from '@/hooks/useNFeImportCrud'
 import { NfeImportDetailsDialog } from '@/components/nfe/NfeImportDetailsDialog'
 import type { NFEImportacao } from '@/services/nfeImportService'
@@ -46,6 +61,67 @@ const HistoricoNFePage = () => {
   // Hooks ficam todos antes do `return` de carregamento: declarados depois, a
   // ordem muda quando o carregamento termina e o React derruba a tela.
   const [conciliando, setConciliando] = useState<any | null>(null)
+  const [lancando, setLancando] = useState<string | null>(null)
+  const { toast } = useToast()
+
+  /**
+   * Notas conferidas que ainda não entraram no estoque.
+   *
+   * A importação não movimenta saldo de propósito: a quantidade entra no
+   * lançamento, depois da conferência, que é o que gera a movimentação e deixa
+   * rastro. O problema era o silêncio — nota conferida ficava parada e o item
+   * seguia com saldo zero sem ninguém avisar. Agora a tela cobra.
+   */
+  const aguardandoLancamento = importacoes.filter((n: any) => n.status === 'conferida')
+  const aguardandoConferencia = importacoes.filter(
+    (n: any) => !n.status || n.status === 'importada',
+  )
+
+  const lancarNoEstoque = async (nfe: any) => {
+    setLancando(nfe.id)
+    try {
+      const { data, error } = await supabase.rpc('nfe_lancar_estoque', { p_nfe_id: nfe.id })
+      if (error) throw error
+
+      const resultado = data as {
+        ja_lancada: boolean
+        itens_lancados: number
+        unidades_criadas?: number
+      }
+
+      await registrarAuditoria({
+        acao: 'nfe.lancar_estoque',
+        tabela: 'nfe_importacao',
+        registroId: nfe.id,
+        dadosNovos: {
+          numero: nfe.numero_nfe,
+          itens_lancados: resultado?.itens_lancados ?? 0,
+          unidades_criadas: resultado?.unidades_criadas ?? 0,
+        },
+      })
+
+      toast({
+        title: resultado?.ja_lancada ? 'NF-e já estava lançada' : 'Estoque lançado',
+        description: resultado?.ja_lancada
+          ? 'Nenhuma movimentação foi duplicada.'
+          : `${contar(resultado?.itens_lancados ?? 0, 'item deu', 'itens deram')} entrada no estoque.` +
+            (resultado?.unidades_criadas
+              ? ` ${contar(resultado.unidades_criadas, 'unidade individual foi criada', 'unidades individuais foram criadas')}.`
+              : ''),
+      })
+
+      await fetchImportacoes()
+      await fetchStats()
+    } catch (erro) {
+      toast({
+        title: 'Não foi possível lançar no estoque',
+        description: erro instanceof Error ? erro.message : 'Erro desconhecido',
+        variant: 'destructive',
+      })
+    } finally {
+      setLancando(null)
+    }
+  }
 
   // A central de notificações manda `?item=<id>` para abrir a conciliação da
   // nota direto, e não só a listagem.
@@ -236,6 +312,55 @@ const HistoricoNFePage = () => {
           </Button>
         </div>
       </div>
+
+      {/* A quantidade da nota só entra no estoque no lançamento: sem este
+          aviso, a nota ficava conferida e o item com saldo zero */}
+      {(aguardandoLancamento.length > 0 || aguardandoConferencia.length > 0) && (
+        <Alert>
+          <PackageCheck className="h-4 w-4" />
+          <AlertTitle>
+            {aguardandoLancamento.length > 0
+              ? `${contar(aguardandoLancamento.length, 'nota conferida espera', 'notas conferidas esperam')} o lançamento no estoque`
+              : `${contar(aguardandoConferencia.length, 'nota espera', 'notas esperam')} conferência`}
+          </AlertTitle>
+          <AlertDescription className="space-y-2">
+            <p>
+              A quantidade da nota só entra no saldo no lançamento — é ele que gera a
+              movimentação de entrada e, nos equipamentos, as unidades numeradas. Enquanto
+              isso não acontece, o item fica com o saldo que já tinha.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {aguardandoLancamento.map((nfe: any) => (
+                <Button
+                  key={nfe.id}
+                  size="sm"
+                  variant="outline"
+                  onClick={() => lancarNoEstoque(nfe)}
+                  disabled={lancando === nfe.id}
+                >
+                  {lancando === nfe.id ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <PackageCheck className="mr-2 h-4 w-4" />
+                  )}
+                  Lançar NF-e {nfe.numero_nfe}
+                </Button>
+              ))}
+              {aguardandoConferencia.map((nfe: any) => (
+                <Button
+                  key={nfe.id}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setConciliando(nfe)}
+                >
+                  <Link2 className="mr-2 h-4 w-4" />
+                  Conferir NF-e {nfe.numero_nfe}
+                </Button>
+              ))}
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Painel de Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { NFeImportBatch } from '@/types'
-import { CheckCircle, XCircle, AlertTriangle, FilePlus } from 'lucide-react'
+import { CheckCircle, XCircle, AlertTriangle, FilePlus, PackageCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 interface NfImportResultProps {
@@ -40,13 +40,30 @@ export const NfImportResult = ({
             <p className="text-sm text-muted-foreground">Com Erros</p>
           </div>
         </div>
-        <div className="flex justify-center space-x-4 pt-4">
-          <Button onClick={onStartNewImport}>
+        {/* O saldo não entra aqui: quem move estoque é o lançamento, depois
+            da conferência. Sem dizer isso, o item fica com saldo zero e
+            parece que a importação falhou. */}
+        {result.successCount > 0 && (
+          <div className="rounded-md border border-status-pendente/30 bg-status-pendente/10 px-4 py-3 text-ds-body">
+            <p className="font-medium">A quantidade ainda não entrou no estoque.</p>
+            <p className="text-ds-caption text-muted-foreground">
+              Confira a nota item a item e lance no estoque: é o lançamento que gera a
+              movimentação de entrada e, nos equipamentos, as unidades numeradas. Até lá, o
+              item fica com o saldo que já tinha.
+            </p>
+          </div>
+        )}
+
+        <div className="flex flex-wrap justify-center gap-4 pt-4">
+          <Button asChild>
+            <Link to="/nfe/historico">
+              <PackageCheck className="mr-2 h-4 w-4" />
+              Conferir e lançar no estoque
+            </Link>
+          </Button>
+          <Button variant="outline" onClick={onStartNewImport}>
             <FilePlus className="mr-2 h-4 w-4" />
             Nova Importação
-          </Button>
-          <Button variant="outline" asChild>
-            <Link to="/nfe/historico">Ver Histórico</Link>
           </Button>
         </div>
       </CardContent>

@@ -46,6 +46,8 @@ import {
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useNFeImportCrud } from '@/hooks/useNFeImportCrud'
+import { supabase } from '@/lib/supabase'
+import { contar } from '@/lib/plural'
 import type { NFEImportacao } from '@/services/nfeImportService'
 
 interface NfeImportDetailsDialogProps {
@@ -77,6 +79,49 @@ export function NfeImportDetailsDialog({
   }
   const [editedData, setEditedData] = useState<Partial<NFEImportacao>>({})
   const [isEditing, setIsEditing] = useState(false)
+
+  /**
+   * Unidades que esta nota gerou, por item da nota.
+   *
+   * Fecha a trilha: a nota mostra o item, o item mostra o material e, quando o
+   * material é acompanhado peça a peça, as peças que entraram por esta nota —
+   * com o número que está na etiqueta.
+   */
+  const [unidadesPorItem, setUnidadesPorItem] = useState<
+    Record<string, Array<{ id: string; codigo: string; status: string }>>
+  >({})
+
+  useEffect(() => {
+    if (!open || !importacao?.id) return
+
+    const carregar = async () => {
+      const { data, error } = await supabase
+        .from('material_unidades')
+        .select('id, codigo, status, nfe_item_id')
+        .eq('nfe_id', importacao.id)
+        .order('sequencia')
+
+      if (error) {
+        // Sem as unidades a nota continua legível; só deixa de mostrar as peças
+        console.error('Erro ao carregar as unidades da nota:', error)
+        return
+      }
+
+      const porItem: Record<string, Array<{ id: string; codigo: string; status: string }>> = {}
+      for (const unidade of data ?? []) {
+        if (!unidade.nfe_item_id) continue
+        porItem[unidade.nfe_item_id] = porItem[unidade.nfe_item_id] ?? []
+        porItem[unidade.nfe_item_id].push({
+          id: unidade.id,
+          codigo: unidade.codigo,
+          status: unidade.status,
+        })
+      }
+      setUnidadesPorItem(porItem)
+    }
+
+    void carregar()
+  }, [open, importacao?.id])
 
   useEffect(() => {
     if (importacao) {
@@ -325,6 +370,36 @@ export function NfeImportDetailsDialog({
                                   <p className="truncate text-sm font-medium">
                                     {item.descricao_produto}
                                   </p>
+                                )}
+
+                                {/* Peças que entraram por esta linha da nota */}
+                                {unidadesPorItem[item.id]?.length > 0 && (
+                                  <div className="mt-1 space-y-1">
+                                    <p className="text-[11px] text-muted-foreground">
+                                      {contar(
+                                        unidadesPorItem[item.id].length,
+                                        'peça numerada',
+                                        'peças numeradas',
+                                      )}
+                                      :
+                                    </p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {unidadesPorItem[item.id].map((unidade) => (
+                                        <Badge
+                                          key={unidade.id}
+                                          variant="outline"
+                                          className="cursor-pointer font-mono text-[10px] hover:bg-accent"
+                                          title={`${unidade.codigo} - ${unidade.status.replace('_', ' ')}`}
+                                          onClick={() =>
+                                            item.materiais_equipamentos?.id &&
+                                            abrirNoCadastro(item.materiais_equipamentos.id)
+                                          }
+                                        >
+                                          {unidade.codigo}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
                                 )}
                               </div>
                             </TableCell>
