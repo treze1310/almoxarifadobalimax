@@ -558,6 +558,10 @@ export type Database = {
           marca_id: string | null
           modelo: string | null
           nome: string
+          /** Gerada pelo banco: nome sem acento/pontuação, para casar com NF-e */
+          nome_comparavel: string | null
+          /** Gerada pelo banco: palavras significativas do nome */
+          nome_palavras: string[] | null
           numero_ca: string | null
           numero_serie: string | null
           observacoes: string | null

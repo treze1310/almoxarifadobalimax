@@ -13,6 +13,12 @@ import { materialEquipamentoSchema } from '../src/lib/validations'
 import { buscarTodasAsPaginas } from '../src/lib/consultaPaginada'
 import { contar, plural } from '../src/lib/plural'
 import { enderecoWeb, enderecoWebLegivel } from '../src/lib/enderecoWeb'
+import {
+  agruparSugestoes,
+  forcaDaSugestao,
+  LIMIAR_VINCULO_AUTOMATICO,
+  type LinhaSugestao,
+} from '../src/services/sugestaoMaterialService'
 import { barrasDoCodigo, code128b, larguraEmModulos, podeCodificar } from '../src/lib/code128'
 import {
   detectarSeparador,
@@ -654,5 +660,71 @@ describe('códigos em lote na importação de NF-e', () => {
 
   test('pedido de zero itens não gera nada', () => {
     expect(codigosEmLote(['02370'], 0)).toEqual([])
+  })
+})
+
+/**
+ * Sugestão de material na pré-visualização da NF-e.
+ *
+ * A comparação em si é do banco (`sugerir_materiais`), medida contra o
+ * catálogo real: sugestão certa em primeiro lugar em 198 de 200 descrições.
+ * Aqui ficam as regras que o front aplica sobre o resultado.
+ */
+describe('sugestão de material para item de NF-e', () => {
+  const linha = (over: Partial<LinhaSugestao> = {}): LinhaSugestao => ({
+    descricao: 'DISCO DE CORTE 4.1/2',
+    material_id: 'id-1',
+    codigo: '01432',
+    nome: 'DISCO DE CORTE - INOX',
+    estoque_atual: '7',
+    unidade_medida: 'UN',
+    tipo: 'material',
+    categoria: 'CONSUMO',
+    exige_identificacao_individual: null,
+    similaridade: '0.94',
+    motivo: 'mesmas palavras',
+    ...over,
+  })
+
+  test('devolve as sugestões pelo código do item da nota', () => {
+    const agrupadas = agruparSugestoes([linha()], [
+      { code: 'P1', description: 'DISCO DE CORTE 4.1/2' },
+    ])
+    expect(agrupadas.P1).toHaveLength(1)
+    expect(agrupadas.P1[0].codigo).toBe('01432')
+    // O banco devolve texto; a tela precisa de número
+    expect(agrupadas.P1[0].estoque_atual).toBe(7)
+    expect(agrupadas.P1[0].similaridade).toBeCloseTo(0.94)
+  })
+
+  // Duas linhas da mesma nota podem trazer a mesma descrição com códigos
+  // diferentes; as duas precisam receber a sugestão
+  test('descrição repetida em itens diferentes serve os dois', () => {
+    const agrupadas = agruparSugestoes([linha()], [
+      { code: 'P1', description: 'DISCO DE CORTE 4.1/2' },
+      { code: 'P2', description: 'DISCO DE CORTE 4.1/2' },
+    ])
+    expect(agrupadas.P1[0].id).toBe('id-1')
+    expect(agrupadas.P2[0].id).toBe('id-1')
+  })
+
+  test('item sem sugestão aparece como lista vazia, não como ausente', () => {
+    const agrupadas = agruparSugestoes([], [{ code: 'P9', description: 'ITEM NOVO' }])
+    expect(agrupadas.P9).toEqual([])
+  })
+
+  test('item sem descrição não entra no resultado', () => {
+    const agrupadas = agruparSugestoes([], [{ code: 'P0', description: '   ' }])
+    expect(agrupadas).toEqual({})
+  })
+
+  // O vínculo automático só vale para o que é praticamente o mesmo item; o
+  // resto fica como sugestão para o almoxarife decidir
+  test('a força mostrada acompanha o limiar do vínculo automático', () => {
+    expect(forcaDaSugestao(1).tom).toBe('alta')
+    expect(forcaDaSugestao(LIMIAR_VINCULO_AUTOMATICO).tom).toBe('alta')
+    expect(forcaDaSugestao(LIMIAR_VINCULO_AUTOMATICO - 0.01).tom).not.toBe('alta')
+    expect(forcaDaSugestao(0.5).tom).toBe('media')
+    expect(forcaDaSugestao(0.06).tom).toBe('baixa')
   })
 })

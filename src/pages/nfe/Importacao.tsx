@@ -1,5 +1,6 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { contar } from '@/lib/plural'
+import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { UploadCloud, FileText, History } from 'lucide-react'
@@ -16,7 +17,18 @@ import {
   NFePayment,
   NFeAdditionalInfo,
 } from '@/types'
-import { NfPreviewTable, ItemMatches, ItemMeta, ItemMetaValue } from '@/components/nfe/NfPreviewTable'
+import {
+  NfPreviewTable,
+  ItemMatches,
+  ItemMeta,
+  ItemMetaValue,
+  ItemNomes,
+  SugestoesPorArquivo,
+} from '@/components/nfe/NfPreviewTable'
+import {
+  buscarSugestoes,
+  LIMIAR_VINCULO_AUTOMATICO,
+} from '@/services/sugestaoMaterialService'
 import type { MatchedMaterial } from '@/components/nfe/MaterialSearchDialog'
 import { useCategorias } from '@/hooks/useCategorias'
 import { NfImportDialog } from '@/components/nfe/NfImportDialog'
@@ -367,12 +379,19 @@ const ImportacaoNFePage = () => {
   const [selectedItems, setSelectedItems] = useState<Record<string, string[]>>({})
   const [matches, setMatches] = useState<ItemMatches>({})
   const [itemMeta, setItemMeta] = useState<ItemMeta>({})
+  const [itemNomes, setItemNomes] = useState<ItemNomes>({})
+  const [sugestoes, setSugestoes] = useState<SugestoesPorArquivo>({})
+  const [sugestoesCarregando, setSugestoesCarregando] = useState<Record<string, boolean>>({})
   const categorias = useCategorias()
+  const { toast } = useToast()
 
   const { loading: importLoading, importNFe } = useNFeImport()
 
   // Controlar auto-seleção apenas uma vez por arquivo
   const [autoSelectedFiles, setAutoSelectedFiles] = useState<Set<string>>(new Set())
+  // Arquivos cujas sugestões já foram buscadas (uma vez por arquivo)
+  const sugestoesPedidas = useRef<Set<string>>(new Set())
+
 
   // Efeito para auto-selecionar itens quando arquivos são processados com sucesso (apenas uma vez)
   useEffect(() => {
@@ -456,7 +475,95 @@ const ImportacaoNFePage = () => {
       delete updated[id]
       return updated
     })
+    // Remover nomes corrigidos e sugestões do arquivo
+    setItemNomes(prev => {
+      const updated = { ...prev }
+      delete updated[id]
+      return updated
+    })
+    setSugestoes(prev => {
+      const updated = { ...prev }
+      delete updated[id]
+      return updated
+    })
+    sugestoesPedidas.current.delete(id)
   }
+
+  const handleItemNomeChange = (fileId: string, itemCode: string, nome: string) => {
+    setItemNomes((prev) => ({
+      ...prev,
+      [fileId]: { ...(prev[fileId] || {}), [itemCode]: nome },
+    }))
+  }
+
+  /**
+   * Procura no cadastro algo parecido com cada item da nota.
+   *
+   * O que é quase certo (código igual ou mesmas palavras) já fica vinculado
+   * sozinho, para o almoxarife só conferir; o resto aparece como sugestão
+   * abaixo do produto, com o quanto se parece, e a decisão é dele.
+   */
+  const carregarSugestoes = useCallback(async (file: UploadedNFeFile) => {
+    if (!file.data?.items?.length) return
+
+    setSugestoesCarregando((prev) => ({ ...prev, [file.id]: true }))
+    try {
+      const encontradas = await buscarSugestoes(
+        file.data.items.map((item) => ({ code: item.code, description: item.description })),
+      )
+      setSugestoes((prev) => ({ ...prev, [file.id]: encontradas }))
+
+      const automaticos = Object.entries(encontradas)
+        .map(([code, lista]) => [code, lista[0]] as const)
+        .filter(([, melhor]) => melhor && melhor.similaridade >= LIMIAR_VINCULO_AUTOMATICO)
+
+      if (automaticos.length > 0) {
+        setMatches((prev) => {
+          const doArquivo = { ...(prev[file.id] || {}) }
+          for (const [code, melhor] of automaticos) {
+            // Não atropela vínculo escolhido à mão
+            if (!doArquivo[code]) doArquivo[code] = melhor!
+          }
+          return { ...prev, [file.id]: doArquivo }
+        })
+        toast({
+          title: contar(
+            automaticos.length,
+            'item já cadastrado',
+            'itens já cadastrados',
+          ),
+          description:
+            'Vinculados automaticamente por serem praticamente o mesmo item. Confira antes de importar.',
+        })
+      }
+    } catch (erro) {
+      // Sem sugestão a importação continua: ela só deixa de ajudar
+      console.error('Erro ao buscar sugestões de material:', erro)
+      setSugestoes((prev) => ({ ...prev, [file.id]: {} }))
+      toast({
+        title: 'Não foi possível buscar itens parecidos no cadastro',
+        description:
+          erro instanceof Error
+            ? erro.message
+            : 'Confira cada item pela lupa antes de importar.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSugestoesCarregando((prev) => ({ ...prev, [file.id]: false }))
+    }
+  }, [toast])
+
+  // Assim que a nota é lida, procurar no cadastro algo parecido com cada item
+  useEffect(() => {
+    files.forEach((file) => {
+      const lida = file.status === 'success' || file.status === 'warning'
+      if (!lida || !file.data?.items?.length) return
+      if (sugestoesPedidas.current.has(file.id)) return
+
+      sugestoesPedidas.current.add(file.id)
+      void carregarSugestoes(file)
+    })
+  }, [files, carregarSugestoes])
 
   const handleMatchChange = (
     fileId: string,
@@ -562,9 +669,15 @@ const ImportacaoNFePage = () => {
             .filter(item => selectedItemsForFile.includes(item.code))
             .map(item => {
               const meta = fileMeta[item.code]
+              const nomeCorrigido = (itemNomes[f.id]?.[item.code] ?? '').trim()
               return {
                 ...item,
                 matchedMaterialId: fileMatches[item.code]?.id,
+                // Nome do cadastro; a descrição da nota fica como veio no XML
+                nomeMaterial:
+                  nomeCorrigido && nomeCorrigido !== item.description.trim()
+                    ? nomeCorrigido
+                    : undefined,
                 // tipo/categoria só relevantes para itens novos (sem vínculo)
                 tipo: meta?.tipo || 'material',
                 categoria: meta?.categoria || 'MATERIAL DE CONSUMO',
@@ -617,6 +730,10 @@ const ImportacaoNFePage = () => {
     setSelectedItems({})
     setMatches({})
     setItemMeta({})
+    setItemNomes({})
+    setSugestoes({})
+    setSugestoesCarregando({})
+    sugestoesPedidas.current.clear()
     setStage('upload')
   }
 
@@ -702,6 +819,10 @@ const ImportacaoNFePage = () => {
                   itemMeta={itemMeta}
                   onItemMetaChange={handleItemMetaChange}
                   categorias={categorias}
+                  itemNomes={itemNomes}
+                  onItemNomeChange={handleItemNomeChange}
+                  sugestoes={sugestoes}
+                  sugestoesCarregando={sugestoesCarregando}
                 />
               ) : (
                 <div className="text-center p-10 text-muted-foreground">

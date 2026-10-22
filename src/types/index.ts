@@ -172,6 +172,13 @@ export interface NFeItem {
   // Classificação informada na pré-visualização (apenas para itens NOVOS, que serão criados)
   tipo?: 'material' | 'equipamento'
   categoria?: string
+
+  /**
+   * Nome com que o material será cadastrado, quando o almoxarife corrigiu a
+   * descrição na pré-visualização. O item da nota continua guardando o texto
+   * original do XML — a nota é o que o fornecedor emitiu, não se reescreve.
+   */
+  nomeMaterial?: string
 }
 
 export interface NFeEmitter {

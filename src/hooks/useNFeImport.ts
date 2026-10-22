@@ -229,7 +229,8 @@ export function useNFeImport() {
             try {
               const materialResult = await createMaterialFromNFe({
                 codigo_produto: newCode, // ✅ Usar código sequencial gerado
-                descricao_produto: item.description,
+                // Nome corrigido na pré-visualização, se houve correção
+                descricao_produto: item.nomeMaterial || item.description,
                 ncm: item.ncm,
                 cest: item.cest,
                 codigo_ean: item.ean,

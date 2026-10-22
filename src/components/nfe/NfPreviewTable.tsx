@@ -33,6 +33,7 @@ import {
   Trash2,
   Package,
   Search,
+  Sparkles,
   X,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -40,6 +41,12 @@ import {
   MaterialSearchDialog,
   MatchedMaterial,
 } from '@/components/nfe/MaterialSearchDialog'
+import {
+  forcaDaSugestao,
+  type SugestaoMaterial,
+  type SugestoesPorItem,
+} from '@/services/sugestaoMaterialService'
+import { cn } from '@/lib/utils'
 
 // fileId -> itemCode -> material vinculado
 export type ItemMatches = Record<string, Record<string, MatchedMaterial>>
@@ -52,6 +59,12 @@ export interface ItemMetaValue {
 // fileId -> itemCode -> classificação
 export type ItemMeta = Record<string, Record<string, ItemMetaValue>>
 
+// fileId -> itemCode -> nome corrigido para o cadastro
+export type ItemNomes = Record<string, Record<string, string>>
+
+// fileId -> itemCode -> sugestões de material já cadastrado
+export type SugestoesPorArquivo = Record<string, SugestoesPorItem>
+
 interface NfPreviewTableProps {
   files: UploadedNFeFile[]
   onRemoveFile: (id: string) => void
@@ -62,6 +75,13 @@ interface NfPreviewTableProps {
   itemMeta?: ItemMeta
   onItemMetaChange?: (fileId: string, itemCode: string, meta: ItemMetaValue) => void
   categorias?: string[]
+  /** Nome corrigido para o cadastro (a descrição da nota não muda) */
+  itemNomes?: ItemNomes
+  onItemNomeChange?: (fileId: string, itemCode: string, nome: string) => void
+  /** Sugestões de material já cadastrado, por item */
+  sugestoes?: SugestoesPorArquivo
+  /** Arquivos cujas sugestões ainda estão sendo buscadas */
+  sugestoesCarregando?: Record<string, boolean>
 }
 
 const statusConfig = {
@@ -112,6 +132,10 @@ export const NfPreviewTable = ({
   itemMeta = {},
   onItemMetaChange,
   categorias = [],
+  itemNomes = {},
+  onItemNomeChange,
+  sugestoes = {},
+  sugestoesCarregando = {},
 }: NfPreviewTableProps) => {
   // Item cuja lupa de busca está aberta
   const [searchTarget, setSearchTarget] = useState<{
@@ -124,6 +148,12 @@ export const NfPreviewTable = ({
 
   const getMeta = (fileId: string, itemCode: string): ItemMetaValue =>
     itemMeta[fileId]?.[itemCode] || { tipo: 'material', categoria: 'MATERIAL DE CONSUMO' }
+
+  const getNome = (fileId: string, item: NFeItem): string =>
+    itemNomes[fileId]?.[item.code] ?? item.description
+
+  const getSugestoes = (fileId: string, itemCode: string): SugestaoMaterial[] =>
+    sugestoes[fileId]?.[itemCode] ?? []
 
   const isItemSelected = (fileId: string, itemCode: string) => {
     return selectedItems[fileId]?.includes(itemCode) || false
@@ -148,8 +178,14 @@ export const NfPreviewTable = ({
       onItemSelectionChange(fileId, item.code, selectAll)
     })
   }
+  // Detalhes ja abertos: o almoxarife precisa ver e conferir os itens, nao
+  // cacar onde clicar para que aparecam
   return (
-    <Accordion type="single" collapsible className="w-full">
+    <Accordion
+      type="multiple"
+      defaultValue={files.map((f) => f.id)}
+      className="w-full"
+    >
       {files.map((uploadedFile) => {
         const config = statusConfig[uploadedFile.status]
         const Icon = config.icon
@@ -282,15 +318,42 @@ export const NfPreviewTable = ({
                                 {match ? match.codigo : isSelected ? 'Auto' : 'N/A'}
                               </Badge>
                             </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <span className="flex-1">{item.description}</span>
+                            <TableCell className="min-w-[320px]">
+                              <div className="flex items-start gap-2">
+                                {onItemNomeChange ? (
+                                  <div className="flex-1 space-y-1">
+                                    {/* Editável: a descrição da nota costuma vir
+                                        abreviada e é ela que vira o nome do item */}
+                                    <Input
+                                      className="h-8"
+                                      value={getNome(uploadedFile.id, item)}
+                                      onChange={(e) =>
+                                        onItemNomeChange(uploadedFile.id, item.code, e.target.value)
+                                      }
+                                      disabled={!!match}
+                                      title={
+                                        match
+                                          ? 'Item vinculado a um material já cadastrado: vale o nome do cadastro'
+                                          : 'Nome com que o item será cadastrado'
+                                      }
+                                    />
+                                    {!match &&
+                                      getNome(uploadedFile.id, item).trim() !==
+                                        item.description.trim() && (
+                                        <p className="text-[11px] text-muted-foreground">
+                                          Na nota: {item.description}
+                                        </p>
+                                      )}
+                                  </div>
+                                ) : (
+                                  <span className="flex-1">{item.description}</span>
+                                )}
                                 {onMatchChange && (
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7 shrink-0"
-                                    title="Vincular a material existente"
+                                    className="h-8 w-8 shrink-0"
+                                    title="Buscar outro material para vincular"
                                     onClick={() =>
                                       setSearchTarget({ fileId: uploadedFile.id, item })
                                     }
@@ -299,17 +362,18 @@ export const NfPreviewTable = ({
                                   </Button>
                                 )}
                               </div>
-                              {match && (
-                                <div className="mt-1 flex items-center gap-1 text-xs text-success">
+
+                              {match ? (
+                                <div className="mt-1 flex items-start gap-1 text-xs text-success">
                                   <span>
-                                    → {match.nome} (estoque atual: {match.estoque_atual} →{' '}
-                                    {match.estoque_atual + item.quantity})
+                                    → {match.codigo} {match.nome} (estoque: {match.estoque_atual}{' '}
+                                    → {match.estoque_atual + item.quantity})
                                   </span>
                                   {onMatchChange && (
                                     <button
                                       type="button"
                                       className="ml-1 inline-flex items-center text-muted-foreground hover:text-destructive"
-                                      title="Remover vínculo"
+                                      title="Desfazer o vínculo e cadastrar como item novo"
                                       onClick={() =>
                                         onMatchChange(uploadedFile.id, item.code, null)
                                       }
@@ -318,6 +382,68 @@ export const NfPreviewTable = ({
                                     </button>
                                   )}
                                 </div>
+                              ) : (
+                                /* Sugestões logo abaixo do produto: sempre que houver
+                                   algo parecido no cadastro, mesmo de longe, para não
+                                   cadastrar item repetido */
+                                onMatchChange && (
+                                  <div className="mt-2">
+                                    {sugestoesCarregando[uploadedFile.id] ? (
+                                      <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                        Procurando no cadastro...
+                                      </p>
+                                    ) : getSugestoes(uploadedFile.id, item.code).length === 0 ? (
+                                      <p className="text-xs text-muted-foreground">
+                                        Nada parecido no cadastro: será criado como item novo.
+                                      </p>
+                                    ) : (
+                                      <div className="space-y-1">
+                                        <p className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                                          <Sparkles className="h-3 w-3" />
+                                          Já cadastrado? Talvez seja:
+                                        </p>
+                                        {getSugestoes(uploadedFile.id, item.code).map((sugestao) => {
+                                          const forca = forcaDaSugestao(sugestao.similaridade)
+                                          return (
+                                            <button
+                                              key={sugestao.id}
+                                              type="button"
+                                              onClick={() =>
+                                                onMatchChange(uploadedFile.id, item.code, sugestao)
+                                              }
+                                              className="flex w-full items-center gap-2 rounded-md border bg-background px-2 py-1 text-left text-xs hover:bg-accent"
+                                              title="Vincular este item da nota ao material já cadastrado"
+                                            >
+                                              <span className="font-mono text-muted-foreground">
+                                                {sugestao.codigo}
+                                              </span>
+                                              <span className="min-w-0 flex-1 truncate">
+                                                {sugestao.nome}
+                                              </span>
+                                              <Badge
+                                                variant="outline"
+                                                className={cn(
+                                                  'shrink-0 text-[10px]',
+                                                  forca.tom === 'alta' &&
+                                                    'border-success/40 text-success',
+                                                  forca.tom === 'media' &&
+                                                    'border-warning/40 text-warning-foreground',
+                                                  forca.tom === 'baixa' && 'text-muted-foreground',
+                                                )}
+                                              >
+                                                {forca.rotulo}
+                                              </Badge>
+                                              <span className="shrink-0 text-muted-foreground">
+                                                estoque {sugestao.estoque_atual}
+                                              </span>
+                                            </button>
+                                          )
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+                                )
                               )}
                             </TableCell>
                             {onItemMetaChange && (
