@@ -11,6 +11,8 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react'
+import { SelecaoUnidades } from '@/components/romaneios/SelecaoUnidades'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -121,6 +123,11 @@ export const RetiradaAssistida = () => {
   const [termo, setTermo] = useState('')
   const [sugestoes, setSugestoes] = useState<MaterialBusca[]>([])
 
+  const [paiSelecionado, setPaiSelecionado] = useState<MaterialBusca | null>(null)
+  const [pecasSelecionadas, setPecasSelecionadas] = useState<string[]>([])
+  const [inserindoPecas, setInserindoPecas] = useState(false)
+  const [erroPecas, setErroPecas] = useState<string | null>(null)
+
   // Passo 3
   const [assinatura, setAssinatura] = useState<string | null>(null)
   const [observacoes, setObservacoes] = useState('')
@@ -163,9 +170,10 @@ export const RetiradaAssistida = () => {
     (material: MaterialBusca) => {
       const saldo = material.estoque_atual ?? 0
       if (material.exige_identificacao_individual) {
-        setAviso(
-          `${material.nome} é controlado peça a peça: bipe ou busque a etiqueta da peça (${material.codigo}-1, ${material.codigo}-2, …).`,
-        )
+        setAviso(null)
+        setPecasSelecionadas([])
+        setErroPecas(null)
+        setPaiSelecionado(material)
         return
       }
 
@@ -267,6 +275,48 @@ export const RetiradaAssistida = () => {
     [itens],
   )
 
+  const inserirPecasSelecionadas = async () => {
+    if (!paiSelecionado || !pecasSelecionadas.length || inserindoPecas) return
+    const pai = paiSelecionado
+    setInserindoPecas(true)
+    setErroPecas(null)
+    try {
+      // Revalida a disponibilidade na confirmação; cada peça vira uma linha.
+      const { data: pecas, error } = await supabase.from('material_unidades')
+        .select('id, codigo, status')
+        .eq('material_equipamento_id', pai.id)
+        .in('id', pecasSelecionadas)
+      if (error) throw error
+      if (!pecas || pecas.length !== pecasSelecionadas.length || pecas.some(p => p.status !== 'disponivel')) {
+        throw new Error('Uma das peças deixou de estar disponível. Feche e abra a seleção para atualizar.')
+      }
+      setItens(atuais => [
+        ...atuais,
+        ...pecas.filter(p => !atuais.some(i => i.unidadeId === p.id)).map(p => ({
+          id: pai.id,
+          codigo: pai.codigo,
+          nome: pai.nome,
+          unidade: pai.unidade_medida,
+          valorUnitario: pai.valor_unitario ?? 0,
+          estoqueAtual: pai.estoque_atual ?? 0,
+          pontoPedido: pai.ponto_pedido ?? pai.estoque_minimo ?? null,
+          quantidade: 1,
+          unidadeId: p.id,
+          unidadeCodigo: p.codigo,
+        })),
+      ])
+      setPaiSelecionado(null)
+      setPecasSelecionadas([])
+      setSugestoes([])
+      setTermo('')
+      setAviso(null)
+    } catch (erro) {
+      setErroPecas(erro instanceof Error ? erro.message : 'Não foi possível inserir as peças. Tente novamente.')
+    } finally {
+      setInserindoPecas(false)
+    }
+  }
+
   const adicionarPorCodigo = useCallback(
     async (codigo: string) => {
       setAviso(null)
@@ -298,14 +348,6 @@ export const RetiradaAssistida = () => {
         }
 
         const material = achados[0] as MaterialBusca
-
-        // Item acompanhado peça a peça: não dá para sair "1 unidade qualquer"
-        if (material.exige_identificacao_individual) {
-          setAviso(
-            `${material.nome} é controlado peça a peça: bipe a etiqueta da peça (${material.codigo}-1, ${material.codigo}-2, …) em vez do código do item.`,
-          )
-          return
-        }
 
         adicionarMaterial(material)
         setSugestoes([])
@@ -459,6 +501,32 @@ export const RetiradaAssistida = () => {
           </Button>
         }
       />
+
+      <Dialog open={!!paiSelecionado} onOpenChange={aberto => {
+        if (!aberto && !inserindoPecas) setPaiSelecionado(null)
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Selecionar unidades</DialogTitle>
+            <DialogDescription>{paiSelecionado?.codigo} — {paiSelecionado?.nome}. Escolha uma ou mais peças disponíveis para esta retirada.</DialogDescription>
+          </DialogHeader>
+          {paiSelecionado && <SelecaoUnidades
+            key={paiSelecionado.id}
+            materialId={paiSelecionado.id}
+            valor={pecasSelecionadas}
+            onChange={setPecasSelecionadas}
+            ocupadas={itens.flatMap(item => item.unidadeId ? [item.unidadeId] : [])}
+            disabled={inserindoPecas}
+          />}
+          {erroPecas && <p role="alert" className="text-sm text-destructive">{erroPecas}</p>}
+          <DialogFooter>
+            <Button variant="outline" disabled={inserindoPecas} onClick={() => setPaiSelecionado(null)}>Cancelar</Button>
+            <Button disabled={!pecasSelecionadas.length || inserindoPecas} onClick={inserirPecasSelecionadas}>
+              {inserindoPecas ? 'Inserindo…' : `Inserir ${pecasSelecionadas.length} unidade(s)`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Trilha dos 3 passos */}
       <ol className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">

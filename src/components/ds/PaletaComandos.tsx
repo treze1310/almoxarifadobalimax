@@ -31,13 +31,14 @@ interface Resultado {
 }
 
 interface Grupos {
+  unidades: Resultado[]
   materiais: Resultado[]
   romaneios: Resultado[]
   solicitacoes: Resultado[]
   colaboradores: Resultado[]
 }
 
-const vazio: Grupos = { materiais: [], romaneios: [], solicitacoes: [], colaboradores: [] }
+const vazio: Grupos = { unidades: [], materiais: [], romaneios: [], solicitacoes: [], colaboradores: [] }
 
 const ATALHOS = [
   { titulo: 'Nova retirada (bipar e assinar)', destino: '/romaneios/retirada', modulo: 'romaneios', acao: 'create' as const, icone: ScanLine },
@@ -89,7 +90,8 @@ export const PaletaComandos = () => {
       const padrao = `%${termoLimpo}%`
 
       try {
-        const [mat, rom, sol, col] = await Promise.all([
+        const [uni, mat, rom, sol, col] = await Promise.all([
+          can('materiais') ? supabase.from('material_unidades').select('id, codigo, status').ilike('codigo', padrao).limit(5) : Promise.resolve({ data: [] }),
           can('materiais')
             ? supabase
                 .from('materiais_equipamentos')
@@ -124,6 +126,7 @@ export const PaletaComandos = () => {
         if (requisicao !== buscaAtual.current) return
 
         setResultados({
+          unidades: (uni.data ?? []).map((u: any) => ({ id: u.id, titulo: u.codigo, detalhe: 'Unidade individual', destino: `/unidades/${encodeURIComponent(u.codigo)}` })),
           materiais: (mat.data ?? []).map((m: any) => ({
             id: m.id,
             titulo: m.nome,
@@ -205,6 +208,9 @@ export const PaletaComandos = () => {
           </CommandGroup>
         )}
 
+        {resultados.unidades.length > 0 && <CommandGroup heading="Unidades individuais">
+          {resultados.unidades.map(r => <CommandItem key={r.id} value={`uni-${r.id}`} onSelect={() => ir(r.destino)}><ScanLine className="mr-2 h-4 w-4" />{r.titulo}<span className="ml-auto text-xs text-muted-foreground">{r.detalhe}</span></CommandItem>)}
+        </CommandGroup>}
         {resultados.materiais.length > 0 && (
           <>
             <CommandGroup heading="Materiais">

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Loader2, Package, Plus, Tag } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -270,7 +271,7 @@ export const UnidadesDoMaterial = ({
                   <TableCell className="py-2">
                     <div className="flex items-center gap-2 font-mono text-ds-table font-medium">
                       <Tag className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-                      {unidade.codigo}
+                      <Link className="text-primary underline" to={`/unidades/${encodeURIComponent(unidade.codigo)}`}>{unidade.codigo}</Link>
                     </div>
                     {unidade.valor_aquisicao ? (
                       <div className="text-xs text-muted-foreground">

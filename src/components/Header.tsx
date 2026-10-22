@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import {
   PackageSearch,
@@ -12,6 +12,8 @@ import { ThemeToggle } from '@/components/ds/ThemeToggle'
 import { CentralNotificacoes } from '@/components/ds/CentralNotificacoes'
 
 export const Header = () => {
+  const navigate = useNavigate()
+  const [codigo, setCodigo] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
 
   return (
@@ -79,6 +81,15 @@ export const Header = () => {
           </div>
         </div>
 
+        <form className="ml-2 w-32 md:w-44" onSubmit={e => {
+          e.preventDefault()
+          if (/^\d+-\d+$/.test(codigo.trim())) {
+            navigate(`/unidades/${encodeURIComponent(codigo.trim())}`)
+            setCodigo('')
+          }
+        }}>
+          <Input aria-label="Bipar unidade" placeholder="Bipar unidade" value={codigo} onChange={e => setCodigo(e.target.value)} />
+        </form>
         {/* Ações do topo, alinhadas à direita */}
         <div className="ml-auto flex shrink-0 items-center gap-1 pl-2">
           <CentralNotificacoes />

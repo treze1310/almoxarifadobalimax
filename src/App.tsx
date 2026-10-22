@@ -22,6 +22,7 @@ const RetiradaAssistidaPage = lazy(() => import('./pages/romaneios/RetiradaAssis
 const ImportacaoNFePage = lazy(() => import('./pages/nfe/Importacao'))
 const HistoricoPage = lazy(() => import('./pages/nfe/Historico'))
 const MateriaisEquipamentosPage = lazy(() => import('./pages/materiais-equipamentos/MateriaisEquipamentos'))
+const UnidadePage = lazy(() => import('./pages/materiais-equipamentos/Unidade'))
 const SolicitacoesPage = lazy(() => import('./pages/solicitacoes/Solicitacoes'))
 const NovaSolicitacaoPage = lazy(() => import('./pages/solicitacoes/NovaSolicitacao'))
 const SolicitacaoPrintPage = lazy(() => import('./pages/solicitacoes/SolicitacaoPrint'))
@@ -81,6 +82,8 @@ const App = () => (
 
           {/* 📦 Materiais e Equipamentos */}
           <Route path="materiais-equipamentos" element={<RequirePermission modulo="materiais" acao="read"><MateriaisEquipamentosPage /></RequirePermission>} />
+
+          <Route path="unidades/:codigo" element={<RequirePermission modulo="materiais" acao="read"><UnidadePage /></RequirePermission>} />
 
           {/* 🛒 Solicitações de Compra */}
           <Route path="solicitacoes" element={<RequirePermission modulo="solicitacoes" acao="read"><SolicitacoesPage /></RequirePermission>} />
