@@ -20,6 +20,8 @@ export interface MatchedMaterial {
   unidade_medida: string | null
   tipo: string | null
   categoria: string | null
+  /** Equipamento/ferramenta: o lançamento vai criar uma peça numerada por unidade */
+  exige_identificacao_individual?: boolean
 }
 
 interface MaterialSearchDialogProps {
@@ -52,7 +54,9 @@ export const MaterialSearchDialog = ({
     try {
       let query = supabase
         .from('materiais_equipamentos')
-        .select('id, codigo, nome, estoque_atual, unidade_medida, tipo, categoria')
+        .select(
+          'id, codigo, nome, estoque_atual, unidade_medida, tipo, categoria, exige_identificacao_individual',
+        )
         .eq('ativo', true)
         .order('nome', { ascending: true })
         .limit(50)
@@ -75,6 +79,7 @@ export const MaterialSearchDialog = ({
           unidade_medida: m.unidade_medida,
           tipo: m.tipo ?? null,
           categoria: m.categoria ?? null,
+          exige_identificacao_individual: !!m.exige_identificacao_individual,
         })),
       )
     } catch (error) {

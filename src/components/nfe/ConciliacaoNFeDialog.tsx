@@ -178,20 +178,33 @@ export const ConciliacaoNFeDialog = ({
       const { data, error } = await supabase.rpc('nfe_lancar_estoque', { p_nfe_id: nfeId })
       if (error) throw error
 
-      const resultado = data as { ja_lancada: boolean; itens_lancados: number }
+      const resultado = data as {
+        ja_lancada: boolean
+        itens_lancados: number
+        /** Peças criadas para os itens que exigem identificação individual */
+        unidades_criadas?: number
+      }
 
       await registrarAuditoria({
         acao: 'nfe.lancar_estoque',
         tabela: 'nfe_importacao',
         registroId: nfeId,
-        dadosNovos: { numero: numeroNfe, itens_lancados: resultado?.itens_lancados ?? 0 },
+        dadosNovos: {
+          numero: numeroNfe,
+          itens_lancados: resultado?.itens_lancados ?? 0,
+          unidades_criadas: resultado?.unidades_criadas ?? 0,
+        },
       })
 
       toast({
         title: resultado?.ja_lancada ? 'NF-e já estava lançada' : 'Estoque lançado',
         description: resultado?.ja_lancada
           ? 'Nenhuma movimentação foi duplicada.'
-          : `${contar(resultado?.itens_lancados ?? 0, 'item deu', 'itens deram')} entrada no estoque.`,
+          : `${contar(resultado?.itens_lancados ?? 0, 'item deu', 'itens deram')} entrada no estoque.` +
+            // Equipamento e ferramenta entram peça a peça, cada uma com o seu número
+            (resultado?.unidades_criadas
+              ? ` ${contar(resultado.unidades_criadas, 'unidade individual foi criada', 'unidades individuais foram criadas')} e já pode ser etiquetada.`
+              : ''),
       })
       onAtualizado?.()
       onFechar()

@@ -47,6 +47,7 @@ import {
   type SugestoesPorItem,
 } from '@/services/sugestaoMaterialService'
 import { cn } from '@/lib/utils'
+import { contar } from '@/lib/plural'
 
 // fileId -> itemCode -> material vinculado
 export type ItemMatches = Record<string, Record<string, MatchedMaterial>>
@@ -380,6 +381,16 @@ export const NfPreviewTable = ({
                                     >
                                       <X className="h-3 w-3" />
                                     </button>
+                                  )}
+                                  {/* Equipamento com controle peça a peça: o
+                                      lançamento vai criar uma peça numerada
+                                      para cada unidade da nota */}
+                                  {match.exige_identificacao_individual && (
+                                    <span className="ml-1 block text-muted-foreground">
+                                      Ao lançar, gera{' '}
+                                      {contar(item.quantity, 'peça numerada', 'peças numeradas')}{' '}
+                                      ({match.codigo}-…).
+                                    </span>
                                   )}
                                 </div>
                               ) : (
