@@ -19,6 +19,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { MaterialEquipamentoForm } from './MaterialEquipamentoForm'
 import { HistoricoFornecedoresPrecos } from './HistoricoFornecedoresPrecos'
+import { UnidadesDoMaterial } from './UnidadesDoMaterial'
 import { Separator } from '@/components/ui/separator'
 import { MaterialEquipamento } from '@/types'
 import { Trash2 } from 'lucide-react'
@@ -124,6 +125,27 @@ export const MaterialEquipamentoDialog = ({
           />
           {(material as any)?.id && (
             <>
+              {/* Equipamento e ferramenta são acompanhados peça a peça: as
+                  unidades ficam dentro do item PAI, não soltas na listagem */}
+              {(material as any).exige_identificacao_individual && (
+                <>
+                  <Separator className="my-6" />
+                  <div className="space-y-3">
+                    <div>
+                      <h3 className="text-ds-section font-semibold">Unidades deste item</h3>
+                      <p className="text-ds-caption text-muted-foreground">
+                        Cada peça tem o seu próprio número ({(material as any).codigo}-1,{' '}
+                        {(material as any).codigo}-2, …) e o seu próprio status.
+                      </p>
+                    </div>
+                    <UnidadesDoMaterial
+                      materialId={(material as any).id}
+                      codigoMaterial={(material as any).codigo}
+                      estoqueAtual={(material as any).estoque_atual}
+                    />
+                  </div>
+                </>
+              )}
               <Separator className="my-6" />
               <HistoricoFornecedoresPrecos materialId={(material as any).id} />
             </>

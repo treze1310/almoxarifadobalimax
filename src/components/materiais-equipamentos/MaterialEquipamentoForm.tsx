@@ -75,6 +75,8 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
       status: (initialData?.status as any) || 'ativo',
       ativo: initialData?.ativo ?? true,
       alugado: (initialData as any)?.alugado ?? false,
+      exige_identificacao_individual:
+        (initialData as any)?.exige_identificacao_individual ?? false,
       // EPI-specific fields
       is_epi: initialData?.is_epi ?? false,
       numero_ca: initialData?.numero_ca || '',
@@ -117,6 +119,8 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
         status: initialData.status as any,
         ativo: initialData.ativo,
         alugado: (initialData as any)?.alugado ?? false,
+        exige_identificacao_individual:
+          (initialData as any)?.exige_identificacao_individual ?? false,
         // EPI-specific fields
         is_epi: initialData.is_epi ?? false,
         numero_ca: initialData.numero_ca || '',
@@ -398,6 +402,30 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
                   onCheckedChange={field.onChange}
                   className="data-[state=checked]:bg-orange-600"
                 />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        {/* Controle peça a peça: equipamento e ferramenta, não material de consumo */}
+        <FormField
+          control={form.control}
+          name="exige_identificacao_individual"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-6">
+              <div className="space-y-0.5">
+                <FormLabel className="text-lg font-semibold">
+                  Exige identificação individual
+                </FormLabel>
+                <div className="text-sm text-muted-foreground">
+                  Para equipamento e ferramenta: cada peça recebe o seu próprio número (
+                  <span className="font-mono">{form.watch('codigo') || '00125'}-1</span>,{' '}
+                  <span className="font-mono">{form.watch('codigo') || '00125'}-2</span>) e é
+                  acompanhada dentro deste item. Material de consumo não precisa.
+                </div>
+              </div>
+              <FormControl>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
               </FormControl>
             </FormItem>
           )}

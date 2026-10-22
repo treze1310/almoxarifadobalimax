@@ -453,6 +453,78 @@ export type Database = {
         }
         Relationships: []
       }
+      material_unidades: {
+        Row: {
+          codigo: string
+          colaborador_id: string | null
+          created_at: string
+          data_aquisicao: string | null
+          id: string
+          localizacao_id: string | null
+          material_equipamento_id: string
+          nfe_id: string | null
+          nfe_item_id: string | null
+          numero_serie: string | null
+          observacoes: string | null
+          patrimonio_anterior: string | null
+          sequencia: number
+          status: string
+          updated_at: string
+          valor_aquisicao: number | null
+        }
+        Insert: {
+          codigo: string
+          colaborador_id?: string | null
+          created_at?: string
+          data_aquisicao?: string | null
+          id?: string
+          localizacao_id?: string | null
+          material_equipamento_id: string
+          nfe_id?: string | null
+          nfe_item_id?: string | null
+          numero_serie?: string | null
+          observacoes?: string | null
+          patrimonio_anterior?: string | null
+          sequencia: number
+          status?: string
+          updated_at?: string
+          valor_aquisicao?: number | null
+        }
+        Update: {
+          codigo?: string
+          colaborador_id?: string | null
+          created_at?: string
+          data_aquisicao?: string | null
+          id?: string
+          localizacao_id?: string | null
+          material_equipamento_id?: string
+          nfe_id?: string | null
+          nfe_item_id?: string | null
+          numero_serie?: string | null
+          observacoes?: string | null
+          patrimonio_anterior?: string | null
+          sequencia?: number
+          status?: string
+          updated_at?: string
+          valor_aquisicao?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_unidades_material_equipamento_id_fkey"
+            columns: ["material_equipamento_id"]
+            isOneToOne: false
+            referencedRelation: "materiais_equipamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_unidades_nfe_id_fkey"
+            columns: ["nfe_id"]
+            isOneToOne: false
+            referencedRelation: "nfe_importacao"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       materiais_equipamentos: {
         Row: {
           alugado: boolean | null
@@ -468,6 +540,7 @@ export type Database = {
           data_aquisicao: string | null
           descricao: string | null
           estoque_atual: number | null
+          exige_identificacao_individual: boolean
           estoque_maximo: number | null
           estoque_minimo: number | null
           ponto_pedido: number | null
@@ -515,6 +588,7 @@ export type Database = {
           data_aquisicao?: string | null
           descricao?: string | null
           estoque_atual?: number | null
+          exige_identificacao_individual?: boolean
           estoque_maximo?: number | null
           estoque_minimo?: number | null
           ponto_pedido?: number | null
@@ -559,6 +633,7 @@ export type Database = {
           data_aquisicao?: string | null
           descricao?: string | null
           estoque_atual?: number | null
+          exige_identificacao_individual?: boolean
           estoque_maximo?: number | null
           estoque_minimo?: number | null
           ponto_pedido?: number | null

@@ -130,6 +130,9 @@ export const materialEquipamentoSchema = z.object({
   ativo: z.boolean().default(true),
   // Campo destacado para aluguel
   alugado: z.boolean().default(false),
+  // Equipamento/ferramenta acompanhado peça a peça: cada unidade ganha um
+  // número proprio (00125-1, 00125-2) e vive dentro deste item
+  exige_identificacao_individual: z.boolean().default(false),
   // EPI-specific fields
   is_epi: z.boolean().default(false),
   numero_ca: z.string().max(50, 'Número do CA muito longo').optional().or(z.literal('')).transform(val => val || undefined),
