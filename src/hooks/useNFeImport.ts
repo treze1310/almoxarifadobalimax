@@ -189,7 +189,7 @@ export function useNFeImport() {
               continue
             }
 
-            // Prioridade 2: material já existe pelo código original da NFe
+            // Prioridade 2: o nosso código é igual ao código do fornecedor
             const { data: existingMaterial, error: existingError } = await supabase
               .from('materiais_equipamentos')
               .select('id')
@@ -199,10 +199,41 @@ export function useNFeImport() {
             if (existingMaterial && !existingError) {
               console.log(`✅ Material existente encontrado: ${item.code}`)
               itemsToLink.push({ item, materialId: existingMaterial.id, isExisting: true })
-            } else {
-              console.log(`➕ Novo material será criado: ${item.code}`)
-              itemsToCreate.push(item)
+              continue
             }
+
+            /**
+             * Prioridade 3: o código do fornecedor já apareceu em outra nota.
+             *
+             * O vínculo anterior é o único que sobrevive a trocar o nosso
+             * código: enquanto a busca era só por `codigo = cProd`, mudar o
+             * número do item (para o patrimônio antigo, por exemplo) fazia a
+             * importação seguinte não reconhecer o item e **criar outro**,
+             * com código novo e estoque zero — o item "virava novo" e a
+             * quantidade parecia desaparecer. O produto do fornecedor é o
+             * mesmo; quem muda é a nossa etiqueta.
+             */
+            const { data: itemAnterior } = await supabase
+              .from('nfe_itens')
+              .select('material_equipamento_id, created_at')
+              .eq('codigo_produto', item.code)
+              .not('material_equipamento_id', 'is', null)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+
+            if (itemAnterior?.material_equipamento_id) {
+              console.log(`🔁 Mesmo produto de nota anterior: ${item.code}`)
+              itemsToLink.push({
+                item,
+                materialId: itemAnterior.material_equipamento_id,
+                isExisting: true,
+              })
+              continue
+            }
+
+            console.log(`➕ Novo material será criado: ${item.code}`)
+            itemsToCreate.push(item)
           }
 
           // Gerar códigos sequenciais para itens novos

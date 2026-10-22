@@ -168,43 +168,6 @@ export function useNFeImportCrud() {
   }, [toast, importacaoSelecionada])
 
   // Reprocessar importação
-  const reprocessImportacao = useCallback(async (id: string) => {
-    setLoading(true)
-    try {
-      const { success, error } = await nfeImportService.reprocess(id)
-      
-      if (!success) {
-        toast({
-          title: 'Erro',
-          description: 'Erro ao reprocessar importação NFe',
-          variant: 'destructive'
-        })
-        return { success: false, error }
-      }
-
-      toast({
-        title: 'Sucesso',
-        description: 'Importação reprocessada com sucesso'
-      })
-
-      // Recarregar dados
-      await fetchImportacoes()
-
-      return { success: true }
-
-    } catch (error: any) {
-      console.error('Erro ao reprocessar importação:', error)
-      toast({
-        title: 'Erro',
-        description: 'Erro inesperado ao reprocessar importação',
-        variant: 'destructive'
-      })
-      return { success: false, error }
-    } finally {
-      setLoading(false)
-    }
-  }, [toast, fetchImportacoes])
-
   // Buscar estatísticas
   const fetchStats = useCallback(async () => {
     try {
@@ -234,7 +197,6 @@ export function useNFeImportCrud() {
     fetchImportacaoById,
     updateImportacao,
     deleteImportacao,
-    reprocessImportacao,
     fetchStats
   }
 }

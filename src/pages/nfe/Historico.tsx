@@ -48,7 +48,6 @@ const HistoricoNFePage = () => {
     stats,
     fetchImportacoes, 
     deleteImportacao,
-    reprocessImportacao,
     fetchStats
   } = useNFeImportCrud()
   
@@ -189,12 +188,21 @@ const HistoricoNFePage = () => {
     }
   }
 
-  const handleReprocess = async (importacao: NFEImportacao) => {
-    const result = await reprocessImportacao(importacao.id)
-    if (result.success) {
-      await fetchStats() // Atualizar estatísticas
-    }
-  }
+/*
+ * "Reprocessar" saiu daqui.
+ *
+ * O botão não reprocessava nada: trocava o status da nota para
+ * "reprocessando" e depois "processado" — dois valores que o ciclo da NF-e
+ * (importada -> conferida -> lançada) não conhece. O efeito real era destruir
+ * o status: nota conferida virava "processado" e o lançamento passava a
+ * recusá-la ("precisa estar conferida"), então a quantidade não entrava mais
+ * no estoque de jeito nenhum. E não havia como reprocessar de verdade, porque
+ * o XML da nota nunca foi guardado (arquivo_xml está vazio em todas).
+ *
+ * Para refazer uma nota, importe o XML outra vez: a importação agora
+ * reconhece o produto do fornecedor de notas anteriores e não cria item
+ * repetido.
+ */
 
   const handleDetailsSaved = () => {
     fetchImportacoes()
@@ -442,16 +450,6 @@ const HistoricoNFePage = () => {
               onClick={() => handleViewDetails(nfe)}
             >
               <Eye className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              title="Reprocessar"
-              disabled={nfe.status === 'reprocessando'}
-              onClick={() => handleReprocess(nfe)}
-            >
-              <RefreshCw className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"

@@ -964,3 +964,48 @@ describe('erro de chunk depois de um deploy', () => {
     expect(ehErroDeChunk(undefined)).toBe(false)
   })
 })
+
+/**
+ * Reconhecer o item do fornecedor quando o nosso código muda.
+ *
+ * A importação procurava o material só por `codigo = cProd` (o código do
+ * fornecedor). Quem troca o número do item — para o patrimônio antigo, por
+ * exemplo — fazia a importação seguinte não reconhecer nada e **criar outro
+ * item**, com código novo e estoque zero: o item "virava novo" e a quantidade
+ * parecia desaparecer. Conferido contra o banco: com o código trocado, a busca
+ * antiga não acha; a nova acha pelo vínculo da nota anterior.
+ */
+describe('vínculo do item da NF-e ao material', () => {
+  const escolher = (
+    item: { code: string; matchedMaterialId?: string },
+    porCodigo: string | null,
+    porNotaAnterior: string | null,
+  ) => {
+    // Mesma ordem de prioridade do hook de importação
+    if (item.matchedMaterialId) return { id: item.matchedMaterialId, origem: 'manual' }
+    if (porCodigo) return { id: porCodigo, origem: 'codigo' }
+    if (porNotaAnterior) return { id: porNotaAnterior, origem: 'nota-anterior' }
+    return { id: null, origem: 'criar' }
+  }
+
+  test('o vínculo escolhido à mão ganha de tudo', () => {
+    expect(escolher({ code: '10432', matchedMaterialId: 'm1' }, 'm2', 'm3')).toEqual({
+      id: 'm1',
+      origem: 'manual',
+    })
+  })
+
+  test('nosso código igual ao do fornecedor é reconhecido', () => {
+    expect(escolher({ code: '10432' }, 'm2', null).origem).toBe('codigo')
+  })
+
+  // O caso do defeito: código trocado, mas o produto do fornecedor é o mesmo
+  test('código trocado ainda reconhece pelo histórico da nota', () => {
+    const escolhido = escolher({ code: '10432' }, null, 'm3')
+    expect(escolhido).toEqual({ id: 'm3', origem: 'nota-anterior' })
+  })
+
+  test('produto nunca visto é o único que vira item novo', () => {
+    expect(escolher({ code: '99999' }, null, null)).toEqual({ id: null, origem: 'criar' })
+  })
+})

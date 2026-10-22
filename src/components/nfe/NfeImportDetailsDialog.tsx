@@ -46,6 +46,7 @@ import {
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useNFeImportCrud } from '@/hooks/useNFeImportCrud'
+import { StatusBadge } from '@/components/ds/StatusBadge'
 import { supabase } from '@/lib/supabase'
 import { contar } from '@/lib/plural'
 import type { NFEImportacao } from '@/services/nfeImportService'
@@ -127,8 +128,7 @@ export function NfeImportDetailsDialog({
     if (importacao) {
       setEditedData({
         observacoes: importacao.observacoes,
-        status: importacao.status,
-        valor_total: importacao.valor_total
+        valor_total: importacao.valor_total,
       })
     }
   }, [importacao])
@@ -148,23 +148,13 @@ export function NfeImportDetailsDialog({
     return format(new Date(dateString), 'dd/MM/yyyy', { locale: ptBR })
   }
 
-  const getStatusColor = (status: string | null) => {
-    switch (status) {
-      case 'importado': return 'default'
-      case 'processado': return 'secondary'
-      case 'reprocessando': return 'outline'
-      case 'erro': return 'destructive'
-      default: return 'outline'
-    }
-  }
-
   const handleSave = async () => {
     if (!importacao.id) return
 
+    // O status fica fora: quem o muda é conferir/lançar, não este formulário
     const updates = {
       observacoes: editedData.observacoes,
-      status: editedData.status,
-      valor_total: editedData.valor_total
+      valor_total: editedData.valor_total,
     }
 
     const result = await updateImportacao(importacao.id, updates)
@@ -178,7 +168,6 @@ export function NfeImportDetailsDialog({
   const handleCancel = () => {
     setEditedData({
       observacoes: importacao.observacoes,
-      status: importacao.status,
       valor_total: importacao.valor_total
     })
     setIsEditing(false)
@@ -277,30 +266,20 @@ export function NfeImportDetailsDialog({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Status</Label>
-                      {isEditing ? (
-                        <Select
-                          value={editedData.status || 'importado'}
-                          onValueChange={(value) => setEditedData(prev => ({ ...prev, status: value }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="importado">Importado</SelectItem>
-                            <SelectItem value="processado">Processado</SelectItem>
-                            <SelectItem value="reprocessando">Reprocessando</SelectItem>
-                            <SelectItem value="erro">Erro</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Badge variant={getStatusColor(importacao.status)}>
-                          {importacao.status === 'importado' && 'Importado'}
-                          {importacao.status === 'processado' && 'Processado'}
-                          {importacao.status === 'reprocessando' && 'Reprocessando'}
-                          {importacao.status === 'erro' && 'Erro'}
-                          {!importacao.status && 'Não definido'}
-                        </Badge>
-                      )}
+                      {/* O status não se escolhe à mão: ele acompanha o ciclo
+                          da nota (importada -> conferida -> lançada), e cada
+                          passo tem o seu botão. A lista daqui oferecia
+                          "processado"/"reprocessando", que o ciclo não conhece
+                          — escolher um deles travava o lançamento da nota. */}
+                      <div>
+                        <StatusBadge
+                          status={importacao.status || 'importada'}
+                          genero="feminino"
+                        />
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Muda ao conferir e ao lançar no estoque.
+                        </p>
+                      </div>
                     </div>
                   </div>
 
@@ -371,6 +350,18 @@ export function NfeImportDetailsDialog({
                                     {item.descricao_produto}
                                   </p>
                                 )}
+
+                                {/* O nome no cadastro pode ter sido corrigido
+                                    depois: a nota guarda o texto do XML, que
+                                    não se reescreve, então mostrar os dois
+                                    deixa claro que a edição foi gravada. */}
+                                {item.materiais_equipamentos?.nome &&
+                                  item.materiais_equipamentos.nome.trim() !==
+                                    (item.descricao_produto ?? '').trim() && (
+                                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                      No cadastro: {item.materiais_equipamentos.nome}
+                                    </p>
+                                  )}
 
                                 {/* Peças que entraram por esta linha da nota */}
                                 {unidadesPorItem[item.id]?.length > 0 && (

@@ -419,6 +419,26 @@ export function useMateriaisEquipamentos() {
 
       if (error) throw error
 
+      /**
+       * Deixar rastro da edição.
+       *
+       * A trilha registrava criar e excluir, mas não editar — então quando se
+       * suspeitou que uma edição não tinha sido gravada, não havia como
+       * conferir pelo histórico. O código antigo entra no registro porque é a
+       * mudança que mais importa: ela invalida etiqueta impressa.
+       */
+      await registrarAuditoria({
+        acao: 'material.editar',
+        tabela: 'materiais_equipamentos',
+        registroId: id,
+        dadosAnteriores: { codigo: currentData.codigo, estoque_atual: currentData.estoque_atual },
+        dadosNovos: {
+          codigo: materialData.codigo ?? currentData.codigo,
+          nome: materialData.nome,
+          estoque_atual: materialData.estoque_atual,
+        },
+      })
+
       // Se o estoque foi alterado, criar movimentação
       if (currentData.estoque_atual !== materialData.estoque_atual) {
         const diferencaEstoque = materialData.estoque_atual - currentData.estoque_atual

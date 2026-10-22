@@ -154,30 +154,6 @@ export const nfeImportService = {
   },
 
   // Reprocessar importação (recriar materiais)
-  async reprocess(id: string): Promise<{ success: boolean; error: any }> {
-    try {
-      // Buscar dados da NFe
-      const { data: nfeData, error: nfeError } = await this.getById(id)
-      if (nfeError || !nfeData) throw nfeError || new Error('NFe não encontrada')
-
-      // Marcar como reprocessando
-      await this.update(id, { status: 'reprocessando' })
-
-      // Aqui você pode implementar a lógica de reprocessamento
-      // Por exemplo, recriar materiais que foram excluídos, etc.
-
-      // Marcar como processado
-      await this.update(id, { status: 'processado' })
-
-      return { success: true, error: null }
-
-    } catch (error) {
-      // Em caso de erro, marcar como erro
-      await this.update(id, { status: 'erro' })
-      return { success: false, error }
-    }
-  },
-
   // Buscar estatísticas das importações
   async getStats(): Promise<{ 
     data: {

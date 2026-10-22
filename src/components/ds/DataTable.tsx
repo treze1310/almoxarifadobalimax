@@ -203,10 +203,14 @@ export function DataTable<T>({
 
   const colunasVisiveis = colunas.filter((c) => c.fixa || !ocultas.includes(c.id))
 
-  // As páginas montam `colunas` como literal, então o array muda de identidade
-  // a cada render e invalidaria todos os memos abaixo — com 2.209 itens isso
-  // significa refazer tudo a cada tecla. A assinatura por id mantém o cache.
-  const assinaturaColunas = colunas.map((c) => c.id).join('|')
+  // As opções chegam depois da primeira renderização. Incluí-las na assinatura
+  // evita congelar filtros vazios e mantém a tradução de rótulos para IDs atualizada.
+  const assinaturaColunas = JSON.stringify(colunas.map(c => ({
+    id: c.id,
+    campoServidor: c.campoServidor,
+    semFiltro: c.semFiltro,
+    opcoesFiltro: c.opcoesFiltro,
+  })))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const colunasEstaveis = useMemo(() => colunas, [assinaturaColunas])
 
@@ -303,7 +307,7 @@ export function DataTable<T>({
       filtros: filtrosDoBanco,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aoConsultar, buscaAplicada, paginaAtual, tamanhoPagina, ordenacao, JSON.stringify(filtros)])
+  }, [aoConsultar, buscaAplicada, paginaAtual, tamanhoPagina, ordenacao, JSON.stringify(filtros), assinaturaColunas])
 
   const idsVisiveis = visiveis.map(idLinha)
   const todasSelecionadas = idsVisiveis.length > 0 && idsVisiveis.every((id) => selecionadas.includes(id))

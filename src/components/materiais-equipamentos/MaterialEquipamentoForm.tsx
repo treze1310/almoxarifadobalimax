@@ -625,7 +625,7 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
                   <LocalizacaoComboboxWithAdd
                     value={field.value}
                     onValueChange={field.onChange}
-                    placeholder="Selecione uma localização"
+                    placeholder="Sem localização"
                   />
                 </FormControl>
                 <p className="text-xs text-muted-foreground">

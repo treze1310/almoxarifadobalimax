@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, ChevronsUpDown, Pencil, Plus, X } from 'lucide-react'
+import { Check, ChevronsUpDown, Pencil, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Command,
@@ -45,7 +45,7 @@ interface LocalizacaoComboboxWithAddProps {
 export function LocalizacaoComboboxWithAdd({
   value,
   onValueChange,
-  placeholder = 'Selecione uma localização...',
+  placeholder = 'Sem localização',
   disabled = false,
 }: LocalizacaoComboboxWithAddProps) {
   const [open, setOpen] = useState(false)
@@ -163,15 +163,13 @@ export function LocalizacaoComboboxWithAdd({
 
                   {/* Item sem localização é caso normal (ainda não guardado,
                       em trânsito): escolher uma não pode ser irreversível */}
-                  {value && (
-                    <CommandItem
+                  <CommandItem
                       onSelect={() => { onValueChange(''); setOpen(false) }}
                       className="flex items-center gap-2 border-b"
                     >
-                      <X className="h-4 w-4" />
+                      <Check className={cn('h-4 w-4', !value ? 'opacity-100' : 'opacity-0')} />
                       <span className="text-muted-foreground">Sem localização</span>
-                    </CommandItem>
-                  )}
+                  </CommandItem>
 
                   {filtradas.map((localizacao) => (
                     <CommandItem
@@ -219,30 +217,6 @@ export function LocalizacaoComboboxWithAdd({
           </PopoverContent>
         </Popover>
 
-        {selecionada && !disabled && (
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={() => setEditando(selecionada)}
-              title="Editar a localização selecionada"
-              aria-label="Editar a localização selecionada"
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={() => onValueChange('')}
-              title="Tirar a localização deste item"
-              aria-label="Tirar a localização deste item"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </>
-        )}
       </div>
 
       <Dialog
