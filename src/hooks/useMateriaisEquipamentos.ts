@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { palavrasDaBusca } from '@/lib/textoComparavel'
+import { materialEquipamentoCampos } from '@/lib/validations'
 import { buscarTodasAsPaginas, executarPaginado } from '@/lib/consultaPaginada'
 import { useToast } from '@/components/ui/use-toast'
 import type { Tables } from '@/types/database'
@@ -22,6 +23,32 @@ type MovimentacaoEstoque = Tables<'movimentacao_estoque'> & {
     unidade_medida: string
   } | null
   usuarios?: { nome: string } | null
+}
+
+/**
+ * Campo que o formulário deixou em branco limpa a coluna.
+ *
+ * O schema transforma texto vazio em `undefined`, e `undefined` desaparece no
+ * JSON enviado ao banco: a coluna ficava com o valor antigo. Na prática, tirar
+ * a localização (ou o fornecedor, a marca, o centro de custo) de um item era
+ * impossível — a tela aceitava e o banco ignorava. Enviando `null` explícito,
+ * o campo em branco realmente apaga.
+ *
+ * Só vale para os campos que o formulário controla; `codigo` é tratado antes,
+ * porque não se apaga o código de um item.
+ */
+const limparCamposEsvaziados = (
+  dados: MaterialEquipamentoFormData,
+): Record<string, unknown> => {
+  const payload: Record<string, unknown> = { ...dados }
+
+  for (const campo of Object.keys(materialEquipamentoCampos.shape)) {
+    // `codigo` é tratado antes; `reposicao_automatica` não aceita nulo no banco
+    if (campo === 'codigo' || campo === 'reposicao_automatica') continue
+    if (payload[campo] === undefined) payload[campo] = null
+  }
+
+  return payload
 }
 
 export function useMateriaisEquipamentos() {
@@ -379,7 +406,7 @@ export function useMateriaisEquipamentos() {
 
       const { data, error } = await supabase
         .from('materiais_equipamentos')
-        .update(materialData)
+        .update(limparCamposEsvaziados(materialData))
         .eq('id', id)
         .select()
         .single()

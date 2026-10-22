@@ -9,7 +9,7 @@ import {
   mascararTelefone,
 } from '../src/lib/dadosPessoais'
 import { STATUS, normalizarStatus, rotuloStatus } from '../src/lib/status'
-import { materialEquipamentoSchema } from '../src/lib/validations'
+import { materialEquipamentoCampos, materialEquipamentoSchema } from '../src/lib/validations'
 import { buscarTodasAsPaginas } from '../src/lib/consultaPaginada'
 import { contar, plural } from '../src/lib/plural'
 import { enderecoWeb, enderecoWebLegivel } from '../src/lib/enderecoWeb'
@@ -854,5 +854,59 @@ describe('expansão das peças em linhas de romaneio', () => {
       'mat-3',
       'mat-3',
     ])
+  })
+})
+
+/**
+ * Campo do cadastro esvaziado precisa limpar a coluna.
+ *
+ * O schema transforma texto vazio em `undefined`, e `undefined` desaparece do
+ * JSON que vai ao banco: a coluna ficava com o valor antigo. Era por isso que
+ * escolher uma localização não tinha volta — a tela aceitava tirar e o banco
+ * ignorava. Conferido contra o banco: PATCH com `undefined` mantém o valor,
+ * com `null` limpa.
+ */
+describe('esvaziar campo de referência no cadastro de material', () => {
+  // Mesma regra do hook: campo do formulário que ficou em branco vira null
+  const paraOBanco = (dados: Record<string, unknown>) => {
+    const payload = { ...dados }
+    for (const campo of Object.keys(materialEquipamentoCampos.shape)) {
+      if (campo === 'codigo' || campo === 'reposicao_automatica') continue
+      if (payload[campo] === undefined) payload[campo] = null
+    }
+    return payload
+  }
+
+  test('localização em branco vira null, não desaparece', () => {
+    const payload = paraOBanco({ nome: 'Furadeira', localizacao_id: undefined })
+    expect(payload.localizacao_id).toBeNull()
+    expect('localizacao_id' in payload).toBe(true)
+  })
+
+  test('as outras referências do formulário também limpam', () => {
+    const payload = paraOBanco({ nome: 'Furadeira' })
+    expect(payload.fornecedor_id).toBeNull()
+    expect(payload.marca_id).toBeNull()
+    expect(payload.centro_custo_id).toBeNull()
+    expect(payload.descricao).toBeNull()
+  })
+
+  test('o que foi preenchido continua igual', () => {
+    const payload = paraOBanco({
+      nome: 'Furadeira',
+      localizacao_id: 'loc-1',
+      estoque_atual: 7,
+      ativo: true,
+    })
+    expect(payload.localizacao_id).toBe('loc-1')
+    expect(payload.estoque_atual).toBe(7)
+    expect(payload.ativo).toBe(true)
+  })
+
+  // Código não se apaga, e `reposicao_automatica` não aceita nulo no banco
+  test('código e reposição automática ficam fora da limpeza', () => {
+    const payload = paraOBanco({ nome: 'Furadeira' })
+    expect('codigo' in payload).toBe(false)
+    expect('reposicao_automatica' in payload).toBe(false)
   })
 })

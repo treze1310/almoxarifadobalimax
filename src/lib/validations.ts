@@ -110,7 +110,14 @@ export const localizacaoSchema = z.object({
 })
 
 // Material/Equipamento validation schema
-export const materialEquipamentoSchema = z.object({
+/**
+ * Campos do formulário de material/equipamento.
+ *
+ * Exportado à parte do schema porque `superRefine` embrulha o objeto e esconde
+ * o `.shape`: quem precisa saber quais campos o formulário controla (para
+ * limpar no banco o que ficou em branco) usa esta lista.
+ */
+export const materialEquipamentoCampos = z.object({
   // Código será auto-gerado (5 dígitos)
   codigo: z.string().optional().or(z.literal('')).transform(val => val || undefined),
   nome: z.string().min(1, 'Nome é obrigatório').max(255, 'Nome muito longo'),
@@ -165,6 +172,8 @@ export const materialEquipamentoSchema = z.object({
   estoque_maximo: z.number().int().min(0).optional(),
   reposicao_automatica: z.boolean().optional(),
 })
+
+export const materialEquipamentoSchema = materialEquipamentoCampos
   .superRefine((dados, ctx) => {
     const minimo = dados.estoque_minimo ?? 0
 
