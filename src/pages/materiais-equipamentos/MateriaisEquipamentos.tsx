@@ -66,9 +66,15 @@ const MateriaisEquipamentosPage = () => {
    * ordenação e paginação acontecem no banco (RNF-01): chegam 25 linhas por
    * vez, e não os 2.209 itens do cadastro.
    */
-  const [paginaDeDados, setPaginaDeDados] = useState<{ dados: any[]; total: number }>({
+  const [paginaDeDados, setPaginaDeDados] = useState<{
+    dados: any[]
+    total: number
+    /** O banco não achou nada exato e devolveu o que é parecido */
+    aproximado: boolean
+  }>({
     dados: [],
     total: 0,
+    aproximado: false,
   })
   const [carregandoPagina, setCarregandoPagina] = useState(true)
   const [consulta, setConsulta] = useState<ConsultaServidor | null>(null)
@@ -210,7 +216,11 @@ const MateriaisEquipamentosPage = () => {
         filtros,
         apenasInativos: showInactive,
       })
-      setPaginaDeDados({ dados: resultado.data, total: resultado.total })
+      setPaginaDeDados({
+        dados: resultado.data,
+        total: resultado.total,
+        aproximado: resultado.aproximado,
+      })
     } finally {
       setCarregandoPagina(false)
     }
@@ -697,6 +707,15 @@ const MateriaisEquipamentosPage = () => {
             {contar(paginaDeDados.total, 'item', 'itens')}
           </Badge>
         </div>
+        {/* Nada exato: o que está na lista é o que mais se parece com o
+            que foi digitado */}
+        {paginaDeDados.aproximado && (
+          <div className="rounded-md border border-status-pendente/30 bg-status-pendente/10 px-3 py-2 text-ds-caption">
+            Nenhum item com esse texto exato. Mostrando os{' '}
+            {contar(paginaDeDados.total, 'mais parecido', 'mais parecidos')} com{' '}
+            <strong>{consulta?.busca}</strong>.
+          </div>
+        )}
       </div>
 
       {/* Alerta de estoque baixo/zerado */}

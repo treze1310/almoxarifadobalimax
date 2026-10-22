@@ -13,6 +13,7 @@ import { materialEquipamentoSchema } from '../src/lib/validations'
 import { buscarTodasAsPaginas } from '../src/lib/consultaPaginada'
 import { contar, plural } from '../src/lib/plural'
 import { enderecoWeb, enderecoWebLegivel } from '../src/lib/enderecoWeb'
+import { palavrasDaBusca, textoComparavel } from '../src/lib/textoComparavel'
 import {
   agruparSugestoes,
   forcaDaSugestao,
@@ -726,5 +727,48 @@ describe('sugestão de material para item de NF-e', () => {
     expect(forcaDaSugestao(LIMIAR_VINCULO_AUTOMATICO - 0.01).tom).not.toBe('alta')
     expect(forcaDaSugestao(0.5).tom).toBe('media')
     expect(forcaDaSugestao(0.06).tom).toBe('baixa')
+  })
+})
+
+/**
+ * Barra de pesquisa de Materiais/Equipamentos.
+ *
+ * O termo digitado é comparado com as colunas geradas pelo banco, que já
+ * estão sem acento e sem pontuação. A normalização daqui precisa dar o mesmo
+ * resultado que `texto_comparavel` no banco — se divergir, a pesquisa erra
+ * justamente nas palavras com acento.
+ */
+describe('normalização do termo de busca', () => {
+  // "acao" tem de encontrar "AÇÃO": era o caso que a busca antiga não achava
+  test('tira acento e cedilha', () => {
+    expect(textoComparavel('CÂMERA DE AÇÃO')).toBe('camera de acao')
+    expect(textoComparavel('Manutenção Elétrica')).toBe('manutencao eletrica')
+  })
+
+  test('pontuação vira espaço e espaço repetido some', () => {
+    expect(textoComparavel('DISCO DE CORTE - 4".1/2')).toBe('disco de corte 4 1 2')
+    expect(textoComparavel('  parafuso   M8  ')).toBe('parafuso m8')
+  })
+
+  test('texto vazio ou ausente não atrapalha', () => {
+    expect(textoComparavel('')).toBe('')
+    expect(textoComparavel(null)).toBe('')
+    expect(textoComparavel(undefined)).toBe('')
+    expect(palavrasDaBusca('   ')).toEqual([])
+  })
+
+  // Procurar palavra por palavra é o que faz "corte disco" achar
+  // "DISCO DE CORTE": a frase inteira exigia a mesma ordem do cadastro
+  test('separa as palavras para a ordem deixar de importar', () => {
+    expect(palavrasDaBusca('corte disco')).toEqual(['corte', 'disco'])
+    expect(palavrasDaBusca('4" x 1/2')).toEqual(['4', 'x', '1', '2'])
+  })
+
+  // Vírgula e parêntese são separadores do filtro do PostgREST; na parte por
+  // palavra eles nunca chegam lá, porque a normalização já os removeu
+  test('não sobra separador de filtro nas palavras', () => {
+    for (const palavra of palavrasDaBusca('disco, corte (4.1/2) "especial"')) {
+      expect(palavra).not.toMatch(/[,()"]/)
+    }
   })
 })

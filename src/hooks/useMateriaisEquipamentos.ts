@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { palavrasDaBusca } from '@/lib/textoComparavel'
 import { buscarTodasAsPaginas, executarPaginado } from '@/lib/consultaPaginada'
 import { useToast } from '@/components/ui/use-toast'
 import type { Tables } from '@/types/database'
@@ -58,6 +59,12 @@ export function useMateriaisEquipamentos() {
    * A tela de materiais abre para procurar um item específico, então a busca
    * é o caminho principal: em vez de baixar os 2.209 itens para filtrar no
    * navegador, o banco devolve só a página pedida e o total.
+   *
+   * O texto é comparado contra `busca_comparavel` (nome, modelo, descrição
+   * longa e categoria num só campo, sem acento, com índice de trigramas):
+   * a palavra pode vir em qualquer ordem e com ou sem acento. Quando nada é
+   * encontrado, há uma segunda tentativa por parecença, para erro de
+   * digitação — e a tela avisa que o resultado é aproximado.
    */
   const buscarPagina = useCallback(
     async (consulta: {
@@ -73,11 +80,14 @@ export function useMateriaisEquipamentos() {
       const pagina = Math.max(1, consulta.pagina ?? 1)
       const tamanho = consulta.tamanhoPagina ?? 25
       const de = (pagina - 1) * tamanho
+      const termo = (consulta.busca ?? '').trim()
 
-      let query = supabase
-        .from('materiais_equipamentos')
-        .select(
-          `
+      /** Monta a consulta da página; com `ids`, limita a esses itens */
+      const montar = (ids?: string[]) => {
+        let query = supabase
+          .from('materiais_equipamentos')
+          .select(
+            `
             id, codigo, nome, tipo, categoria, unidade_medida, modelo,
             estoque_atual, estoque_minimo, estoque_maximo, ponto_pedido,
             reposicao_automatica, precisa_repor, situacao_estoque,
@@ -88,34 +98,72 @@ export function useMateriaisEquipamentos() {
             localizacao:localizacao_id (codigo, nome),
             centros_custo:centro_custo_id (codigo, descricao, empresas:empresa_id(nome))
           `,
-          { count: 'exact' },
-        )
-        .order(consulta.ordenarPor || 'codigo', { ascending: consulta.ascendente ?? true })
-        .range(de, de + tamanho - 1)
+            { count: 'exact' },
+          )
+          .order(consulta.ordenarPor || 'codigo', { ascending: consulta.ascendente ?? true })
+          .range(de, de + tamanho - 1)
+          .eq('ativo', !consulta.apenasInativos)
 
-      query = query.eq('ativo', !consulta.apenasInativos)
+        if (ids) {
+          query = query.in('id', ids)
+        } else if (termo) {
+          // Código e código de barras continuam à parte: ali se procura o
+          // trecho exato que está na etiqueta. O valor vai entre aspas porque
+          // vírgula e parêntese são separadores do filtro: sem isso, procurar
+          // por "4(1/2)" ou "disco, corte" quebrava a consulta inteira.
+          const BARRA_INVERTIDA = String.fromCharCode(92)
+          const semAspas = termo.split('"').join('').split(BARRA_INVERTIDA).join('')
+          const exato = '"%' + semAspas + '%"'
+          const porPalavra = palavrasDaBusca(termo)
+            .map((palavra) => `busca_comparavel.ilike.%${palavra}%`)
+            .join(',')
 
-      const termo = (consulta.busca ?? '').trim()
-      if (termo) {
-        // Por onde se procura um item: código, código de barras, nome, modelo
-        // e a descrição longa, que é onde fica a especificação técnica.
-        const padrao = `%${termo}%`
-        query = query.or(
-          `codigo.ilike.${padrao},nome.ilike.${padrao},codigo_barras.ilike.${padrao},` +
-            `modelo.ilike.${padrao},descricao.ilike.${padrao}`,
-        )
+          query = query.or(
+            [
+              `codigo.ilike.${exato}`,
+              `codigo_barras.ilike.${exato}`,
+              porPalavra ? `and(${porPalavra})` : '',
+            ]
+              .filter(Boolean)
+              .join(','),
+          )
+        }
+
+        for (const [coluna, valores] of Object.entries(consulta.filtros ?? {})) {
+          if (valores.length > 0) query = query.in(coluna, valores)
+        }
+
+        return query
       }
 
-      for (const [coluna, valores] of Object.entries(consulta.filtros ?? {})) {
-        if (valores.length > 0) query = query.in(coluna, valores)
-      }
-
-      const { data, error, count } = await query
+      const { data, error, count } = await montar()
       if (error) {
         toast({ title: 'Erro ao buscar', description: error.message, variant: 'destructive' })
-        return { data: [] as any[], total: 0 }
+        return { data: [] as any[], total: 0, aproximado: false }
       }
-      return { data: (data as any[]) ?? [], total: count ?? 0 }
+
+      // Nada encontrado: tentar por parecença. Só a partir de 3 letras, para
+      // um termo curto não devolver meio almoxarifado.
+      if ((count ?? 0) === 0 && termo.length >= 3) {
+        const { data: parecidos, error: erroParecidos } = await supabase.rpc(
+          'materiais_parecidos',
+          { p_busca: termo, p_ativo: !consulta.apenasInativos, p_limite: 50 },
+        )
+
+        if (!erroParecidos && Array.isArray(parecidos) && parecidos.length > 0) {
+          const ids = parecidos.map((linha: any) => linha.id as string)
+          const aproximada = await montar(ids)
+          if (!aproximada.error) {
+            return {
+              data: (aproximada.data as any[]) ?? [],
+              total: aproximada.count ?? 0,
+              aproximado: true,
+            }
+          }
+        }
+      }
+
+      return { data: (data as any[]) ?? [], total: count ?? 0, aproximado: false }
     },
     [toast],
   )
