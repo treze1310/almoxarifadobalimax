@@ -1,3 +1,4 @@
+import { DialogBody, DialogFooter, DialogClose } from '@/components/ui/dialog'
 import { useState, useEffect } from 'react'
 import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -140,7 +141,7 @@ export function EPIAtribuicaoDialog({ materialId, colaboradorId, onSuccess }: EP
     materialSelecionado.estoque_atual < formData.quantidade_atribuida
 
   return (
-    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <DialogContent tamanho="lg" className="flex flex-col overflow-hidden">
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <Package className="w-5 h-5" />
@@ -148,8 +149,9 @@ export function EPIAtribuicaoDialog({ materialId, colaboradorId, onSuccess }: EP
         </DialogTitle>
       </DialogHeader>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-col gap-4">
+        <DialogBody className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="material">Material/EPI *</Label>
             <Select 
@@ -189,7 +191,7 @@ export function EPIAtribuicaoDialog({ materialId, colaboradorId, onSuccess }: EP
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label htmlFor="data_atribuicao">Data de Atribuição *</Label>
             <Input
@@ -268,11 +270,13 @@ export function EPIAtribuicaoDialog({ materialId, colaboradorId, onSuccess }: EP
           />
         </div>
 
-        <div className="flex gap-2 pt-4">
-          <Button type="submit" disabled={loading || estoqueInsuficiente} className="flex-1">
+        </DialogBody>
+        <DialogFooter className="border-t pt-4">
+          <DialogClose asChild><Button type="button" variant="outline">Cancelar</Button></DialogClose>
+          <Button type="submit" disabled={loading || estoqueInsuficiente}>
             {loading ? 'Atribuindo...' : 'Atribuir EPI'}
           </Button>
-        </div>
+        </DialogFooter>
       </form>
     </DialogContent>
   )

@@ -376,7 +376,7 @@ const NovaSolicitacaoPage = () => {
           descricao="Tipo de documento: SCO (Solicitação de Compra), padrão fixo."
         >
             <div className="md:col-span-12">
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 items-end gap-4 md:grid-cols-3">
                 <FormField
                   control={form.control}
                   name="data"
@@ -394,7 +394,52 @@ const NovaSolicitacaoPage = () => {
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="prazoEntrega"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prazo de Entrega *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o prazo de entrega" />
+                          </SelectTrigger>
+                      </FormControl>
+                        <SelectContent>
+                          {PrazoEntregaOptions.map((prazo) => (
+                            <SelectItem key={prazo} value={prazo}>
+                              {prazo}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="min-w-0">
+                <ResponsavelAutocomplete
+                  value={solicitanteData}
+                  onChange={(value) => {
+                    setSolicitanteData(value)
+                    // Atualizar os campos do form baseado no tipo
+                    if (value?.type === 'colaborador') {
+                      form.setValue('colaborador_id', value.colaborador_id)
+                      form.setValue('solicitante_nome', undefined)
+                    } else if (value?.type === 'nome') {
+                      form.setValue('colaborador_id', undefined)
+                      form.setValue('solicitante_nome', value.nome)
+                    } else {
+                      form.setValue('colaborador_id', undefined)
+                      form.setValue('solicitante_nome', undefined)
+                    }
+                  }}
+                  placeholder="Digite o nome do solicitante..."
+                />
+                </div>
               </div>
+
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <FormField
@@ -435,32 +480,7 @@ const NovaSolicitacaoPage = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <FormField
-                  control={form.control}
-                  name="prazoEntrega"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Prazo de Entrega *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o prazo de entrega" />
-                          </SelectTrigger>
-                      </FormControl>
-                        <SelectContent>
-                          {PrazoEntregaOptions.map((prazo) => (
-                            <SelectItem key={prazo} value={prazo}>
-                              {prazo}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {prazoEntrega === 'Customizada (especificar data)' && (
+              {prazoEntrega === 'Customizada (especificar data)' && (
                 <FormField
                   control={form.control}
                     name="dataCustomizada"
@@ -479,28 +499,6 @@ const NovaSolicitacaoPage = () => {
                   )}
                   />
                 )}
-              </div>
-
-              <div className="mt-4">
-                <ResponsavelAutocomplete
-                  value={solicitanteData}
-                  onChange={(value) => {
-                    setSolicitanteData(value)
-                    // Atualizar os campos do form baseado no tipo
-                    if (value?.type === 'colaborador') {
-                      form.setValue('colaborador_id', value.colaborador_id)
-                      form.setValue('solicitante_nome', undefined)
-                    } else if (value?.type === 'nome') {
-                      form.setValue('colaborador_id', undefined)
-                      form.setValue('solicitante_nome', value.nome)
-                    } else {
-                      form.setValue('colaborador_id', undefined)
-                      form.setValue('solicitante_nome', undefined)
-                    }
-                  }}
-                  placeholder="Digite o nome do solicitante..."
-                />
-              </div>
             </div>
         </FormSection>
 
@@ -511,14 +509,14 @@ const NovaSolicitacaoPage = () => {
         >
             <div className="md:col-span-12">
               <div className="rounded-md border">
-                <Table>
+                <Table className="table-fixed">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[50%]">Material/Equipamento</TableHead>
-                      <TableHead>Unidade</TableHead>
-                      <TableHead>Quantidade</TableHead>
+                      <TableHead className="w-[40%]">Material/Equipamento</TableHead>
+                      <TableHead className="w-20">Unidade</TableHead>
+                      <TableHead className="w-[120px]">Quantidade</TableHead>
                       <TableHead>Observações</TableHead>
-                      <TableHead className="w-[80px]">Ações</TableHead>
+                      <TableHead className="w-[64px]">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

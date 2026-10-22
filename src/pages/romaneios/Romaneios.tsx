@@ -610,32 +610,32 @@ const RomaneiosPage = () => {
               {/* Informações Gerais */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 flex-wrap items-start gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Data:</span>
+                    <span className="whitespace-nowrap font-medium">Data:</span>
                     <span>{formatDate(selectedRomaneio.data_romaneio || selectedRomaneio.created_at)}</span>
                   </div>
                   
                   {selectedRomaneio.colaboradores && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 flex-wrap items-start gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Solicitante:</span>
+                      <span className="whitespace-nowrap font-medium">Solicitante:</span>
                       <span>{selectedRomaneio.colaboradores.nome}</span>
                     </div>
                   )}
                   
                   {selectedRomaneio.responsavel_retirada && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 flex-wrap items-start gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Responsável:</span>
+                      <span className="whitespace-nowrap font-medium">Responsável:</span>
                       <span>{selectedRomaneio.responsavel_retirada}</span>
                     </div>
                   )}
                 </div>
                 
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">Status:</span>
+                  <div className="flex min-w-0 flex-wrap items-start gap-2">
+                    <span className="whitespace-nowrap font-medium">Status:</span>
                     <Badge variant={getStatusBadgeVariant(selectedRomaneio.status || 'pendente')}>
                       {selectedRomaneio.status || 'pendente'}
                     </Badge>
@@ -643,17 +643,17 @@ const RomaneiosPage = () => {
                   
                   
                   {selectedRomaneio.centro_custo_origem && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 flex-wrap items-start gap-2">
                       <Package className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Centro de Custo Origem:</span>
+                      <span className="whitespace-nowrap font-medium">Centro de Custo Origem:</span>
                       <span>{selectedRomaneio.centro_custo_origem.codigo} - {selectedRomaneio.centro_custo_origem.empresas?.nome || selectedRomaneio.centro_custo_origem.descricao}</span>
                     </div>
                   )}
                   
                   {selectedRomaneio.centro_custo_destino && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 flex-wrap items-start gap-2">
                       <Package className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Centro de Custo Destino:</span>
+                      <span className="whitespace-nowrap font-medium">Centro de Custo Destino:</span>
                       <span>{selectedRomaneio.centro_custo_destino.codigo} - {selectedRomaneio.centro_custo_destino.empresas?.nome || selectedRomaneio.centro_custo_destino.descricao}</span>
                     </div>
                   )}
@@ -662,7 +662,7 @@ const RomaneiosPage = () => {
               
               {selectedRomaneio.observacoes && (
                 <div>
-                  <span className="font-medium">Observações:</span>
+                  <span className="whitespace-nowrap font-medium">Observações:</span>
                   <p className="mt-1 text-sm text-muted-foreground">{selectedRomaneio.observacoes}</p>
                 </div>
               )}

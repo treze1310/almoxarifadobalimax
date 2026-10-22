@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/ds/PageHeader'
 import { useState, useEffect, useCallback } from 'react'
 import { contar } from '@/lib/plural'
 import { Button } from '@/components/ui/button'
@@ -5,8 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { ArrowLeft, Edit, Save, RotateCcw, Search, Grid, Package, MapPin, Settings, Trash2, Maximize } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Edit, Save, RotateCcw, Search, Grid, Package, MapPin, Settings, Trash2, Maximize } from 'lucide-react'
 import {
   Tooltip,
   TooltipContent,
@@ -352,14 +352,7 @@ const MapaPage = () => {
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center space-x-4">
-          <Button asChild variant="outline" size="icon">
-            <Link to="/localizacao">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <h1 className="text-2xl font-bold">Mapa Visual do Almoxarifado</h1>
-        </div>
+        <PageHeader titulo="Mapa Visual do Almoxarifado" descricao="Consulte e organize as posições das localizações." migalhas={[{ label: 'Início', href: '/dashboard' }, { label: 'Localização', href: '/localizacao' }, { label: 'Mapa visual' }]} />
         <div className="flex items-center justify-center h-96">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
         </div>
@@ -371,17 +364,10 @@ const MapaPage = () => {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center space-x-4">
-          <Button asChild variant="outline" size="icon">
-            <Link to="/localizacao">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <h1 className="text-2xl font-bold">Mapa Visual do Almoxarifado</h1>
-        </div>
+        <PageHeader titulo="Mapa Visual do Almoxarifado" descricao="Consulte e organize as posições das localizações." migalhas={[{ label: 'Início', href: '/dashboard' }, { label: 'Localização', href: '/localizacao' }, { label: 'Mapa visual' }]} />
         
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center gap-2">
             <Search className="h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar localização..."
@@ -391,7 +377,7 @@ const MapaPage = () => {
             />
           </div>
           
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Edit className="h-4 w-4" />
             <Switch
               checked={editMode}
@@ -400,7 +386,7 @@ const MapaPage = () => {
             <span className="text-sm">Modo Edição</span>
           </div>
           
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Controles de tamanho do layout */}
             <Button
               onClick={() => setShowSizeControls(!showSizeControls)}
@@ -439,7 +425,7 @@ const MapaPage = () => {
       </div>
 
       {/* Stats */}
-      <div className="flex items-center space-x-4">
+      <div className="flex flex-wrap items-center gap-4">
         <Badge variant="secondary">
           <MapPin className="h-3 w-3 mr-1" />
           {filteredLocalizacoes.length} localizações
@@ -475,8 +461,8 @@ const MapaPage = () => {
                 Ajuste as dimensões da área de visualização do mapa
               </p>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex flex-wrap items-center gap-2">
                 <label className="text-sm">Largura:</label>
                 <Input
                   type="number"
@@ -488,7 +474,7 @@ const MapaPage = () => {
                 />
                 <span className="text-sm text-muted-foreground">vw</span>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <label className="text-sm">Altura:</label>
                 <Input
                   type="number"
@@ -514,9 +500,9 @@ const MapaPage = () => {
 
       {/* Mapa */}
       <Card 
-        className="transition-all duration-300"
+        className="flex min-h-0 flex-col transition-all duration-300"
         style={{ 
-          height: `${customMapSize.height}vh`,
+          height: `min(${customMapSize.height}vh, calc(100dvh - 280px))`,
           width: `${customMapSize.width}vw`,
           maxWidth: '100%'
         }}
@@ -540,14 +526,13 @@ const MapaPage = () => {
             </div>
           )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex min-h-0 flex-1 gap-4">
           <TooltipProvider>
             <div
               id="map-container"
-              className="relative w-full h-full bg-muted/10 rounded-lg border-2 border-dashed border-muted overflow-hidden"
+              className="relative min-w-0 flex-1 h-full bg-muted/10 rounded-lg border-2 border-dashed border-muted overflow-hidden"
               onDragOver={handleDragOver}
               onDrop={handleDrop}
-              style={{ minHeight: '500px' }}
             >
               {/* Grid de fundo */}
               <div 
@@ -574,7 +559,7 @@ const MapaPage = () => {
                           ${selectedLocation?.id === localizacao.id ? 'ring-2 ring-blue-500' : ''}
                           ${isDragging && draggedLocation?.id === localizacao.id ? 'opacity-50' : 'opacity-90'}
                           ${isResizing && selectedLocation?.id === localizacao.id ? 'ring-2 ring-orange-500' : ''}
-                          transition-all duration-200 flex items-center justify-center text-xs font-medium relative group`}
+                          transition-all duration-200 flex items-center justify-center text-xs font-medium group`}
                         style={{
                           left: `${localizacao.posicao_x}%`,
                           top: `${localizacao.posicao_y}%`,
@@ -588,7 +573,7 @@ const MapaPage = () => {
                           if (editMode && !isResizing) setSelectedLocation(localizacao)
                         }}
                       >
-                        <div className="text-center pointer-events-none">
+                        <div title={localizacao.nome} className="min-w-0 text-center pointer-events-none">
                           <div className="font-bold text-[10px] leading-tight">{localizacao.codigo}</div>
                           <div className="text-[8px] opacity-75 truncate leading-tight">
                             {localizacao.nome.split(' ').slice(0, 2).join(' ')}
@@ -645,38 +630,6 @@ const MapaPage = () => {
                   </Tooltip>
                 ))}
               
-              {/* Localizações não posicionadas */}
-              <div className="absolute top-4 right-4 max-w-64">
-                <div className="bg-white/95 dark:bg-black/95 backdrop-blur-sm rounded-lg border p-3 shadow-lg">
-                  <h3 className="font-medium text-sm mb-2 flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Não Posicionadas ({filteredLocalizacoes.filter(loc => loc.posicao_x === null || loc.posicao_y === null).length})
-                  </h3>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {filteredLocalizacoes
-                      .filter(loc => loc.posicao_x === null || loc.posicao_y === null)
-                      .map((localizacao) => (
-                        <div
-                          key={localizacao.id}
-                          className={`p-2 rounded text-xs border ${getLocationColor(localizacao as any)} 
-                            ${editMode ? 'cursor-move' : 'cursor-pointer'} hover:scale-105 transition-transform`}
-                          draggable={editMode}
-                          onDragStart={(e) => handleDragStart(e, localizacao)}
-                          onClick={() => setSelectedLocation(localizacao)}
-                        >
-                          <div className="font-medium">{localizacao.codigo}</div>
-                          <div className="text-[10px] opacity-75 truncate">{localizacao.nome}</div>
-                        </div>
-                      ))}
-                  </div>
-                  {editMode && (
-                    <p className="text-[10px] text-muted-foreground mt-2">
-                      Arraste para o mapa para posicionar
-                    </p>
-                  )}
-                </div>
-              </div>
-              
               {/* Instruções quando vazio */}
               {filteredLocalizacoes.length === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -691,6 +644,39 @@ const MapaPage = () => {
               )}
             </div>
           </TooltipProvider>
+              {/* Localizações não posicionadas */}
+              <div className="w-64 shrink-0 min-h-0">
+                <div className="flex h-full min-h-0 flex-col rounded-lg border bg-background p-3">
+                  <h3 className="font-medium text-sm mb-2 flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Não Posicionadas ({filteredLocalizacoes.filter(loc => loc.posicao_x === null || loc.posicao_y === null).length})
+                  </h3>
+                  <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
+                    {filteredLocalizacoes
+                      .filter(loc => loc.posicao_x === null || loc.posicao_y === null)
+                      .map((localizacao) => (
+                        <div
+                          key={localizacao.id}
+                          className={`p-2 rounded text-xs border ${getLocationColor(localizacao as any)} 
+                            ${editMode ? 'cursor-move' : 'cursor-pointer'} hover:scale-105 transition-transform`}
+                          draggable={editMode}
+                          onDragStart={(e) => handleDragStart(e, localizacao)}
+                          onClick={() => setSelectedLocation(localizacao)}
+                        >
+                          <div className="font-medium">{localizacao.codigo}</div>
+                          <div title={localizacao.nome} className="text-xs opacity-75 truncate">{localizacao.nome}</div>
+                        </div>
+                      ))}
+                  </div>
+                  {editMode && (
+                    <p className="text-[10px] text-muted-foreground mt-2">
+                      Arraste para o mapa para posicionar
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+
         </CardContent>
       </Card>
     </div>

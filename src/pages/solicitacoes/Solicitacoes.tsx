@@ -628,7 +628,7 @@ const SolicitacoesPage = () => {
       {/* Diálogo de Detalhes da Solicitação */}
       <Dialog open={!!selectedSolicitacao} onOpenChange={() => setSelectedSolicitacao(null)}>
         <DialogContent 
-          className="max-w-4xl max-h-[90vh] overflow-y-auto fixed" 
+          tamanho="lg" className="flex flex-col overflow-hidden fixed"
           aria-describedby="solicitacao-details-description"
           style={{
             top: detailsDialogPosition.top,
@@ -646,7 +646,8 @@ const SolicitacoesPage = () => {
           </DialogHeader>
           
           {selectedSolicitacao && (
-            <div className="space-y-6">
+            <>
+            <div className="min-h-0 flex-1 space-y-6 overflow-y-auto">
               {/* Informações Gerais */}
               <div>
                 <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
@@ -751,9 +752,6 @@ const SolicitacoesPage = () => {
                               <>
                                 <p className="font-medium">{materiaisInfo[item.material_equipamento_id]?.nome || 'Material não encontrado'}</p>
                                 <p className="text-sm text-muted-foreground">
-                                  ID: {item.material_equipamento_id}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
                                   Unidade: {materiaisInfo[item.material_equipamento_id]?.unidade_medida || 'N/A'}
                                 </p>
                               </>
@@ -779,6 +777,8 @@ const SolicitacoesPage = () => {
               
               <Separator />
               
+            </div>
+            <div className="shrink-0 border-t pt-3">
               {/* Ações */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">Ações</h3>
@@ -837,6 +837,7 @@ const SolicitacoesPage = () => {
                 />
               </div>
             </div>
+            </>
           )}
         </DialogContent>
       </Dialog>

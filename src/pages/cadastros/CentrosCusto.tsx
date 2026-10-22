@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { PlusCircle, Pencil, Trash2, Landmark } from 'lucide-react'
+import { PlusCircle, Edit, Trash2, Landmark } from 'lucide-react'
 import { PageHeader } from '@/components/ds/PageHeader'
 import { DataTable, type ColunaDataTable } from '@/components/ds/DataTable'
 import { StatusBadge } from '@/components/ds/StatusBadge'
@@ -267,7 +267,7 @@ export default function CentrosCusto() {
               title="Editar"
               onClick={() => setEditingCentroCusto(centro)}
             >
-              <Pencil className="h-4 w-4" />
+              <Edit className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"

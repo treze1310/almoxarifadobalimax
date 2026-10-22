@@ -109,6 +109,8 @@ const MateriaisEquipamentosPage = () => {
   const [filtroEstoqueBaixo, setFiltroEstoqueBaixo] = useState(
     searchParams.get('estoque') === 'critico'
   )
+  const [createFooter, setCreateFooter] = useState<HTMLDivElement | null>(null)
+  const [cloneFooter, setCloneFooter] = useState<HTMLDivElement | null>(null)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingMaterial, setEditingMaterial] = useState<any>(null)
 
@@ -969,7 +971,7 @@ const MateriaisEquipamentosPage = () => {
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent
           tamanho="xl"
-          className="flex max-h-[calc(100dvh-2rem)] flex-col items-start"
+          className="flex max-h-[calc(100dvh-2rem)] flex-col items-start overflow-hidden"
           style={{
             position: 'absolute',
             top: dialogPosition.top,
@@ -987,10 +989,12 @@ const MateriaisEquipamentosPage = () => {
           </DialogHeader>
           <div className="-mx-1 min-h-0 w-full flex-1 overflow-y-auto px-1">
             <MaterialEquipamentoForm
+              footerContainer={createFooter}
               onSubmit={handleCreate}
               onCancel={() => setIsCreateDialogOpen(false)}
             />
           </div>
+          <div ref={setCreateFooter} className="w-full shrink-0 border-t pt-3" />
         </DialogContent>
       </Dialog>
 
@@ -998,7 +1002,7 @@ const MateriaisEquipamentosPage = () => {
       <Dialog open={!!cloningMaterial} onOpenChange={() => setCloningMaterial(null)}>
         <DialogContent
           tamanho="xl"
-          className="flex max-h-[calc(100dvh-2rem)] flex-col items-start"
+          className="flex max-h-[calc(100dvh-2rem)] flex-col items-start overflow-hidden"
           style={{
             position: 'absolute',
             top: dialogPosition.top,
@@ -1025,12 +1029,14 @@ const MateriaisEquipamentosPage = () => {
           {cloningMaterial && (
             <div className="-mx-1 min-h-0 w-full flex-1 overflow-y-auto px-1">
               <MaterialEquipamentoForm
+                footerContainer={cloneFooter}
                 initialData={cloningMaterial}
                 onSubmit={handleCloneSubmit}
                 onCancel={() => setCloningMaterial(null)}
               />
             </div>
           )}
+          <div ref={setCloneFooter} className="w-full shrink-0 border-t pt-3" />
         </DialogContent>
       </Dialog>
 

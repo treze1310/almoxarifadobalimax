@@ -123,14 +123,14 @@ export function ImageUpload({
           <Button
             variant="destructive"
             size="sm"
-            className="absolute -top-2 -right-2 rounded-full w-6 h-6 p-0"
+            className="absolute top-1 right-1 z-10 rounded-full w-6 h-6 p-0"
             onClick={handleRemove}
           >
             <X className="w-3 h-3" />
           </Button>
         )}
         
-        <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-full flex items-center justify-center">
+        <div className="pointer-events-none absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-full flex items-center justify-center">
           <Camera className="w-6 h-6 text-white" />
         </div>
       </div>

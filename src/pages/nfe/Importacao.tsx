@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/ds/PageHeader'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { contar } from '@/lib/plural'
 import { useToast } from '@/components/ui/use-toast'
@@ -749,15 +750,14 @@ const ImportacaoNFePage = () => {
   return (
     <>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Importação de NF-e</h1>
+        <PageHeader titulo="Importação de NF-e" descricao="Importe notas fiscais e acompanhe o resultado." migalhas={[{ label: 'Início', href: '/dashboard' }, { label: 'Importação de NF-e' }]} acoes={
           <Button variant="outline" asChild>
             <Link to="/nfe/historico">
               <History className="mr-2 h-4 w-4" />
               Ver Histórico
             </Link>
           </Button>
-        </div>
+        } />
         <Card
           onDragEnter={() => setIsDragging(true)}
           onDragLeave={() => setIsDragging(false)}

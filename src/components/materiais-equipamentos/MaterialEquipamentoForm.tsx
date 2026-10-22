@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { useCallback, useEffect, useState, useId } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { verificarStatusCalibracao } from '@/utils/calibracao'
@@ -36,12 +37,14 @@ import { codigoEmUso, generateMaterialCode } from '@/services/materialCodeServic
 import { useToast } from '@/hooks/use-toast'
 
 interface MaterialEquipamentoFormProps {
+  footerContainer?: HTMLElement | null
   initialData?: Tables<'materiais_equipamentos'>
   onSubmit: (data: MaterialEquipamentoFormData) => Promise<void>
   onCancel: () => void
 }
 
-export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: MaterialEquipamentoFormProps) {
+export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel, footerContainer }: MaterialEquipamentoFormProps) {
+  const formId = useId()
   const { data: fornecedores } = useSupabaseTable('fornecedores', { order: { column: 'nome' } })
   const [ncmSuggestions, setNcmSuggestions] = useState<Array<{ codigo: string; descricao: string; confianca: number }>>([])
   const [loadingNCM, setLoadingNCM] = useState(false)
@@ -256,13 +259,22 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
   // Filter only active records
   const activeFornecedores = fornecedores?.filter(fornecedor => fornecedor.ativo) || []
 
+  const footer = (
+    <DialogFooter className="md:col-span-2">
+      <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
+      <Button form={formId} type="submit" disabled={form.formState.isSubmitting}>
+        {form.formState.isSubmitting ? 'Salvando...' : initialData ? 'Atualizar' : 'Cadastrar'}
+      </Button>
+    </DialogFooter>
+  )
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <form id={formId} onSubmit={form.handleSubmit(handleSubmit)} className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 [&>div]:min-w-0 [&>.grid]:md:col-span-2">
 
         {/* Capa: imagem do item acima do nome para melhor visualização */}
         {form.watch('foto_url') && (
-          <div className="w-full overflow-hidden rounded-lg border bg-muted">
+          <div className="w-full overflow-hidden rounded-lg border bg-muted md:col-span-2">
             <img
               src={form.watch('foto_url')}
               alt="Imagem do item"
@@ -325,7 +337,7 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
               <FormControl>
                 <Input 
                   placeholder="Ex: Parafuso Phillips, Furadeira Elétrica, Capacete de Segurança" 
-                  className="text-lg p-4" 
+                  className="text-sm"
                   {...field} 
                 />
               </FormControl>
@@ -380,11 +392,11 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
           control={form.control}
           name="alugado"
           render={({ field }) => (
-            <FormItem className={`flex flex-row items-center justify-between rounded-lg border-2 p-6 ${
-              field.value ? 'border-orange-300 bg-orange-50' : 'border-gray-200 bg-gray-50'
+            <FormItem className={`flex flex-row items-center justify-between rounded-lg border-2 p-3 ${
+              field.value ? 'border-orange-300 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/30' : 'border-border bg-muted/40'
             }`}>
               <div className="space-y-0.5">
-                <FormLabel className="text-lg font-semibold flex items-center gap-2">
+                <FormLabel className="text-sm font-medium flex items-center gap-2">
                   {field.value && <AlertTriangle className="h-5 w-5 text-orange-600" />}
                   Item Alugado
                 </FormLabel>
@@ -413,9 +425,9 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
           control={form.control}
           name="exige_identificacao_individual"
           render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-6">
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
               <div className="space-y-0.5">
-                <FormLabel className="text-lg font-semibold">
+                <FormLabel className="text-sm font-medium">
                   Exige identificação individual
                 </FormLabel>
                 <div className="text-sm text-muted-foreground">
@@ -873,8 +885,8 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
 
         {/* Campos específicos de EPI */}
         {form.watch('is_epi') && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-4">
-            <h3 className="text-lg font-semibold text-blue-800 flex items-center gap-2">
+          <div className="p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg space-y-4 md:col-span-2">
+            <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200 flex items-center gap-2">
               🛡️ Informações do EPI
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -971,9 +983,9 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
 
         {/* Campos específicos de Calibração */}
         {form.watch('requer_calibracao') && (
-          <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg space-y-4">
+          <div className="p-4 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg space-y-4 md:col-span-2">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-orange-800 flex items-center gap-2">
+              <h3 className="text-sm font-medium text-orange-800 dark:text-orange-200 flex items-center gap-2">
                 🔧 Informações de Calibração/Aferição
               </h3>
               {(() => {
@@ -1141,14 +1153,7 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
           )}
         />
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? 'Salvando...' : initialData ? 'Atualizar' : 'Cadastrar'}
-          </Button>
-        </DialogFooter>
+        {footerContainer ? createPortal(footer, footerContainer) : footer}
       </form>
     </Form>
   )

@@ -119,7 +119,7 @@ export const CentralNotificacoes = () => {
           {naoLidos.length > 0 && (
             <span
               className={cn(
-                'absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white',
+                'absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white',
                 naoLidos.some((a) => a.severidade === 'alta')
                   ? 'bg-destructive'
                   : 'bg-status-pendente',

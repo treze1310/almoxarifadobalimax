@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/ds/PageHeader'
 import { useState, useEffect } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -105,10 +106,7 @@ const ConfiguracoesPage = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Configurações</h1>
-        <p className="text-muted-foreground">Gerencie as configurações do sistema.</p>
-      </div>
+      <PageHeader titulo="Configurações" descricao="Gerencie as configurações do sistema." migalhas={[{ label: 'Início', href: '/dashboard' }, { label: 'Configurações' }]} />
 
       <Tabs defaultValue="empresa" className="w-full">
         <TabsList>
@@ -142,7 +140,7 @@ const ConfiguracoesPage = () => {
         <TabsContent value="empresa">
           <Card>
             <CardHeader>
-              <CardTitle>Configurações da Empresa</CardTitle>
+              <CardTitle className="text-lg">Configurações da Empresa</CardTitle>
               <CardDescription>
                 Dados e logo da empresa emitente. O logo aparece no canto superior esquerdo das
                 emissões (romaneios de entrada/saída, requisição de compra, fichas de EPI, etc).

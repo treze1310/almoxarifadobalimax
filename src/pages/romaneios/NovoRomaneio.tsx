@@ -608,7 +608,7 @@ const NovoRomaneioPage = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4 mb-6">
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
@@ -635,10 +635,10 @@ const NovoRomaneioPage = () => {
                   <Card key={romaneio.id} className="cursor-pointer hover:shadow-md transition-shadow">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-4 mb-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-3 mb-2">
                             <div>
-                              <h4 className="font-semibold text-lg">{romaneio.numero}</h4>
+                              <h4 className="font-semibold text-sm">{romaneio.numero}</h4>
                               <p className="text-sm text-muted-foreground">
                                 Solicitante: {romaneio.colaboradores?.nome || 'N/A'} 
                                 {romaneio.colaboradores?.matricula && ` (${romaneio.colaboradores.matricula})`}
@@ -654,7 +654,7 @@ const NovoRomaneioPage = () => {
                             </Badge>
                           </div>
                           
-                                                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                                                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
                             <div className="flex items-center gap-2">
                               <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                               <span>
@@ -687,8 +687,8 @@ const NovoRomaneioPage = () => {
                           </div>
 
                           {romaneio.romaneios_itens && romaneio.romaneios_itens.length > 0 && (
-                            <div className="mt-3 pt-3 border-t">
-                              <p className="text-xs text-muted-foreground mb-2">Itens retirados:</p>
+                            <div className="mt-2 pt-2 border-t">
+                              <span className="sr-only">Itens retirados:</span>
                               <div className="flex flex-wrap gap-1">
                                 {romaneio.romaneios_itens.slice(0, 3).map((item, index) => (
                                   <Badge key={index} variant="outline" className="text-xs">
@@ -705,7 +705,7 @@ const NovoRomaneioPage = () => {
                           )}
                         </div>
                         
-                        <div className="flex flex-col gap-2 ml-4">
+                        <div className="flex shrink-0 flex-row gap-2 ml-4">
                           <Button
                             onClick={() => handleSelectRomaneio(romaneio)}
                             className="w-full"

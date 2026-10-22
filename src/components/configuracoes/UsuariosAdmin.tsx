@@ -259,7 +259,7 @@ export const UsuariosAdmin = () => {
                 {usuarios.map((usuario) => (
                   <TableRow key={usuario.id}>
                     <TableCell className="py-2">
-                      <div className="text-sm font-medium">{usuario.nome}</div>
+                      <div title={usuario.nome} className="max-w-[220px] truncate text-sm font-medium">{usuario.nome}</div>
                       <div className="text-xs text-muted-foreground">{usuario.email}</div>
                     </TableCell>
                     <TableCell className="py-2">
@@ -267,8 +267,8 @@ export const UsuariosAdmin = () => {
                         value={usuario.perfil_acesso_id || ''}
                         onValueChange={(valor) => trocarPerfil(usuario, valor)}
                       >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="Sem perfil (somente leitura)" />
+                        <SelectTrigger className="h-8 min-w-[180px] text-left text-xs [&>span]:truncate">
+                          <SelectValue placeholder="Somente leitura" />
                         </SelectTrigger>
                         <SelectContent>
                           {perfisAtivos.map((perfil) => (
@@ -284,14 +284,14 @@ export const UsuariosAdmin = () => {
                         value={usuario.centro_custo_id || SEM_CENTRO}
                         onValueChange={(valor) => trocarCentroCusto(usuario, valor)}
                       >
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-8 min-w-[180px] text-left text-xs [&>span]:truncate">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value={SEM_CENTRO}>Não definido</SelectItem>
                           {centrosCusto.map((centro) => (
                             <SelectItem key={centro.id} value={centro.id}>
-                              {centro.codigo} - {centro.descricao}
+                              {centro.codigo?.trim()} - {centro.descricao?.trim()}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -431,7 +431,7 @@ export const UsuariosAdmin = () => {
                   <SelectItem value={SEM_CENTRO}>Não definido</SelectItem>
                   {centrosCusto.map((centro) => (
                     <SelectItem key={centro.id} value={centro.id}>
-                      {centro.codigo} - {centro.descricao}
+                      {centro.codigo?.trim()} - {centro.descricao?.trim()}
                     </SelectItem>
                   ))}
                 </SelectContent>

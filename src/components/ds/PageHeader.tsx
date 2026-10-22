@@ -32,7 +32,7 @@ export const PageHeader = ({
 }: PageHeaderProps) => (
   <div className={cn('space-y-3', className)}>
     {migalhas && migalhas.length > 0 && (
-      <nav aria-label="Trilha de navegação" className="flex items-center gap-1 text-xs text-muted-foreground">
+      <nav aria-label="Trilha de navegação" className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
         {migalhas.map((migalha, i) => (
           <span key={`${migalha.label}-${i}`} className="flex items-center gap-1">
             {i > 0 && <ChevronRight className="h-3 w-3 shrink-0" aria-hidden />}
@@ -48,12 +48,12 @@ export const PageHeader = ({
       </nav>
     )}
 
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0 space-y-1">
         <h1 className="text-ds-page truncate">{titulo}</h1>
         {descricao && <p className="text-ds-body text-muted-foreground">{descricao}</p>}
       </div>
-      {acoes && <div className="flex shrink-0 flex-wrap items-center gap-2">{acoes}</div>}
+      {acoes && <div className="flex max-w-full flex-wrap items-center gap-2 [&_button]:whitespace-nowrap">{acoes}</div>}
     </div>
   </div>
 )

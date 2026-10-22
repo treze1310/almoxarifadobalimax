@@ -1,3 +1,4 @@
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,7 +19,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -71,6 +71,7 @@ export default function SolicitacaoActionDialogs({
   const podeAtender = can('solicitacoes', 'update')
   const podeExcluir = can('solicitacoes', 'delete')
 
+  const [destructiveAction, setDestructiveAction] = useState<'cancel' | 'delete' | null>(null)
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -139,7 +140,15 @@ export default function SolicitacaoActionDialogs({
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap justify-end gap-2">
+      {(podeExcluir || ((status === 'Pendente' || status === 'Aprovada') && podeAtender)) && (
+        <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline">Mais ações</Button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {(status === 'Pendente' || status === 'Aprovada') && podeAtender && <DropdownMenuItem onSelect={() => setDestructiveAction('cancel')}><Ban className="mr-2 h-4 w-4" />Cancelar solicitação</DropdownMenuItem>}
+            {podeExcluir && <DropdownMenuItem className="text-destructive" onSelect={() => setDestructiveAction('delete')}><Trash2 className="mr-2 h-4 w-4" />Excluir</DropdownMenuItem>}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
       {/* Aprovar */}
       {status === 'Pendente' && podeAprovar && (
         <Button
@@ -217,13 +226,7 @@ export default function SolicitacaoActionDialogs({
 
       {/* Cancelar */}
       {(status === 'Pendente' || status === 'Aprovada') && podeAtender && (
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline">
-              <Ban className="h-4 w-4 mr-2" />
-              Cancelar
-            </Button>
-          </AlertDialogTrigger>
+        <AlertDialog open={destructiveAction === 'cancel'} onOpenChange={open => { if (!open) setDestructiveAction(null) }}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Cancelar Solicitação</AlertDialogTitle>
@@ -247,13 +250,7 @@ export default function SolicitacaoActionDialogs({
 
       {/* Excluir */}
       {podeExcluir && (
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button variant="destructive">
-            <Trash2 className="h-4 w-4 mr-2" />
-            Excluir
-          </Button>
-        </AlertDialogTrigger>
+      <AlertDialog open={destructiveAction === 'delete'} onOpenChange={open => { if (!open) setDestructiveAction(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Solicitação</AlertDialogTitle>

@@ -374,7 +374,7 @@ const DashboardPage = () => {
               <p className="text-xs">As compras são contabilizadas a partir das NF-e importadas</p>
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={288}>
+            <div className="h-72 [@media(max-height:800px)]:h-[220px]"><ResponsiveContainer width="100%" height="100%">
               <BarChart data={comprasMensais} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
                 <XAxis dataKey="mes" tickLine={false} axisLine={false} fontSize={12} />
@@ -401,7 +401,7 @@ const DashboardPage = () => {
                 />
                 <Bar dataKey="total" name="Total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
               </BarChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer></div>
           )}
         </CardContent>
       </Card>

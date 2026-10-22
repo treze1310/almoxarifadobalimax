@@ -338,7 +338,7 @@ export default function EPIGerenciamento() {
         <KpiCard
           rotulo="EPIs atribuídos"
           valor={estatisticas.epis_atribuidos}
-          detalhe="Em uso pelos colaboradores"
+          detalhe="Em uso"
           icone={User}
         />
         <KpiCard
@@ -351,7 +351,7 @@ export default function EPIGerenciamento() {
         <KpiCard
           rotulo="Vencidos"
           valor={estatisticas.epis_vencidos}
-          detalhe="Precisam ser substituídos"
+          detalhe="Substituição necessária"
           icone={AlertTriangle}
           tom="critico"
         />

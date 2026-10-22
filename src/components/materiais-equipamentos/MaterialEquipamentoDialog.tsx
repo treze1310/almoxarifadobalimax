@@ -77,6 +77,8 @@ export const MaterialEquipamentoDialog = ({
     }
   }
 
+  const [footerContainer, setFooterContainer] = useState<HTMLDivElement | null>(null)
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* `xl` para editar e criar terem a mesma largura: o mesmo formulário
@@ -104,6 +106,7 @@ export const MaterialEquipamentoDialog = ({
         </DialogHeader>
         <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 pt-2">
           <MaterialEquipamentoForm
+            footerContainer={footerContainer}
             initialData={material as any}
             onSubmit={onSubmit || (async () => {})}
             onCancel={() => onOpenChange(false)}
@@ -136,6 +139,7 @@ export const MaterialEquipamentoDialog = ({
             </>
           )}
         </div>
+        <div ref={setFooterContainer} className="shrink-0 border-t pt-3" />
         {/* O "Excluir" ficava no cabeçalho, por cima do X de fechar, e era o
             primeiro elemento focável: ao abrir, o foco caía nele e um Enter
             distraído excluía o item. Aqui ele é o último, na ordem visual e na

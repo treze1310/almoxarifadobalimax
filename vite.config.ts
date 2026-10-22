@@ -48,18 +48,8 @@ export default defineConfig(({ mode }) => ({
     sourcemap: mode === 'development',
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
-      output: {
-        // Separar bibliotecas pesadas em chunks próprios para reduzir o bundle inicial
-        manualChunks(id) {
-          if (!id.includes('node_modules')) return
-          if (id.includes('jspdf') || id.includes('html2canvas')) return 'pdf'
-          if (id.includes('recharts') || id.includes('/d3-') || id.includes('victory-vendor')) return 'charts'
-          if (id.includes('@supabase')) return 'supabase'
-          if (id.includes('@radix-ui')) return 'radix'
-          if (id.includes('react-router') || id.includes('/react-dom/') || id.includes('/react/')) return 'react'
-          return 'vendor'
-        },
-      },
+      // Let the bundler split shared dependencies together. Grouping React,
+      // Radix and their helpers manually created a circular startup dependency.
       input: {
         // Site institucional (homepage pública)
         main: resolve(__dirname, 'index.html'),
