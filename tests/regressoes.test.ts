@@ -14,6 +14,7 @@ import { buscarTodasAsPaginas } from '../src/lib/consultaPaginada'
 import { contar, plural } from '../src/lib/plural'
 import { enderecoWeb, enderecoWebLegivel } from '../src/lib/enderecoWeb'
 import { palavrasDaBusca, textoComparavel } from '../src/lib/textoComparavel'
+import { expandirItensPorPeca, type LinhaComPecas } from '../src/lib/romaneioPecas'
 import {
   agruparSugestoes,
   forcaDaSugestao,
@@ -789,5 +790,69 @@ describe('código de unidade na etiqueta', () => {
   test('o código do filho vira barras e é mais largo que o do pai', () => {
     expect(barrasDoCodigo('00125-1').length).toBeGreaterThan(0)
     expect(larguraEmModulos('00125-1')).toBeGreaterThan(larguraEmModulos('00125'))
+  })
+})
+
+/**
+ * Romaneio com peça escolhida.
+ *
+ * As regras de verdade estão no banco (uma peça não sai em dois romaneios,
+ * peça tem de ser do item da linha, quantidade 1, devolução devolve, romaneio
+ * cancelado solta a peça) e foram conferidas contra ele. Aqui fica o que o
+ * front faz antes de gravar: virar a escolha da tela em linhas do banco.
+ */
+describe('expansão das peças em linhas de romaneio', () => {
+  const linha = (over: Partial<LinhaComPecas> = {}): LinhaComPecas => ({
+    material_equipamento_id: 'mat-1',
+    quantidade: 1,
+    valor_unitario: 100,
+    ...over,
+  })
+
+  // Uma linha só com quantidade 3 não diz qual das três peças saiu
+  test('cada peça escolhida vira uma linha de quantidade 1', () => {
+    const linhas = expandirItensPorPeca([
+      linha({ quantidade: 3, unidades: ['u1', 'u2', 'u3'] }),
+    ])
+    expect(linhas).toHaveLength(3)
+    expect(linhas.map((l) => l.material_unidade_id)).toEqual(['u1', 'u2', 'u3'])
+    expect(linhas.every((l) => l.quantidade === 1)).toBe(true)
+    expect(linhas.every((l) => l.material_equipamento_id === 'mat-1')).toBe(true)
+  })
+
+  test('o valor total da linha acompanha a peça única', () => {
+    const [primeira] = expandirItensPorPeca([
+      linha({ quantidade: 2, valor_unitario: 1500, valor_total: 3000, unidades: ['u1', 'u2'] }),
+    ])
+    expect(primeira.valor_total).toBe(1500)
+  })
+
+  // Material de consumo continua como era: uma linha com a quantidade
+  test('item sem peças passa inteiro, com a quantidade digitada', () => {
+    expect(expandirItensPorPeca([linha({ quantidade: 10 })])).toEqual([
+      { material_equipamento_id: 'mat-1', quantidade: 10, valor_unitario: 100 },
+    ])
+    expect(expandirItensPorPeca([linha({ quantidade: 10, unidades: [] })])[0].quantidade).toBe(10)
+  })
+
+  // `quantidadeOriginal` é campo da tela de devolução; o banco não tem a coluna
+  test('campo de tela não vaza para o banco', () => {
+    const [primeira] = expandirItensPorPeca([linha({ quantidadeOriginal: 5, unidades: ['u1'] })])
+    expect('quantidadeOriginal' in primeira).toBe(false)
+    expect('unidades' in primeira).toBe(false)
+  })
+
+  test('linhas de itens diferentes saem todas, na ordem', () => {
+    const linhas = expandirItensPorPeca([
+      linha({ unidades: ['u1'] }),
+      linha({ material_equipamento_id: 'mat-2', quantidade: 4 }),
+      linha({ material_equipamento_id: 'mat-3', quantidade: 2, unidades: ['u9', 'u8'] }),
+    ])
+    expect(linhas.map((l) => l.material_equipamento_id)).toEqual([
+      'mat-1',
+      'mat-2',
+      'mat-3',
+      'mat-3',
+    ])
   })
 })

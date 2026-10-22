@@ -23,6 +23,9 @@ type Romaneio = Tables<'romaneios'> & {
     numero_serie: string | null
     codigo_patrimonial: string | null
     observacoes: string | null
+    material_unidade_id?: string | null
+    /** Peça individual desta linha, quando o item é acompanhado peça a peça */
+    material_unidades?: { codigo: string; status: string } | null
     materiais_equipamentos?: {
       codigo: string
       nome: string
@@ -101,7 +104,8 @@ export function useRomaneios() {
           fornecedores:fornecedor_id (nome)
           ${options?.includeItens ? `, romaneios_itens (
             id, quantidade, valor_unitario, valor_total, 
-            numero_serie, codigo_patrimonial, observacoes,
+            numero_serie, codigo_patrimonial, observacoes, material_unidade_id,
+            material_unidades:material_unidade_id (codigo, status),
             materiais_equipamentos:material_equipamento_id (id, codigo, nome, unidade_medida, codigo_ncm, centros_custo:centro_custo_id (codigo, descricao, empresas:empresa_id(nome)))
           )` : ''}
         `)
@@ -146,7 +150,8 @@ export function useRomaneios() {
           fornecedores:fornecedor_id (nome),
           romaneios_itens (
             id, quantidade, valor_unitario, valor_total,
-            numero_serie, codigo_patrimonial, observacoes,
+            numero_serie, codigo_patrimonial, observacoes, material_unidade_id,
+            material_unidades:material_unidade_id (codigo, status),
             materiais_equipamentos:material_equipamento_id (id, codigo, nome, unidade_medida, codigo_ncm, centros_custo:centro_custo_id (codigo, descricao, empresas:empresa_id(nome)))
           )
         `)
@@ -567,7 +572,8 @@ export function useRomaneios() {
           centro_custo_destino:centro_custo_destino_id (codigo, descricao, empresas:empresa_id(nome)),
           romaneios_itens (
             id, quantidade, valor_unitario, valor_total,
-            numero_serie, codigo_patrimonial, observacoes,
+            numero_serie, codigo_patrimonial, observacoes, material_unidade_id,
+            material_unidades:material_unidade_id (codigo, status),
             materiais_equipamentos:material_equipamento_id (id, codigo, nome, unidade_medida, codigo_ncm, centros_custo:centro_custo_id (codigo, descricao, empresas:empresa_id(nome)))
           )
         `)

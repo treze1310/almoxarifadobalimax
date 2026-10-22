@@ -63,6 +63,8 @@ class DevolucaoItensService {
           codigo_patrimonial,
           observacoes,
           data_devolucao,
+          material_unidade_id,
+          material_unidades:material_unidade_id (codigo, status),
           materiais_equipamentos:material_equipamento_id (
             id,
             codigo,
@@ -102,6 +104,8 @@ class DevolucaoItensService {
           codigo_patrimonial,
           observacoes,
           data_devolucao,
+          material_unidade_id,
+          material_unidades:material_unidade_id (codigo, status),
           materiais_equipamentos:material_equipamento_id (
             id,
             codigo,

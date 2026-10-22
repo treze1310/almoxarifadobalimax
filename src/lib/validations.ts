@@ -215,6 +215,17 @@ export const formatPhone = (value: string) => {
 export const romaneioItemSchema = z.object({
   material_equipamento_id: z.string().uuid('ID do material/equipamento inválido'),
   quantidade: z.number().int().min(1, 'Quantidade deve ser maior que 0'),
+  /**
+   * Peça individual (FILHO) desta linha. Em equipamento acompanhado peça a
+   * peça, cada peça é uma linha de quantidade 1 — é o que permite saber qual
+   * voltou e qual continua na rua.
+   */
+  material_unidade_id: z
+    .string()
+    .uuid('ID da peça inválido')
+    .optional()
+    .or(z.literal(''))
+    .transform((val) => val || undefined),
   valor_unitario: z.number().min(0, 'Valor deve ser positivo').optional(),
   valor_total: z.number().min(0, 'Valor deve ser positivo').optional(),
   numero_serie: z.string().max(100, 'Número de série muito longo').optional(),

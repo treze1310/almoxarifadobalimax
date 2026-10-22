@@ -10,6 +10,8 @@ import { devolucaoItensService } from '@/services/devolucaoItensService'
 import type { Tables } from '@/types/database'
 
 type RomaneioItem = Tables<'romaneios_itens'> & {
+  /** Peça individual desta linha, quando o item é acompanhado peça a peça */
+  material_unidades?: { codigo: string; status: string } | null
   materiais_equipamentos?: {
     id: string
     codigo: string
@@ -221,7 +223,9 @@ const ItensStatusTable = ({ romaneioId, onItemUpdated }: ItensStatusTableProps) 
                     {getStatusBadge(item)}
                   </TableCell>
                   <TableCell className="font-mono">
-                    {item.materiais_equipamentos?.codigo}
+                    {/* Na peça individual, o que vale é o número dela: é o que
+                        está na etiqueta e o que volta na devolução */}
+                    {item.material_unidades?.codigo ?? item.materiais_equipamentos?.codigo}
                   </TableCell>
                   <TableCell className="font-medium">
                     {item.materiais_equipamentos?.nome}

@@ -57,7 +57,7 @@ interface ResponsavelData {
 
 /** Campos que a busca de material precisa trazer, num lugar só */
 const CAMPOS_MATERIAL =
-  'id, codigo, nome, unidade_medida, valor_unitario, estoque_atual, ponto_pedido, estoque_minimo'
+  'id, codigo, nome, unidade_medida, valor_unitario, estoque_atual, ponto_pedido, estoque_minimo, exige_identificacao_individual'
 
 interface MaterialBusca {
   id: string
@@ -68,6 +68,8 @@ interface MaterialBusca {
   estoque_atual: number | null
   ponto_pedido: number | null
   estoque_minimo: number | null
+  /** Equipamento acompanhado peça a peça: aqui se bipa a peça, não o item */
+  exige_identificacao_individual?: boolean | null
 }
 
 interface ItemRetirada {
@@ -80,6 +82,9 @@ interface ItemRetirada {
   estoqueAtual: number
   pontoPedido: number | null
   quantidade: number
+  /** Peça individual, quando foi a etiqueta dela que entrou no leitor */
+  unidadeId?: string
+  unidadeCodigo?: string
 }
 
 const PASSOS = [
@@ -157,6 +162,13 @@ export const RetiradaAssistida = () => {
   const adicionarMaterial = useCallback(
     (material: MaterialBusca) => {
       const saldo = material.estoque_atual ?? 0
+      if (material.exige_identificacao_individual) {
+        setAviso(
+          `${material.nome} é controlado peça a peça: bipe ou busque a etiqueta da peça (${material.codigo}-1, ${material.codigo}-2, …).`,
+        )
+        return
+      }
+
       const existente = itens.find((item) => item.id === material.id)
 
       if (existente && existente.quantidade >= saldo) {
@@ -198,11 +210,75 @@ export const RetiradaAssistida = () => {
    * Caminho do leitor e do Enter: aqui o código precisa casar com um material
    * só. O código de barras é o que o leitor manda, e é o único realmente único.
    */
+  /**
+   * Peça lida no leitor (`01764-3`).
+   *
+   * A etiqueta de equipamento é da peça, não do cadastro: quem bipa está
+   * dizendo exatamente qual peça está saindo. Peça que já está com alguém, em
+   * manutenção ou baixada não entra — e o aviso diz em que estado ela está.
+   */
+  const adicionarPorPeca = useCallback(
+    async (codigo: string): Promise<boolean> => {
+      const { data: peca, error } = await supabase
+        .from('material_unidades')
+        .select(
+          `id, codigo, status,
+           materiais_equipamentos:material_equipamento_id (${CAMPOS_MATERIAL})`,
+        )
+        .eq('codigo', codigo)
+        .maybeSingle()
+
+      if (error || !peca) return false
+
+      const pai = (peca as any).materiais_equipamentos as MaterialBusca | null
+      if (!pai) return false
+
+      if (peca.status !== 'disponivel') {
+        setAviso(
+          `A peça ${peca.codigo} está como "${String(peca.status).replace('_', ' ')}" e não pode ser retirada.`,
+        )
+        return true
+      }
+
+      if (itens.some((item) => item.unidadeId === peca.id)) {
+        setAviso(`A peça ${peca.codigo} já está nesta retirada.`)
+        return true
+      }
+
+      setAviso(null)
+      setItens((atuais) => [
+        ...atuais,
+        {
+          id: pai.id,
+          codigo: pai.codigo,
+          nome: pai.nome,
+          unidade: pai.unidade_medida,
+          valorUnitario: pai.valor_unitario ?? 0,
+          estoqueAtual: pai.estoque_atual ?? 0,
+          pontoPedido: pai.ponto_pedido ?? pai.estoque_minimo ?? null,
+          // Uma peça é uma linha; quantidade não se digita
+          quantidade: 1,
+          unidadeId: peca.id,
+          unidadeCodigo: peca.codigo,
+        },
+      ])
+      return true
+    },
+    [itens],
+  )
+
   const adicionarPorCodigo = useCallback(
     async (codigo: string) => {
       setAviso(null)
       setBuscando(true)
       try {
+        // Primeiro a peça: é a etiqueta que o almoxarife tem na mão
+        if (await adicionarPorPeca(codigo)) {
+          setSugestoes([])
+          setTermo('')
+          return
+        }
+
         const { data: achados, error } = await supabase
           .from('materiais_equipamentos')
           .select(CAMPOS_MATERIAL)
@@ -221,7 +297,17 @@ export const RetiradaAssistida = () => {
           return
         }
 
-        adicionarMaterial(achados[0] as MaterialBusca)
+        const material = achados[0] as MaterialBusca
+
+        // Item acompanhado peça a peça: não dá para sair "1 unidade qualquer"
+        if (material.exige_identificacao_individual) {
+          setAviso(
+            `${material.nome} é controlado peça a peça: bipe a etiqueta da peça (${material.codigo}-1, ${material.codigo}-2, …) em vez do código do item.`,
+          )
+          return
+        }
+
+        adicionarMaterial(material)
         setSugestoes([])
         setTermo('')
       } catch (erro) {
@@ -230,7 +316,7 @@ export const RetiradaAssistida = () => {
         setBuscando(false)
       }
     },
-    [adicionarMaterial],
+    [adicionarMaterial, adicionarPorPeca],
   )
 
   /**
@@ -265,10 +351,19 @@ export const RetiradaAssistida = () => {
     }
   }, [termo])
 
-  const mudarQuantidade = (id: string, quantidade: number) => {
+  /**
+   * Chave da linha na tela.
+   *
+   * Duas peças do mesmo equipamento são duas linhas com o mesmo
+   * `material_equipamento_id`: sem a peça na chave, mexer numa mexia nas duas
+   * e remover uma removia as duas.
+   */
+  const chaveDaLinha = (item: ItemRetirada) => item.unidadeId ?? item.id
+
+  const mudarQuantidade = (chave: string, quantidade: number) => {
     setItens((atuais) =>
       atuais.map((item) =>
-        item.id === id
+        chaveDaLinha(item) === chave
           ? { ...item, quantidade: Math.max(1, Math.min(quantidade, item.estoqueAtual)) }
           : item,
       ),
@@ -303,6 +398,8 @@ export const RetiradaAssistida = () => {
           quantidade: item.quantidade,
           valor_unitario: item.valorUnitario,
           valor_total: item.valorUnitario * item.quantidade,
+          // Qual peça saiu, quando foi a etiqueta dela que entrou no leitor
+          material_unidade_id: item.unidadeId,
         })),
       })
 
@@ -533,11 +630,13 @@ export const RetiradaAssistida = () => {
                     const depois = item.estoqueAtual - item.quantidade
                     const vaiAoPonto = item.pontoPedido != null && depois <= item.pontoPedido
                     return (
-                      <TableRow key={item.id}>
+                      <TableRow key={chaveDaLinha(item)}>
                         <TableCell className="py-2">
                           <div className="font-medium">{item.nome}</div>
                           <div className="text-xs text-muted-foreground">
-                            {item.codigo}
+                            {/* Na peça, o número dela é o que vale: é o que
+                                está na etiqueta e o que volta na devolução */}
+                            {item.unidadeCodigo ?? item.codigo}
                             {item.valorUnitario > 0 &&
                               ` · ${formatCurrency(item.valorUnitario)} / ${item.unidade ?? 'un'}`}
                           </div>
@@ -546,36 +645,45 @@ export const RetiradaAssistida = () => {
                           {item.estoqueAtual} {item.unidade}
                         </TableCell>
                         <TableCell className="py-2">
-                          <div className="flex items-center justify-center gap-1">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => mudarQuantidade(item.id, item.quantidade - 1)}
-                              disabled={item.quantidade <= 1}
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <Input
-                              type="number"
-                              value={item.quantidade}
-                              onChange={(e) =>
-                                mudarQuantidade(item.id, parseInt(e.target.value) || 1)
-                              }
-                              className="h-8 w-16 text-center tabular-nums"
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => mudarQuantidade(item.id, item.quantidade + 1)}
-                              disabled={item.quantidade >= item.estoqueAtual}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
+                          {item.unidadeId ? (
+                            // Peça é uma só: para levar outra, bipe a outra
+                            <p className="text-center text-sm text-muted-foreground">1 peça</p>
+                          ) : (
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() =>
+                                  mudarQuantidade(chaveDaLinha(item), item.quantidade - 1)
+                                }
+                                disabled={item.quantidade <= 1}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <Input
+                                type="number"
+                                value={item.quantidade}
+                                onChange={(e) =>
+                                  mudarQuantidade(chaveDaLinha(item), parseInt(e.target.value) || 1)
+                                }
+                                className="h-8 w-16 text-center tabular-nums"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() =>
+                                  mudarQuantidade(chaveDaLinha(item), item.quantidade + 1)
+                                }
+                                disabled={item.quantidade >= item.estoqueAtual}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="py-2 text-right tabular-nums">
                           <span
@@ -602,7 +710,9 @@ export const RetiradaAssistida = () => {
                             size="icon"
                             className="h-8 w-8"
                             onClick={() =>
-                              setItens((atuais) => atuais.filter((i) => i.id !== item.id))
+                              setItens((atuais) =>
+                                atuais.filter((i) => chaveDaLinha(i) !== chaveDaLinha(item)),
+                              )
                             }
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
@@ -663,9 +773,9 @@ export const RetiradaAssistida = () => {
                   </TableHeader>
                   <TableBody>
                     {itens.map((item) => (
-                      <TableRow key={item.id}>
+                      <TableRow key={chaveDaLinha(item)}>
                         <TableCell className="py-2">
-                          {item.codigo} - {item.nome}
+                          {item.unidadeCodigo ?? item.codigo} - {item.nome}
                         </TableCell>
                         <TableCell className="py-2 text-right tabular-nums">
                           {item.quantidade} {item.unidade}

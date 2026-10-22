@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { contar } from '@/lib/plural'
 import { useForm, useFieldArray } from 'react-hook-form'
+import { SelecaoUnidades } from '@/components/romaneios/SelecaoUnidades'
+import { expandirItensPorPeca } from '@/lib/romaneioPecas'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
@@ -64,6 +66,7 @@ type RomaneioRetirada = Tables<'romaneios'> & {
     numero_serie: string | null
     codigo_patrimonial: string | null
     observacoes: string | null
+    material_unidade_id?: string | null
     materiais_equipamentos?: {
       id: string
       codigo: string
@@ -95,6 +98,11 @@ type ComponentFormValues = {
     numero_serie?: string
     codigo_patrimonial?: string
     quantidadeOriginal?: number
+    /**
+     * Peças escolhidas quando o item é acompanhado peça a peça. No envio,
+     * cada peça vira uma linha de quantidade 1.
+     */
+    unidades?: string[]
   }>
 }
 
@@ -164,6 +172,10 @@ const NovoRomaneioPage = () => {
             observacoes: item.observacoes || '',
             numero_serie: item.numero_serie || '',
             codigo_patrimonial: item.codigo_patrimonial || '',
+            // A peça desta linha volta marcada, para a edição não perdê-la
+            unidades: (item as any).material_unidade_id
+              ? [(item as any).material_unidade_id as string]
+              : [],
           })) || []
           
           // Reset form with all data
@@ -331,6 +343,7 @@ const NovoRomaneioPage = () => {
     setStep(2)
   }
 
+
   const onSubmit = async (data: ComponentFormValues, saveAndApprove: boolean = false) => {
     try {
       const responsavelText = data.responsavel_retirada || data.responsavel_nome
@@ -384,15 +397,7 @@ const NovoRomaneioPage = () => {
           centro_custo_origem_id: data.centro_custo_origem_id && data.centro_custo_origem_id !== '' ? data.centro_custo_origem_id : undefined,
           centro_custo_destino_id: data.centro_custo_destino_id && data.centro_custo_destino_id !== '' ? data.centro_custo_destino_id : undefined,
           observacoes: data.observacoes,
-          itens: data.itens.map(item => ({
-            material_equipamento_id: item.material_equipamento_id,
-            quantidade: item.quantidade,
-            valor_unitario: item.valor_unitario,
-            valor_total: item.valor_total,
-            observacoes: item.observacoes,
-            numero_serie: item.numero_serie,
-            codigo_patrimonial: item.codigo_patrimonial,
-          })),
+          itens: expandirItensPorPeca(data.itens),
         }
 
         const result = await updateRomaneio(editId, romaneioData)
@@ -417,15 +422,7 @@ const NovoRomaneioPage = () => {
           observacoes: data.observacoes,
           status: saveAndApprove ? 'aprovado' : 'pendente',
           romaneio_origem_id: selectedRomaneio?.id, // Para devoluções, salvar o romaneio original
-          itens: data.itens.map(item => ({
-            material_equipamento_id: item.material_equipamento_id,
-            quantidade: item.quantidade,
-            valor_unitario: item.valor_unitario,
-            valor_total: item.valor_total,
-            observacoes: item.observacoes,
-            numero_serie: item.numero_serie,
-            codigo_patrimonial: item.codigo_patrimonial,
-          })),
+          itens: expandirItensPorPeca(data.itens),
         }
 
         const result = await createRomaneio(romaneioData)
@@ -493,9 +490,36 @@ const NovoRomaneioPage = () => {
   const handleAddItem = () =>
     append({ material_equipamento_id: '', quantidade: 1 })
 
+  /** O item escolhido é acompanhado peça a peça? */
+  const exigeUnidades = (materialId?: string) =>
+    !!getSelectedItem(materialId)?.exige_identificacao_individual
+
+  const handleUnidadesChange = (index: number, ids: string[]) => {
+    form.setValue(`itens.${index}.unidades`, ids)
+    // A quantidade deixa de ser digitada: é quantas peças foram escolhidas
+    form.setValue(`itens.${index}.quantidade`, Math.max(ids.length, 1))
+  }
+
   const handleItemChange = (value: string, index: number) => {
     form.setValue(`itens.${index}.material_equipamento_id`, value)
+    // Trocar o item zera as peças: elas eram do item anterior
+    form.setValue(`itens.${index}.unidades`, [])
   }
+
+  /**
+   * Peças que já saíram neste romaneio.
+   *
+   * Elas estão `em_uso`, então não apareceriam na lista de disponíveis — e a
+   * edição apagaria a escolha original sem o almoxarife perceber.
+   */
+  const unidadesJaNoRomaneio = useMemo(
+    () =>
+      (form.watch('itens') ?? [])
+        .flatMap((item) => item.unidades ?? [])
+        .filter((id): id is string => !!id),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isEditing],
+  )
 
   const getSelectedItem = (materialId: string) => {
     return materiaisEquipamentos.find(item => item.id === materialId)
@@ -854,6 +878,23 @@ const NovoRomaneioPage = () => {
                             </FormItem>
                           )}
                         />
+
+                        {/* Equipamento acompanhado peça a peça: é preciso dizer
+                            qual peça sai, não só quantas */}
+                        {exigeUnidades(form.watch(`itens.${index}.material_equipamento_id`)) && (
+                          <div className="mt-2">
+                            <SelecaoUnidades
+                              materialId={form.watch(`itens.${index}.material_equipamento_id`)}
+                              valor={form.watch(`itens.${index}.unidades`) ?? []}
+                              onChange={(ids) => handleUnidadesChange(index, ids)}
+                              jaNoRomaneio={unidadesJaNoRomaneio}
+                              ocupadas={(form.watch('itens') ?? [])
+                                .filter((_, i) => i !== index)
+                                .flatMap((outro) => outro.unidades ?? [])}
+                              disabled={isDevolucao}
+                            />
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         {getSelectedItem(form.watch(`itens.${index}.material_equipamento_id`))?.unidade_medida || '-'}
@@ -871,24 +912,42 @@ const NovoRomaneioPage = () => {
                             const materialId = form.watch(`itens.${index}.material_equipamento_id`)
                             const selectedMat = getSelectedItem(materialId)
                             const estoqueDisponivel = selectedMat?.estoque_atual ?? 0
+                            const porPeca = exigeUnidades(materialId)
+                            const pecas = form.watch(`itens.${index}.unidades`)?.length ?? 0
                             const excede =
                               !isDevolucao &&
+                              !porPeca &&
                               !!selectedMat &&
                               Number(formField.value) > estoqueDisponivel
                             return (
                               <FormItem>
-                                <Input
-                                  type="number"
-                                  min={1}
-                                  {...formField}
-                                  onChange={(e) => formField.onChange(parseInt(e.target.value) || 1)}
-                                  className={excede ? 'border-destructive focus-visible:ring-destructive' : ''}
-                                />
-                                {selectedMat && (
+                                {porPeca ? (
+                                  // Quem manda é a lista de peças escolhidas
+                                  <div className="text-sm">
+                                    <span className="font-medium">{pecas}</span>{' '}
+                                    <span className="text-muted-foreground">
+                                      {pecas === 1 ? 'peça' : 'peças'}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    {...formField}
+                                    onChange={(e) => formField.onChange(parseInt(e.target.value) || 1)}
+                                    className={excede ? 'border-destructive focus-visible:ring-destructive' : ''}
+                                  />
+                                )}
+                                {selectedMat && !porPeca && (
                                   <p className={`text-xs mt-1 ${excede ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
                                     {excede
                                       ? `⚠️ Excede estoque! Atual: ${estoqueDisponivel} ${selectedMat.unidade_medida || ''}`
                                       : `Estoque atual: ${estoqueDisponivel} ${selectedMat.unidade_medida || ''}`}
+                                  </p>
+                                )}
+                                {selectedMat && porPeca && pecas === 0 && (
+                                  <p className="mt-1 text-xs text-destructive font-medium">
+                                    Escolha ao menos uma peça
                                   </p>
                                 )}
                                 <FormMessage />

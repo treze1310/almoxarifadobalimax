@@ -25,6 +25,8 @@ type RomaneioItem = {
   codigo_patrimonial: string | null
   observacoes: string | null
   data_devolucao: string | null
+  /** Peça individual desta linha, quando o item é acompanhado peça a peça */
+  material_unidades?: { codigo: string; status: string } | null
   materiais_equipamentos?: {
     id: string
     codigo: string
@@ -351,7 +353,7 @@ const DevolucaoSeletivaDialog = ({ romaneio, trigger, onDevolucaoRealizada }: De
                           />
                         </TableCell>
                         <TableCell className="font-mono">
-                          {item.materiais_equipamentos?.codigo}
+                          {item.material_unidades?.codigo ?? item.materiais_equipamentos?.codigo}
                         </TableCell>
                         <TableCell className="font-medium">
                           {item.materiais_equipamentos?.nome}

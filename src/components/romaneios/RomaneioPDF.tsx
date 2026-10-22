@@ -374,7 +374,7 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
               <tbody>
                 ${romaneio.romaneios_itens?.map(item => `
                   <tr>
-                    <td>${item.materiais_equipamentos?.codigo || 'N/C'}</td>
+                    <td>${(item as any).material_unidades?.codigo || item.materiais_equipamentos?.codigo || 'N/C'}</td>
                     <td style="text-align: left; padding-left: 8px;">
                       ${item.materiais_equipamentos?.nome || 'N/A'}
                     </td>
