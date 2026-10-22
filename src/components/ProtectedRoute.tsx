@@ -11,8 +11,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading } = useAuth()
   const location = useLocation()
 
-  // Mostrar loading enquanto verifica autenticação
-  if (loading) {
+  // Enquanto verifica a autenticação, só na primeira vez: `loading` do
+  // AuthContext é apenas o boot inicial e o login/logout explícitos, então
+  // renovação de token e aba voltando a ficar visível não passam por aqui.
+  if (loading && !user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center space-y-4">

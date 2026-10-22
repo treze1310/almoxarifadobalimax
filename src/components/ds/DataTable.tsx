@@ -144,13 +144,30 @@ export function DataTable<T>({
   // em todas as colunas), então o campo responde na hora e o filtro espera a
   // digitação parar.
   const [buscaAplicada, setBuscaAplicada] = useState(busca)
-  const [filtros, setFiltros] = useState<Record<string, string[]>>({})
+  /**
+   * Filtros também na URL, como a busca e a página.
+   *
+   * Sair da listagem e voltar (ou dar F5, ou mandar o link para alguém)
+   * perdia os filtros aplicados: a listagem voltava inteira e era preciso
+   * refazer a escolha. O formato é `tbl_f_<coluna>=valor~valor`.
+   */
+  const [filtros, setFiltros] = useState<Record<string, string[]>>(() => {
+    const guardados: Record<string, string[]> = {}
+    const prefixo = `${chaveUrl}_f_`
+    searchParams.forEach((valor, chave) => {
+      if (!chave.startsWith(prefixo) || !valor) return
+      guardados[chave.slice(prefixo.length)] = valor.split('~').filter(Boolean)
+    })
+    return guardados
+  })
   const [ordenacao, setOrdenacao] = useState<{ coluna: string; direcao: SortDirection }>({
     coluna: searchParams.get(p('sort')) ?? '',
     direcao: (searchParams.get(p('dir')) as SortDirection) ?? null,
   })
   const [pagina, setPagina] = useState(Number(searchParams.get(p('pg')) ?? 1))
-  const [tamanhoPagina, setTamanhoPagina] = useState(tamanhoPaginaInicial)
+  const [tamanhoPagina, setTamanhoPagina] = useState(
+    Number(searchParams.get(p('pp')) ?? tamanhoPaginaInicial),
+  )
   const [compacta, setCompacta] = useState(false)
   const [ocultas, setOcultas] = useState<string[]>([])
   const [selecionadas, setSelecionadas] = useState<string[]>([])
@@ -166,12 +183,23 @@ export function DataTable<T>({
     aplicar(p('sort'), ordenacao.direcao ? ordenacao.coluna : null)
     aplicar(p('dir'), ordenacao.direcao)
     aplicar(p('pg'), pagina > 1 ? String(pagina) : null)
+    aplicar(p('pp'), tamanhoPagina !== tamanhoPaginaInicial ? String(tamanhoPagina) : null)
+
+    // Filtros: some da URL o que foi desmarcado, entra o que está marcado
+    const prefixo = `${chaveUrl}_f_`
+    Array.from(novos.keys())
+      .filter((chave) => chave.startsWith(prefixo))
+      .forEach((chave) => novos.delete(chave))
+    for (const [coluna, valores] of Object.entries(filtros)) {
+      if (valores.length > 0) novos.set(`${prefixo}${coluna}`, valores.join('~'))
+    }
 
     if (novos.toString() !== searchParams.toString()) {
+      // `replace` para digitar na busca não encher o histórico do navegador
       setSearchParams(novos, { replace: true })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busca, ordenacao, pagina])
+  }, [busca, ordenacao, pagina, tamanhoPagina, filtros])
 
   const colunasVisiveis = colunas.filter((c) => c.fixa || !ocultas.includes(c.id))
 

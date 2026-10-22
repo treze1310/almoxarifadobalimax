@@ -37,6 +37,7 @@ import { DataTable, type ColunaDataTable, type ConsultaServidor } from '@/compon
 import { StatusBadge } from '@/components/ds/StatusBadge'
 import { EmptyState, TableSkeleton } from '@/components/ds/EstadosPagina'
 import { useSearchParams } from 'react-router-dom'
+import { useScrollRestaurado } from '@/hooks/useScrollRestaurado'
 import { supabase } from '@/lib/supabase'
 import { buscarTodasAsPaginas } from '@/lib/consultaPaginada'
 
@@ -77,6 +78,9 @@ const MateriaisEquipamentosPage = () => {
     aproximado: false,
   })
   const [carregandoPagina, setCarregandoPagina] = useState(true)
+
+  // Voltar para a listagem devolve a rolagem onde estava
+  useScrollRestaurado(!carregandoPagina)
   const [consulta, setConsulta] = useState<ConsultaServidor | null>(null)
 
   // Opções dos filtros por coluna: no modo servidor a página carregada não tem

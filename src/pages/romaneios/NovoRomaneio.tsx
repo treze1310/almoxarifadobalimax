@@ -1,8 +1,11 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { contar } from '@/lib/plural'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { SelecaoUnidades } from '@/components/romaneios/SelecaoUnidades'
 import { expandirItensPorPeca } from '@/lib/romaneioPecas'
+import { usePersistentState } from '@/hooks/usePersistentState'
+import { useAuth } from '@/contexts/AuthContext'
+import { ToastAction } from '@/components/ui/toast'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
@@ -274,6 +277,57 @@ const NovoRomaneioPage = () => {
     name: 'itens',
   })
 
+  /**
+   * Rascunho do romaneio em digitação.
+   *
+   * O documento é preenchido com o colaborador na frente e interrompido o
+   * tempo todo — conferir um item, olhar o saldo em outra tela. Cada
+   * interrupção dessas apagava tudo. Vale só para romaneio novo: na edição,
+   * quem manda é o documento que está no banco.
+   */
+  const { userId } = useAuth()
+  const [rascunho, setRascunho, { apagar: apagarRascunho }] = usePersistentState<
+    ComponentFormValues | null
+  >('romaneio-novo', null, { userId })
+
+  const rascunhoRestaurado = useRef(false)
+  useEffect(() => {
+    if (isEditing || rascunhoRestaurado.current) return
+    rascunhoRestaurado.current = true
+
+    const guardado = rascunho
+    const temConteudo =
+      !!guardado && ((guardado.itens?.length ?? 0) > 0 || !!guardado.colaborador_id)
+    if (!temConteudo) return
+
+    form.reset(guardado)
+    replace(guardado.itens ?? [])
+    toast({
+      title: 'Rascunho restaurado',
+      description: 'Este romaneio estava sendo preenchido.',
+      action: (
+        <ToastAction
+          altText="Descartar o rascunho"
+          onClick={() => {
+            apagarRascunho()
+            window.location.reload()
+          }}
+        >
+          Descartar
+        </ToastAction>
+      ),
+    })
+    // Só na montagem: depois quem manda é o formulário
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Guardar o que vai sendo digitado (o hook já espera a digitação parar)
+  useEffect(() => {
+    if (isEditing) return
+    const inscricao = form.watch((valores) => setRascunho(valores as ComponentFormValues))
+    return () => inscricao.unsubscribe()
+  }, [form, isEditing, setRascunho])
+
   const handleSelectRomaneio = async (romaneio: RomaneioRetirada) => {
     setSelectedRomaneio(romaneio)
 
@@ -427,6 +481,8 @@ const NovoRomaneioPage = () => {
 
         const result = await createRomaneio(romaneioData)
         if (result.error === null) {
+          // Documento criado: o rascunho cumpriu o papel
+          apagarRascunho()
           const message = saveAndApprove
             ? `Romaneio de ${data.tipo} criado e aprovado com sucesso! O estoque foi atualizado.`
             : `Romaneio de ${data.tipo} salvo como rascunho. Aguardando aprovação para movimentação do estoque.`

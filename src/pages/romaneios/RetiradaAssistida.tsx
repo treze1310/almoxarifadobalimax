@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
+import { usePersistentState } from '@/hooks/usePersistentState'
+import { ToastAction } from '@/components/ui/toast'
 import {
   AlertTriangle,
   ArrowLeft,
@@ -95,29 +98,81 @@ const PASSOS = [
   { numero: 3, titulo: 'Conferência', descricao: 'Revise e colha a assinatura' },
 ] as const
 
+/**
+ * Rascunho da retirada, guardado enquanto o atendimento não termina.
+ *
+ * Uma retirada é atendida no balcão e interrompida o tempo todo: o almoxarife
+ * sai para conferir uma peça, olha outra tela, a aba perde o foco. Antes, cada
+ * interrupção dessas podia zerar o formulário no meio — responsável, etapa e
+ * itens já bipados. O rascunho fica na sessão daquele computador e é apagado
+ * ao concluir, ao cancelar e no logout.
+ */
+interface RascunhoRetirada {
+  passo: 1 | 2 | 3
+  responsavel?: ResponsavelData
+  centroCustoOrigemId: string
+  centroCustoId: string
+  data: string
+  itens: ItemRetirada[]
+  observacoes: string
+}
+
+const horaLocalAgora = () => {
+  const agora = new Date()
+  // `toISOString` devolve UTC e empurraria o horário; aqui o valor é local.
+  agora.setMinutes(agora.getMinutes() - agora.getTimezoneOffset())
+  return agora.toISOString().slice(0, 16)
+}
+
 export const RetiradaAssistida = () => {
   const navigate = useNavigate()
   const { toast } = useToast()
   const { usuario } = usePermissoes()
+  const { userId } = useAuth()
   const { createRomaneio } = useRomaneios()
 
-  const [passo, setPasso] = useState<1 | 2 | 3>(1)
+  const [rascunho, setRascunho, { apagar: apagarRascunhoRetirada, restaurado }] =
+    usePersistentState<RascunhoRetirada>(
+      'retirada-assistida',
+      {
+        passo: 1,
+        responsavel: undefined,
+        centroCustoOrigemId: '',
+        centroCustoId: '',
+        data: horaLocalAgora(),
+        itens: [],
+        observacoes: '',
+      },
+      { userId },
+    )
+
+  const campo = <C extends keyof RascunhoRetirada>(nome: C) =>
+    (valor: React.SetStateAction<RascunhoRetirada[C]>) =>
+      setRascunho((atual) => ({
+        ...atual,
+        [nome]:
+          typeof valor === 'function'
+            ? (valor as (anterior: RascunhoRetirada[C]) => RascunhoRetirada[C])(atual[nome])
+            : valor,
+      }))
+
   const [salvando, setSalvando] = useState(false)
 
   // Passo 1
-  const [responsavel, setResponsavel] = useState<ResponsavelData | undefined>()
-  const [centroCustoOrigemId, setCentroCustoOrigemId] = useState('')
-  const [centroCustoId, setCentroCustoId] = useState('')
-  // Data e hora, como no formulário completo: a hora da retirada importa.
-  // `toISOString` devolve UTC e empurraria o horário; aqui o valor é local.
-  const [data, setData] = useState(() => {
-    const agora = new Date()
-    agora.setMinutes(agora.getMinutes() - agora.getTimezoneOffset())
-    return agora.toISOString().slice(0, 16)
-  })
+  const passo = rascunho.passo
+  const setPasso = campo('passo')
+  const responsavel = rascunho.responsavel
+  const setResponsavel = campo('responsavel')
+  const centroCustoOrigemId = rascunho.centroCustoOrigemId
+  const setCentroCustoOrigemId = campo('centroCustoOrigemId')
+  const centroCustoId = rascunho.centroCustoId
+  const setCentroCustoId = campo('centroCustoId')
+  const data = rascunho.data
+  const setData = campo('data')
 
   // Passo 2
-  const [itens, setItens] = useState<ItemRetirada[]>([])
+  const itens = rascunho.itens
+  const setItens = campo('itens')
   const [buscando, setBuscando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
   const [termo, setTermo] = useState('')
@@ -128,9 +183,47 @@ export const RetiradaAssistida = () => {
   const [inserindoPecas, setInserindoPecas] = useState(false)
   const [erroPecas, setErroPecas] = useState<string | null>(null)
 
-  // Passo 3
+  // Passo 3. A assinatura fica fora do rascunho de propósito: é um desenho
+  // feito na hora, diante de quem recebe, e não se guarda para depois.
   const [assinatura, setAssinatura] = useState<string | null>(null)
-  const [observacoes, setObservacoes] = useState('')
+  const observacoes = rascunho.observacoes
+  const setObservacoes = campo('observacoes')
+
+  /** Começar do zero: usado ao concluir e ao cancelar */
+  const descartarRascunho = useCallback(() => {
+    apagarRascunhoRetirada()
+    setRascunho({
+      passo: 1,
+      responsavel: undefined,
+      centroCustoOrigemId: '',
+      centroCustoId: '',
+      data: horaLocalAgora(),
+      itens: [],
+      observacoes: '',
+    })
+    setAssinatura(null)
+  }, [apagarRascunhoRetirada, setRascunho])
+
+  // Avisar que a tela não voltou vazia por acaso
+  const avisouRascunho = useRef(false)
+  useEffect(() => {
+    if (!restaurado || avisouRascunho.current) return
+    const temConteudo = rascunho.itens.length > 0 || !!rascunho.responsavel
+    if (!temConteudo) return
+
+    avisouRascunho.current = true
+    toast({
+      title: 'Rascunho restaurado',
+      description: `Retirada em andamento, na etapa ${rascunho.passo} de 3.`,
+      action: (
+        <ToastAction altText="Descartar o rascunho" onClick={descartarRascunho}>
+          Descartar
+        </ToastAction>
+      ),
+    })
+    // Só na montagem: é um aviso, não um acompanhamento
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // A origem de uma retirada é sempre o almoxarifado; vem preenchida e pode ser
   // trocada. Sem isso o romaneio sai sem origem e destoa dos antigos nos
@@ -477,6 +570,8 @@ export const RetiradaAssistida = () => {
         },
       })
 
+      // Retirada concluída: a próxima começa limpa
+      descartarRascunho()
       navigate(`/romaneios?item=${romaneio.id}`)
     } catch (erro) {
       toast({
@@ -495,7 +590,11 @@ export const RetiradaAssistida = () => {
         titulo="Retirada assistida"
         descricao="Bipe os itens, confira o saldo e colha a assinatura de quem recebe."
         acoes={
-          <Button variant="outline" onClick={() => navigate('/romaneios')}>
+          <Button
+            variant="outline"
+            onClick={() => navigate('/romaneios')}
+            title="O que já foi preenchido continua aqui quando você voltar"
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
           </Button>
@@ -892,7 +991,15 @@ export const RetiradaAssistida = () => {
       <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-2 border-t bg-background/95 py-4 backdrop-blur">
         <Button
           variant="outline"
-          onClick={() => (passo === 1 ? navigate('/romaneios') : setPasso((p) => (p - 1) as 1 | 2))}
+          onClick={() => {
+            if (passo > 1) {
+              setPasso((p) => (p - 1) as 1 | 2)
+              return
+            }
+            // Cancelar é desistir: o rascunho não fica esperando
+            descartarRascunho()
+            navigate('/romaneios')
+          }}
           disabled={salvando}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />

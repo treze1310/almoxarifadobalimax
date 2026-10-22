@@ -15,6 +15,8 @@ import { contar, plural } from '../src/lib/plural'
 import { enderecoWeb, enderecoWebLegivel } from '../src/lib/enderecoWeb'
 import { palavrasDaBusca, textoComparavel } from '../src/lib/textoComparavel'
 import { expandirItensPorPeca, type LinhaComPecas } from '../src/lib/romaneioPecas'
+import { chaveDeRascunho, limparRascunhos } from '../src/hooks/usePersistentState'
+import { ehErroDeChunk } from '../src/lib/erroDeChunk'
 import {
   agruparSugestoes,
   forcaDaSugestao,
@@ -908,5 +910,57 @@ describe('esvaziar campo de referência no cadastro de material', () => {
     const payload = paraOBanco({ nome: 'Furadeira' })
     expect('codigo' in payload).toBe(false)
     expect('reposicao_automatica' in payload).toBe(false)
+  })
+})
+
+/**
+ * Rascunho de tela e erro de chunk.
+ *
+ * O "refresh" ao alternar telas tinha duas causas: evento de auth derrubando a
+ * árvore (corrigido nos contextos e nos guards, que não desmontam mais tela já
+ * renderizada) e estado vivendo só em `useState`. Aqui ficam as peças puras da
+ * segunda parte.
+ */
+describe('chave de rascunho por usuário', () => {
+  test('a chave separa usuários na mesma máquina', () => {
+    expect(chaveDeRascunho('retirada-assistida', 'user-1')).toBe(
+      'balimax:user-1:retirada-assistida',
+    )
+    expect(chaveDeRascunho('retirada-assistida', 'user-2')).not.toBe(
+      chaveDeRascunho('retirada-assistida', 'user-1'),
+    )
+  })
+
+  // Sem usuário (antes de o login resolver) o rascunho não pode cair na chave
+  // de ninguém
+  test('sem usuário a chave é a de anônimo', () => {
+    expect(chaveDeRascunho('x', null)).toBe('balimax:anonimo:x')
+    expect(chaveDeRascunho('x')).toBe('balimax:anonimo:x')
+  })
+
+  test('limpar rascunhos tira só as chaves do sistema', () => {
+    sessionStorage.setItem('balimax:user-1:retirada-assistida', '{"versao":"v1","valor":1}')
+    sessionStorage.setItem('tema-preferido', 'escuro')
+
+    limparRascunhos()
+
+    expect(sessionStorage.getItem('balimax:user-1:retirada-assistida')).toBeNull()
+    // Preferência do navegador não é rascunho e não se apaga no logout
+    expect(sessionStorage.getItem('tema-preferido')).toBe('escuro')
+  })
+})
+
+describe('erro de chunk depois de um deploy', () => {
+  // A aba aberta desde antes do deploy pede um arquivo que já não existe
+  test('reconhece as mensagens dos navegadores', () => {
+    expect(ehErroDeChunk(new Error('Failed to fetch dynamically imported module: /assets/x.js'))).toBe(true)
+    expect(ehErroDeChunk(new Error('error loading dynamically imported module'))).toBe(true)
+    expect(ehErroDeChunk(new Error('Importing a module script failed.'))).toBe(true)
+  })
+
+  test('erro comum da tela não é confundido com deploy', () => {
+    expect(ehErroDeChunk(new Error('Cannot read properties of undefined'))).toBe(false)
+    expect(ehErroDeChunk(null)).toBe(false)
+    expect(ehErroDeChunk(undefined)).toBe(false)
   })
 })

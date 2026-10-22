@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useScrollRestaurado } from '@/hooks/useScrollRestaurado'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
@@ -127,6 +128,9 @@ const documentoEditavel = (status?: string | null) =>
   status === 'pendente' || status === 'cancelado' || !status
 
 const RomaneiosPage = () => {
+  // Voltar para a listagem devolve a rolagem onde estava
+  useScrollRestaurado()
+
   const navigate = useNavigate()
   const [selectedRomaneio, setSelectedRomaneio] = useState<Romaneio | null>(null)
   const [motivoCancelamento, setMotivoCancelamento] = useState('')

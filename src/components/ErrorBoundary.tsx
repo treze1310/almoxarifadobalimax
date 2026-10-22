@@ -1,6 +1,7 @@
 import React from 'react'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ehErroDeChunk, recarregarSeForErroDeChunk } from '@/lib/erroDeChunk'
 
 interface Props {
   children: React.ReactNode
@@ -22,6 +23,10 @@ class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(erro: Error, info: React.ErrorInfo) {
+    // Depois de um deploy, a aba antiga não acha mais o arquivo da tela que
+    // está abrindo. Não é erro desta tela e recarregar resolve — uma vez só.
+    if (recarregarSeForErroDeChunk(erro)) return
+
     console.error('[ErrorBoundary] erro não tratado:', erro, info.componentStack)
   }
 
@@ -40,8 +45,9 @@ class ErrorBoundary extends React.Component<Props, State> {
         <div className="space-y-1">
           <h2 className="text-lg font-semibold">Algo deu errado nesta tela</h2>
           <p className="max-w-md text-sm text-muted-foreground">
-            O erro foi registrado no console do navegador. Você pode recarregar a página e tentar
-            novamente — seus dados não foram perdidos.
+            {ehErroDeChunk(erro)
+              ? 'O sistema foi atualizado enquanto esta aba estava aberta. Recarregue para pegar a versão nova.'
+              : 'O erro foi registrado no console do navegador. Você pode recarregar a página e tentar novamente — seus dados não foram perdidos.'}
           </p>
         </div>
         <details className="max-w-xl text-left">

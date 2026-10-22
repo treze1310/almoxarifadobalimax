@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Loader2, ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -22,7 +22,18 @@ const RequirePermission: React.FC<RequirePermissionProps> = ({
 }) => {
   const { can, loading, perfilNome } = usePermissoes()
 
-  if (loading) {
+  /**
+   * Tela que já apareceu não volta para o spinner.
+   *
+   * Era daqui que vinha o "refresh" ao alternar de aba: um evento de auth
+   * fazia as permissões recarregarem, `loading` voltava a `true` e este guard
+   * desmontava a tela — levando com ela o formulário preenchido, a etapa do
+   * wizard e os itens bipados. Hoje `loading` é só a primeira carga, e esta
+   * trava garante que uma recarga nunca derrube o que está na tela.
+   */
+  const jaLiberado = useRef(false)
+
+  if (loading && !jaLiberado.current) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -48,6 +59,8 @@ const RequirePermission: React.FC<RequirePermissionProps> = ({
       </div>
     )
   }
+
+  jaLiberado.current = true
 
   return <>{children}</>
 }

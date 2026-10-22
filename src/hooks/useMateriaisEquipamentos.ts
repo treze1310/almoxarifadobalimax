@@ -203,7 +203,13 @@ export function useMateriaisEquipamentos() {
     status?: string
     includeInactive?: boolean
   }) => {
-    setLoading(true)
+      // Recarga mantém o que já está na tela: `loading` só na primeira vez.
+      // Pondo `loading` a cada recarga, voltar para uma listagem já visitada
+      // mostrava a tela de carregando de novo e piscava tudo.
+    setMateriaisEquipamentos((atuais) => {
+      if (atuais.length === 0) setLoading(true)
+      return atuais
+    })
     try {
       console.log('🔍 Buscando materiais com opções:', options)
       
