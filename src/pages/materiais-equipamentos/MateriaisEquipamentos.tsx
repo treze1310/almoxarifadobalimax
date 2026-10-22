@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { generateMaterialCode } from '@/services/materialCodeService'
 import { contar } from '@/lib/plural'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Edit, Trash2, Package, Wrench, Eye, RefreshCw, AlertTriangle, Copy, Tag, FileSpreadsheet } from 'lucide-react'
+import { PlusCircle, Edit, Trash2, Package, Wrench, Eye, RefreshCw, AlertTriangle, Copy, Tag, FileSpreadsheet, MoreHorizontal } from 'lucide-react'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { verificarStatusCalibracao } from '@/utils/calibracao'
 import {
@@ -43,6 +43,12 @@ import { buscarTodasAsPaginas } from '@/lib/consultaPaginada'
 
 import type { MaterialEquipamentoFormData } from '@/lib/validations'
 import { gerarEtiquetasPDF, type ItemEtiqueta } from '@/utils/etiquetasPdf'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { ImportarCSVDialog } from '@/components/materiais-equipamentos/ImportarCSVDialog'
 import { useToast } from '@/components/ui/use-toast'
 
@@ -507,6 +513,9 @@ const MateriaisEquipamentosPage = () => {
       cabecalho: 'Item',
       fixa: true,
       semFiltro: true,
+      // Com 330px livres, código + nome curto desperdiçavam a largura que
+      // Estoque, Valor, Status e Ações precisavam
+      largura: 240,
       valor: (m) => `${m.codigo ?? ''} ${m.nome ?? ''}`.trim(),
       valorOrdenacao: (m) => m.codigo ?? '',
       campoServidor: 'codigo',
@@ -529,6 +538,8 @@ const MateriaisEquipamentosPage = () => {
     {
       id: 'tipo',
       cabecalho: 'Tipo',
+      largura: 90,
+      nowrap: true,
       valor: (m) => m.tipo ?? '—',
       campoServidor: 'tipo',
       opcoesFiltro: [
@@ -539,6 +550,7 @@ const MateriaisEquipamentosPage = () => {
     {
       id: 'categoria',
       cabecalho: 'Categoria',
+      larguraMax: 130,
       valor: (m) => m.categoria || 'Sem categoria',
       campoServidor: 'categoria',
       opcoesFiltro: listasDeFiltro.categorias,
@@ -546,6 +558,9 @@ const MateriaisEquipamentosPage = () => {
     {
       id: 'localizacao',
       cabecalho: 'Localização',
+      // "ALMOX - PRATELEIRA 04" quebrava em duas linhas
+      larguraMax: 140,
+      nowrap: true,
       valor: (m) => m.localizacao?.nome || 'Não definida',
       campoServidor: 'localizacao_id',
       opcoesFiltro: listasDeFiltro.localizacoes,
@@ -553,6 +568,9 @@ const MateriaisEquipamentosPage = () => {
     {
       id: 'marca',
       cabecalho: 'Marca/Modelo',
+      // Secundárias: escondidas em tela estreita, de volta pelo botão Colunas
+      prioridade: 'baixa',
+      larguraMax: 150,
       valor: (m) => m.marcas?.nome || 'Sem marca',
       campoServidor: 'marca_id',
       opcoesFiltro: listasDeFiltro.marcas,
@@ -566,6 +584,9 @@ const MateriaisEquipamentosPage = () => {
     {
       id: 'centro_custo',
       cabecalho: 'Centro de custo',
+      cabecalhoCurto: 'C. Custo',
+      prioridade: 'baixa',
+      larguraMax: 150,
       valor: (m) => m.centros_custo?.codigo || 'Sem centro de custo',
       celula: (m) =>
         m.centros_custo ? (
@@ -584,6 +605,8 @@ const MateriaisEquipamentosPage = () => {
       id: 'estoque',
       cabecalho: 'Estoque',
       alinhamento: 'right',
+      largura: 104,
+      nowrap: true,
       campoServidor: 'situacao_estoque',
       opcoesFiltro: [
         { rotulo: 'Zerado', valor: 'zerado' },
@@ -626,6 +649,8 @@ const MateriaisEquipamentosPage = () => {
       cabecalho: 'Valor',
       semFiltro: true,
       alinhamento: 'right',
+      largura: 92,
+      nowrap: true,
       valor: (m) => formatCurrency(m.valor_unitario),
       valorOrdenacao: (m) => m.valor_unitario ?? 0,
       campoServidor: 'valor_unitario',
@@ -633,6 +658,8 @@ const MateriaisEquipamentosPage = () => {
     {
       id: 'calibracao',
       cabecalho: 'Calibração',
+      prioridade: 'baixa',
+      larguraMax: 150,
       // O estado da calibração é calculado (vence em X meses), não existe
       // como coluna no banco — por isso não filtra nem ordena no servidor.
       semFiltro: true,
@@ -661,6 +688,8 @@ const MateriaisEquipamentosPage = () => {
     {
       id: 'status',
       cabecalho: 'Status',
+      largura: 104,
+      nowrap: true,
       campoServidor: 'status',
       opcoesFiltro: [
         { rotulo: getStatusLabel('ativo'), valor: 'ativo' },
@@ -806,22 +835,25 @@ const MateriaisEquipamentosPage = () => {
         )}
       </div>
 
-      {/* Alerta de estoque baixo/zerado */}
-      {contadores.estoqueBaixo > 0 && (
-        <Alert variant="destructive" className="cursor-pointer" onClick={() => setFiltroEstoqueBaixo(true)}>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Atenção: estoque baixo ou zerado</AlertTitle>
-          <AlertDescription>
-            {contadores.estoqueBaixo} {contadores.estoqueBaixo === 1 ? 'item está' : 'itens estão'} no
-            ponto de pedido ou com estoque zerado. Clique para filtrar.
-          </AlertDescription>
-        </Alert>
+      {/* Aviso de estoque em uma linha.
+          O banner de três linhas dizia o mesmo que o filtro "Estoque
+          baixo/zerado" logo acima, com o mesmo número, e junto com a dica de
+          clique empurrava a tabela ~120px para baixo — numa tela de 768px isso
+          são duas linhas e meia de itens. A dica virou o título da tabela
+          (tooltip na linha). */}
+      {contadores.estoqueBaixo > 0 && !filtroEstoqueBaixo && (
+        <button
+          type="button"
+          onClick={() => setFiltroEstoqueBaixo(true)}
+          className="flex w-full items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-left text-ds-caption text-destructive hover:bg-destructive/15"
+        >
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span className="truncate">
+            {contar(contadores.estoqueBaixo, 'item está', 'itens estão')} no ponto de pedido ou com
+            estoque zerado — clique para ver só eles.
+          </span>
+        </button>
       )}
-
-      <div className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
-        <Eye className="h-3 w-3" />
-        Clique para editar ou clique com o botão direito para mais opções
-      </div>
 
       <DataTable
         dados={filteredMateriais}
@@ -847,6 +879,9 @@ const MateriaisEquipamentosPage = () => {
           </Button>
         )}
         acoesLinha={(material) => (
+          /* Duas ações à mão (etiqueta e editar) e o resto no menu: cinco
+             botões ocupavam 188px e eram justamente eles que empurravam
+             Estoque, Valor e Status para fora da tela em 1366px. */
           <>
             <Button
               variant="ghost"
@@ -870,41 +905,43 @@ const MateriaisEquipamentosPage = () => {
                 <Edit className="h-4 w-4" />
               </Button>
             )}
-            {podeCriar && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                title="Clonar"
-                aria-label="Clonar"
-                onClick={() => handleCloneClick(material)}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            )}
-            {podeMovimentar && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                title="Movimentar estoque"
-                aria-label="Movimentar estoque"
-                onClick={() => setMovimentacaoMaterial(material)}
-              >
-                <Package className="h-4 w-4" />
-              </Button>
-            )}
-            {podeExcluir && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-destructive hover:text-destructive"
-                title="Excluir"
-                aria-label="Excluir"
-                onClick={() => handleDeleteClick(material)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+            {(podeCriar || podeMovimentar || podeExcluir) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    title="Mais ações"
+                    aria-label="Mais ações"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {podeCriar && (
+                    <DropdownMenuItem onClick={() => handleCloneClick(material)}>
+                      <Copy className="mr-2 h-4 w-4" />
+                      Clonar
+                    </DropdownMenuItem>
+                  )}
+                  {podeMovimentar && (
+                    <DropdownMenuItem onClick={() => setMovimentacaoMaterial(material)}>
+                      <Package className="mr-2 h-4 w-4" />
+                      Movimentar estoque
+                    </DropdownMenuItem>
+                  )}
+                  {podeExcluir && (
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={() => handleDeleteClick(material)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Excluir
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             {!podeEditar && !podeCriar && !podeExcluir && (
               <span className="text-xs text-muted-foreground">Somente leitura</span>
@@ -930,8 +967,9 @@ const MateriaisEquipamentosPage = () => {
 
       {/* Create Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent 
-          className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto items-start"
+        <DialogContent
+          tamanho="xl"
+          className="flex max-h-[calc(100dvh-2rem)] flex-col items-start"
           style={{
             position: 'absolute',
             top: dialogPosition.top,
@@ -939,9 +977,6 @@ const MateriaisEquipamentosPage = () => {
             transform: 'translate(-50%, -50%)',
             margin: 0,
             zIndex: 9999,
-            maxHeight: '90vh',
-            width: 'min(95vw, 800px)',
-            overflowY: 'auto'
           }}
         >
           <DialogHeader>
@@ -950,14 +985,20 @@ const MateriaisEquipamentosPage = () => {
               Preencha os dados para cadastrar um novo item.
             </DialogDescription>
           </DialogHeader>
-          <MaterialEquipamentoForm onSubmit={handleCreate} onCancel={() => setIsCreateDialogOpen(false)} />
+          <div className="-mx-1 min-h-0 w-full flex-1 overflow-y-auto px-1">
+            <MaterialEquipamentoForm
+              onSubmit={handleCreate}
+              onCancel={() => setIsCreateDialogOpen(false)}
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Clone Dialog */}
       <Dialog open={!!cloningMaterial} onOpenChange={() => setCloningMaterial(null)}>
         <DialogContent
-          className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto items-start"
+          tamanho="xl"
+          className="flex max-h-[calc(100dvh-2rem)] flex-col items-start"
           style={{
             position: 'absolute',
             top: dialogPosition.top,
@@ -965,9 +1006,6 @@ const MateriaisEquipamentosPage = () => {
             transform: 'translate(-50%, -50%)',
             margin: 0,
             zIndex: 9999,
-            maxHeight: '90vh',
-            width: 'min(95vw, 800px)',
-            overflowY: 'auto'
           }}
         >
           <DialogHeader>
@@ -985,11 +1023,13 @@ const MateriaisEquipamentosPage = () => {
             </DialogDescription>
           </DialogHeader>
           {cloningMaterial && (
-            <MaterialEquipamentoForm
-              initialData={cloningMaterial}
-              onSubmit={handleCloneSubmit}
-              onCancel={() => setCloningMaterial(null)}
-            />
+            <div className="-mx-1 min-h-0 w-full flex-1 overflow-y-auto px-1">
+              <MaterialEquipamentoForm
+                initialData={cloningMaterial}
+                onSubmit={handleCloneSubmit}
+                onCancel={() => setCloningMaterial(null)}
+              />
+            </div>
           )}
         </DialogContent>
       </Dialog>

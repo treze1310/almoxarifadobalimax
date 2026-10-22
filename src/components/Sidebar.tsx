@@ -21,6 +21,8 @@ import {
   History,
   Upload,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   X,
   LogOut,
   User,
@@ -157,9 +159,11 @@ const MenuContent = ({ onNavigate }: { onNavigate?: () => void }) => {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <ScrollArea className="flex-1">
-        <nav className="space-y-4 p-3">
+    // `min-h-0` é o que deixa a navegação rolar sem empurrar o rodapé da barra
+    // (usuário e "Sair") para fora da tela num notebook de 768px
+    <div className="flex h-full min-h-0 flex-col">
+      <ScrollArea className="min-h-0 flex-1">
+        <nav className="space-y-4 p-3 [@media(max-height:800px)]:space-y-3">
           {/* RF-07: enquanto as permissões carregam, mostra skeleton em vez de
               um menu vazio que faz o usuário parecer sem acesso */}
           {carregandoPermissoes
@@ -168,14 +172,15 @@ const MenuContent = ({ onNavigate }: { onNavigate?: () => void }) => {
               ))
             : gruposVisiveis.map((grupo) => (
                 <div key={grupo.grupo} className="space-y-1">
-                  <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground [@media(max-height:800px)]:pb-0.5">
                     {grupo.grupo}
                   </p>
                   {grupo.itens.map((item: any) => (
                     <Link to={item.href} key={item.href} onClick={handleNavClick}>
                       <Button
                         variant={isActive(item.href) ? 'secondary' : 'ghost'}
-                        className="h-auto w-full justify-start py-2 text-ds-body"
+                        className="h-auto w-full justify-start py-2 text-ds-body [@media(max-height:800px)]:py-1.5"
+                        title={item.title}
                       >
                         <item.icon className="mr-2 h-4 w-4 shrink-0" />
                         <span className="truncate">{item.title}</span>
@@ -187,9 +192,9 @@ const MenuContent = ({ onNavigate }: { onNavigate?: () => void }) => {
         </nav>
       </ScrollArea>
       
-      {/* 📱 Footer com usuário */}
-      <div className="border-t">
-        <div className="p-3 space-y-2">
+      {/* Rodapé do usuário: sempre visível, não rola com o menu */}
+      <div className="shrink-0 border-t">
+        <div className="space-y-2 p-3 [@media(max-height:800px)]:space-y-1 [@media(max-height:800px)]:p-2">
           {/* Informações do usuário */}
           <div className="flex items-center space-x-2 p-2 rounded-lg bg-muted/50">
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -199,7 +204,7 @@ const MenuContent = ({ onNavigate }: { onNavigate?: () => void }) => {
               <p className="text-sm font-medium truncate">
                 {user?.email?.split('@')[0] || 'Usuário'}
               </p>
-              <p className="text-xs text-muted-foreground truncate">
+              <p className="truncate text-xs text-muted-foreground" title={user?.email}>
                 {user?.email}
               </p>
               <p className="text-xs text-primary truncate">
@@ -220,18 +225,41 @@ const MenuContent = ({ onNavigate }: { onNavigate?: () => void }) => {
           </Button>
         </div>
         
-        <div className="p-3 pt-0 text-center">
-          <p className="text-xs text-muted-foreground">
-            Sistema de Almoxarifado
-          </p>
-        </div>
       </div>
     </div>
   )
 }
 
+const CHAVE_RECOLHIDA = 'balimax:sidebar-recolhida'
+
 export const Sidebar = () => {
   const [open, setOpen] = useState(false)
+
+  /**
+   * Barra recolhida: em 1366px de largura, recolher libera ~200px para a
+   * tabela, que é a diferença entre ver e não ver as colunas de Status, Valor
+   * e Ações. A escolha fica guardada porque é preferência de quem usa, não de
+   * cada visita.
+   */
+  const [recolhida, setRecolhida] = useState(() => {
+    try {
+      return localStorage.getItem(CHAVE_RECOLHIDA) === '1'
+    } catch {
+      return false
+    }
+  })
+
+  const alternarRecolhida = () => {
+    setRecolhida((atual) => {
+      const nova = !atual
+      try {
+        localStorage.setItem(CHAVE_RECOLHIDA, nova ? '1' : '0')
+      } catch {
+        // Armazenamento bloqueado: vale só para esta visita
+      }
+      return nova
+    })
+  }
 
   return (
     <>
@@ -258,13 +286,42 @@ export const Sidebar = () => {
         </Sheet>
       </div>
 
-      {/* 📱 DESKTOP: Sidebar tradicional */}
-      <aside className="hidden lg:flex flex-col w-64 border-r bg-card">
-        <div className="flex items-center h-16 border-b px-6">
-          <SidebarIcon className="h-6 w-6 mr-2" />
-          <h2 className="font-bold text-lg">Almoxarifado</h2>
+      {/* DESKTOP: barra com a altura da tela, para o rodapé ficar sempre à mão */}
+      <aside
+        className={`hidden h-dvh shrink-0 flex-col border-r bg-card lg:flex ${
+          recolhida ? 'w-16' : 'w-60'
+        }`}
+      >
+        <div
+          className={`flex h-14 shrink-0 items-center border-b md:h-16 ${
+            recolhida ? 'justify-center px-2' : 'px-4'
+          }`}
+        >
+          {!recolhida && (
+            <>
+              <SidebarIcon className="mr-2 h-5 w-5 shrink-0" />
+              <h2 className="truncate font-bold text-base">Almoxarifado</h2>
+            </>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={alternarRecolhida}
+            className={`h-8 w-8 shrink-0 ${recolhida ? '' : 'ml-auto'}`}
+            title={recolhida ? 'Expandir o menu' : 'Recolher o menu (libera espaço para a tabela)'}
+            aria-label={recolhida ? 'Expandir o menu' : 'Recolher o menu'}
+          >
+            {recolhida ? (
+              <PanelLeftOpen className="h-4 w-4" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" />
+            )}
+          </Button>
         </div>
-        <MenuContent />
+        {/* Recolhida, a barra fica só com o botão de expandir: o menu inteiro
+            em ícones exigiria repensar grupos e submenus, e meio caminho
+            (ícones sem rótulo) é pior que um atalho claro para voltar. */}
+        {!recolhida && <MenuContent />}
       </aside>
     </>
   )

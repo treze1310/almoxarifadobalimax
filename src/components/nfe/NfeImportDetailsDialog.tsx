@@ -175,18 +175,18 @@ export function NfeImportDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-[1440px] max-h-[calc(100dvh-2rem)] overflow-hidden flex flex-col p-4 sm:p-6">
+        <DialogHeader className="shrink-0 pr-6">
           <DialogTitle className="flex items-center space-x-2">
             <FileText className="h-5 w-5" />
             <span>NFe {importacao.numero_nfe} - Série {importacao.serie_nfe}</span>
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="break-all">
             Chave de acesso: {importacao.chave_nfe}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
           <Tabs defaultValue="geral" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="geral">Informações Gerais</TabsTrigger>
@@ -312,7 +312,17 @@ export function NfeImportDetailsDialog({
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    <Table>
+                    <Table className="min-w-[760px] table-fixed">
+                      <colgroup>
+                        <col className="w-[9%]" />
+                        <col className="w-[34%]" />
+                        <col className="w-[9%]" />
+                        <col className="w-[7%]" />
+                        <col className="w-[9%]" />
+                        <col className="w-[11%]" />
+                        <col className="w-[11%]" />
+                        <col className="w-[10%]" />
+                      </colgroup>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Código</TableHead>
@@ -328,11 +338,11 @@ export function NfeImportDetailsDialog({
                       <TableBody>
                         {importacao.nfe_itens?.map((item) => (
                           <TableRow key={item.id}>
-                            <TableCell className="font-mono text-xs">
+                            <TableCell className="break-words font-mono text-xs">
                               {item.codigo_produto}
                             </TableCell>
                             <TableCell>
-                              <div className="max-w-xs">
+                              <div className="min-w-0 break-words">
                                 {item.materiais_equipamentos?.id ? (
                                   <button
                                     type="button"
@@ -342,11 +352,11 @@ export function NfeImportDetailsDialog({
                                     className="flex max-w-full items-center gap-1 text-left text-sm font-medium text-primary underline-offset-2 hover:underline"
                                     title={`Abrir ${item.materiais_equipamentos.codigo} no cadastro`}
                                   >
-                                    <span className="truncate">{item.descricao_produto}</span>
+                                    <span className="whitespace-normal break-words">{item.descricao_produto}</span>
                                     <ExternalLink className="h-3 w-3 shrink-0" />
                                   </button>
                                 ) : (
-                                  <p className="truncate text-sm font-medium">
+                                  <p className="whitespace-normal break-words text-sm font-medium">
                                     {item.descricao_produto}
                                   </p>
                                 )}
@@ -394,7 +404,7 @@ export function NfeImportDetailsDialog({
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell className="font-mono text-xs">
+                            <TableCell className="break-words font-mono text-xs">
                               {item.ncm}
                             </TableCell>
                             <TableCell>{item.unidade}</TableCell>
@@ -483,7 +493,7 @@ export function NfeImportDetailsDialog({
           </Tabs>
         </div>
 
-        <DialogFooter className="flex justify-between">
+        <DialogFooter className="shrink-0 flex justify-between">
           <div className="flex space-x-2">
             {!isEditing && (
               <Button variant="outline" onClick={() => setIsEditing(true)}>

@@ -320,7 +320,8 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel }: Mat
           name="nome"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-lg font-semibold">Nome do Material/Equipamento *</FormLabel>
+              {/* Era o único label em tamanho de título no formulário */}
+              <FormLabel>Nome do Material/Equipamento *</FormLabel>
               <FormControl>
                 <Input 
                   placeholder="Ex: Parafuso Phillips, Furadeira Elétrica, Capacete de Segurança" 

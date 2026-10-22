@@ -239,6 +239,8 @@ const HistoricoNFePage = () => {
     },
     {
       id: 'fornecedor',
+      // Estourava a tabela em ~20px e cortava o cabeçalho "Ações"
+      largura: 260,
       cabecalho: 'Fornecedor',
       valor: (n) => n.fornecedores?.nome || 'Não informado',
       celula: (n) => (
@@ -310,14 +312,12 @@ const HistoricoNFePage = () => {
           </>
         }
       />
+        {/* O "Atualizar" vive no cabeçalho da página; aqui ele aparecia de
+            novo, lado a lado com o primeiro */}
         <div className="flex items-center space-x-4">
           <Badge variant="secondary">
             {contar(importacoes.length, 'importação', 'importações')}
           </Badge>
-          <Button variant="outline" size="sm" onClick={fetchImportacoes} disabled={loading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
         </div>
       </div>
 

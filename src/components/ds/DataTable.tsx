@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { contar } from '@/lib/plural'
 import { useSearchParams } from 'react-router-dom'
 import {
@@ -63,6 +63,26 @@ export interface ColunaDataTable<T> {
   opcoesFiltro?: Array<{ rotulo: string; valor: string }>
   className?: string
   alinhamento?: 'left' | 'right' | 'center'
+  /**
+   * Largura da coluna. Sem isto, as colunas de texto longo (Item, Colaborador,
+   * Fornecedor) comem a largura disponível e empurram Status, Valor e Ações
+   * para fora da tela num notebook de 1366px.
+   */
+  largura?: number
+  /** Teto da largura; o conteúdo passa a ser truncado com `title` completo */
+  larguraMax?: number
+  /** Código, documento, data, valor: não quebram linha */
+  nowrap?: boolean
+  /**
+   * Rótulo curto para o cabeçalho ("C. Custo"), com o nome completo no
+   * `title`. Cabeçalho longo quebrava em 2–3 linhas e crescia a tabela.
+   */
+  cabecalhoCurto?: string
+  /**
+   * `baixa` esconde a coluna por padrão em tela estreita (menos de 1600px);
+   * o usuário reativa pelo botão de colunas, e a escolha fica guardada.
+   */
+  prioridade?: 'normal' | 'baixa'
 }
 
 /**
@@ -168,8 +188,60 @@ export function DataTable<T>({
   const [tamanhoPagina, setTamanhoPagina] = useState(
     Number(searchParams.get(p('pp')) ?? tamanhoPaginaInicial),
   )
-  const [compacta, setCompacta] = useState(false)
-  const [ocultas, setOcultas] = useState<string[]>([])
+  /**
+   * Densidade compacta por padrão em tela baixa.
+   *
+   * Num notebook de 768px, a linha de 48px mostra 6 linhas abaixo do
+   * cabeçalho da página; a de 36px mostra 9. Quem tem tela alta continua com
+   * a densidade folgada.
+   */
+  const [compacta, setCompacta] = useState(
+    () => typeof window !== 'undefined' && window.innerHeight < 900,
+  )
+
+  /**
+   * Colunas escondidas, guardadas por tabela.
+   *
+   * As de `prioridade: 'baixa'` começam escondidas abaixo de 1600px: são as
+   * que, em 1366px, empurravam Estoque, Valor, Status e Ações para fora da
+   * tela. Nada se perde — o botão de colunas traz de volta, e a escolha fica.
+   */
+  const chaveColunas = `balimax:colunas:${chaveUrl}`
+  const [ocultas, setOcultas] = useState<string[]>(() => {
+    try {
+      const guardado = localStorage.getItem(chaveColunas)
+      if (guardado) return JSON.parse(guardado) as string[]
+    } catch {
+      // Armazenamento bloqueado: segue com o padrão
+    }
+
+    if (typeof window !== 'undefined' && window.innerWidth < 1600) {
+      return colunas.filter((c) => c.prioridade === 'baixa' && !c.fixa).map((c) => c.id)
+    }
+    return []
+  })
+
+  /**
+   * Só a escolha do usuário é guardada.
+   *
+   * Gravando também o padrão, a primeira visita congelava o que valia naquele
+   * dia: uma coluna que depois passasse a ser secundária continuava aparecendo
+   * para sempre, porque a lista salva ganhava do padrão.
+   */
+  const escolheuColunas = useRef(false)
+  const alternarColuna = (id: string, visivel: boolean) => {
+    escolheuColunas.current = true
+    setOcultas((prev) => (visivel ? prev.filter((c) => c !== id) : [...prev, id]))
+  }
+
+  useEffect(() => {
+    if (!escolheuColunas.current) return
+    try {
+      localStorage.setItem(chaveColunas, JSON.stringify(ocultas))
+    } catch {
+      // Armazenamento bloqueado: vale só para esta visita
+    }
+  }, [chaveColunas, ocultas])
   const [selecionadas, setSelecionadas] = useState<string[]>([])
 
   // Estado relevante espelhado na URL (RF-08), para a tela ser compartilhável
@@ -390,11 +462,7 @@ export function DataTable<T>({
                   key={coluna.id}
                   checked={coluna.fixa || !ocultas.includes(coluna.id)}
                   disabled={coluna.fixa}
-                  onCheckedChange={(marcada) =>
-                    setOcultas((prev) =>
-                      marcada ? prev.filter((id) => id !== coluna.id) : [...prev, coluna.id],
-                    )
-                  }
+                  onCheckedChange={(marcada) => alternarColuna(coluna.id, !!marcada)}
                 >
                   {coluna.cabecalho}
                 </DropdownMenuCheckboxItem>
@@ -446,15 +514,27 @@ export function DataTable<T>({
               {colunasVisiveis.map((coluna) => (
                 <TableHead
                   key={coluna.id}
+                  style={{
+                    width: coluna.largura,
+                    maxWidth: coluna.larguraMax ?? coluna.largura,
+                  }}
                   className={cn(
-                    'text-ds-table',
+                    'whitespace-nowrap text-ds-table',
                     coluna.alinhamento === 'right' && 'text-right',
                     coluna.alinhamento === 'center' && 'text-center',
                     coluna.className,
                   )}
                 >
-                  <div className="flex items-center gap-1">
-                    <span>{coluna.cabecalho}</span>
+                  <div
+                    className={cn(
+                      'flex items-center gap-1',
+                      coluna.alinhamento === 'right' && 'justify-end',
+                      coluna.alinhamento === 'center' && 'justify-center',
+                    )}
+                  >
+                    <span title={coluna.cabecalho}>
+                      {coluna.cabecalhoCurto ?? coluna.cabecalho}
+                    </span>
                     {!coluna.semFiltro && (
                       <ColumnFilter
                         title={coluna.cabecalho}
@@ -480,7 +560,13 @@ export function DataTable<T>({
                   </div>
                 </TableHead>
               ))}
-              {acoesLinha && <TableHead className="w-[120px] text-right">Ações</TableHead>}
+              {acoesLinha && (
+                // Presa à direita: com overflow, Ações era a primeira a sair
+                // da tela, e é a coluna de onde se edita e imprime etiqueta
+                <TableHead className="sticky right-0 z-10 w-[88px] bg-background text-right">
+                  Ações
+                </TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -513,6 +599,9 @@ export function DataTable<T>({
                       onLinhaClick && 'cursor-pointer hover:bg-muted/50',
                     )}
                     onClick={onLinhaClick ? () => onLinhaClick(linha) : undefined}
+                    // A dica "clique para editar" vivia como texto fixo acima
+                    // da tabela, ocupando altura em toda visita
+                    title={onLinhaClick ? 'Clique para abrir' : undefined}
                   >
                     {acoesEmLote && (
                       <TableCell className="py-1" onClick={(e) => e.stopPropagation()}>
@@ -530,9 +619,18 @@ export function DataTable<T>({
                     {colunasVisiveis.map((coluna) => (
                       <TableCell
                         key={coluna.id}
+                        style={{
+                          width: coluna.largura,
+                          maxWidth: coluna.larguraMax ?? coluna.largura,
+                        }}
+                        // O valor completo fica no `title`: truncar sem isso
+                        // esconderia informação sem dar como vê-la
+                        title={coluna.larguraMax ? coluna.valor(linha) : undefined}
                         className={cn(
                           'text-ds-table',
                           compacta ? 'py-1' : 'py-2',
+                          coluna.nowrap && 'whitespace-nowrap',
+                          coluna.larguraMax && 'truncate',
                           coluna.alinhamento === 'right' && 'text-right',
                           coluna.alinhamento === 'center' && 'text-center',
                           coluna.className,
@@ -542,7 +640,10 @@ export function DataTable<T>({
                       </TableCell>
                     ))}
                     {acoesLinha && (
-                      <TableCell className="py-1" onClick={(e) => e.stopPropagation()}>
+                      <TableCell
+                        className="sticky right-0 z-10 w-[88px] bg-background py-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <div className="flex items-center justify-end gap-1">{acoesLinha(linha)}</div>
                       </TableCell>
                     )}

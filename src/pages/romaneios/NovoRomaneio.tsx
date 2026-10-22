@@ -795,7 +795,7 @@ const NovoRomaneioPage = () => {
           titulo="Informações gerais"
           descricao="Dados principais do romaneio."
         >
-          <div className="col-span-1 grid grid-cols-1 gap-6 md:col-span-12 md:grid-cols-2 lg:grid-cols-4">
+          <div className="col-span-1 grid grid-cols-1 items-end gap-4 md:col-span-12 md:grid-cols-2 lg:grid-cols-4">
             <FormField
               control={form.control}
               name="data_romaneio"
@@ -825,7 +825,7 @@ const NovoRomaneioPage = () => {
                     <CentroCustoSelector
                       value={field.value || ''}
                       onChange={field.onChange}
-                      placeholder="Selecione o centro de custo origem"
+                      placeholder="Origem…"
                       label="Centro de Custo Origem"
                       disabled={isDevolucao}
                     />
@@ -844,7 +844,7 @@ const NovoRomaneioPage = () => {
                     <CentroCustoSelector
                       value={field.value || ''}
                       onChange={field.onChange}
-                      placeholder="Selecione o centro de custo destino"
+                      placeholder="Destino…"
                       label="Centro de Custo Destino"
                       disabled={isDevolucao}
                     />
@@ -881,7 +881,8 @@ const NovoRomaneioPage = () => {
               control={form.control}
               name="observacoes"
               render={({ field }) => (
-                <FormItem className="flex flex-col pt-2">
+                // Texto livre em 1/4 da largura não serve para nada
+                <FormItem className="col-span-full flex flex-col pt-2">
                   <FormLabel>Observações</FormLabel>
                   <FormControl>
                     <Input {...field} placeholder="Observações opcionais..." />

@@ -1,6 +1,7 @@
 import { useLayoutEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/ds/PageHeader'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -673,13 +674,17 @@ const RelatoriosPage = () => {
   }
 
   return (
-    <div className="min-h-screen w-full flex flex-col">
-      {/* Container centralizado com largura máxima */}
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="space-y-6 py-6">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold">Relatórios</h1>
-            <div className="flex items-center gap-2">
+    // O padding e o container próprios faziam o conteúdo começar ~25px mais
+    // abaixo que nas outras telas; agora segue o padding da área de conteúdo
+    <div className="w-full">
+      <div className="w-full">
+        <div className="space-y-6">
+          <PageHeader
+            titulo="Relatórios"
+            descricao="Gere relatórios de estoque, custos e movimentação em PDF."
+            migalhas={[{ label: 'Gestão' }, { label: 'Relatórios' }]}
+            acoes={
+              <div className="flex items-center gap-2">
           {/* RF-15: ferramenta de diagnostico nao aparece em producao */}
           {import.meta.env.DEV && (
             <Button
@@ -691,16 +696,19 @@ const RelatoriosPage = () => {
               Teste Diagnóstico
             </Button>
           )}
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">
-            {REPORT_CONFIGS.length} relatórios disponíveis
-          </span>
-        </div>
-      </div>
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  {REPORT_CONFIGS.length} relatórios disponíveis
+                </span>
+              </div>
+            }
+          />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {REPORT_CONFIGS.map((config) => (
-          <Card key={config.id} className="hover:shadow-sm transition-shadow">
+          // `h-full` + botão em `mt-auto`: com títulos de uma e de duas
+          // linhas, o "Gerar Relatório" ficava em alturas diferentes
+          <Card key={config.id} className="flex h-full flex-col transition-shadow hover:shadow-sm">
             <CardHeader className="p-4 pb-2">
               <div className="flex items-start gap-2">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
@@ -714,7 +722,7 @@ const RelatoriosPage = () => {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3 p-4 pt-0">
+            <CardContent className="flex flex-1 flex-col space-y-3 p-4 pt-0">
               <p className="text-xs text-muted-foreground leading-snug">
                 {config.descricao}
               </p>
@@ -728,6 +736,7 @@ const RelatoriosPage = () => {
               </div>
 
               <Dialog
+                // `mt-auto` empurra o botão para o pé do card
                 open={selectedReport === config.id}
                 onOpenChange={(open) => {
                   if (!open && selectedReport === config.id) {
@@ -739,7 +748,7 @@ const RelatoriosPage = () => {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="h-8 w-full text-xs"
+                    className="mt-auto h-8 w-full text-xs"
                     onClick={() => {
                       applyReportDialogCenter()
                       setSelectedReport(config.id)

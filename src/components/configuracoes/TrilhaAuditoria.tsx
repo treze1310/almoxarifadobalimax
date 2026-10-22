@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { contar } from '@/lib/plural'
 import { Badge } from '@/components/ui/badge'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -47,6 +48,52 @@ const ROTULOS: Record<string, string> = {
   'romaneio.retirada_assistida': 'Retirada assistida concluída',
   'material.importar_csv': 'Edição em lote por planilha',
   'solicitacoes.reposicao_automatica': 'Solicitação de reposição automática',
+}
+
+/**
+ * Resumo do registro, em vez do JSON cru.
+ *
+ * A coluna mostrava `{"numero":"ROM-AL-…","itens":1,...}` e estourava a
+ * largura da tabela. Aqui saem os campos que identificam a operação, na ordem
+ * em que fazem sentido para quem lê; o JSON inteiro continua disponível no
+ * clique.
+ */
+const resumoLegivel = (dados: unknown): string => {
+  if (!dados || typeof dados !== 'object') return String(dados ?? '—')
+
+  const registro = dados as Record<string, unknown>
+  const dinheiro = (v: unknown) =>
+    typeof v === 'number'
+      ? v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+      : String(v)
+
+  const partes: string[] = []
+  for (const chave of ['numero', 'codigo', 'nome', 'email', 'material', 'perfil', 'motivo']) {
+    const valor = registro[chave]
+    if (valor != null && valor !== '') partes.push(String(valor))
+  }
+  for (const [chave, rotulo] of [
+    ['itens', 'item'],
+    ['itens_lancados', 'item lançado'],
+    ['unidades_criadas', 'unidade'],
+    ['quantidade', 'un.'],
+  ] as const) {
+    const valor = registro[chave]
+    if (typeof valor === 'number' && valor > 0) partes.push(`${valor} ${rotulo}${valor > 1 ? 's' : ''}`)
+  }
+  for (const chave of ['valor_total', 'valor']) {
+    const valor = registro[chave]
+    if (valor != null) partes.push(dinheiro(valor))
+  }
+
+  // Nada reconhecido: melhor um JSON curto que uma célula vazia
+  return partes.length > 0 ? partes.join(' · ') : JSON.stringify(dados).slice(0, 80)
+}
+
+/** 22/10/26 13:05 — cabe em uma linha */
+const dataHoraCurta = (iso: string) => {
+  const data = new Date(iso)
+  return `${data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })} ${data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
 }
 
 const destrutiva = (acao: string) =>
@@ -205,21 +252,30 @@ export const TrilhaAuditoria = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[150px]">Quando</TableHead>
-                  <TableHead className="min-w-[180px]">Quem</TableHead>
-                  <TableHead className="min-w-[200px]">Ação</TableHead>
+                  <TableHead className="w-[130px] whitespace-nowrap">Quando</TableHead>
+                  <TableHead className="w-[200px]">Quem</TableHead>
+                  <TableHead className="w-[180px] whitespace-nowrap">Ação</TableHead>
                   <TableHead>Detalhes</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {entradas.map((e) => (
                   <TableRow key={e.id}>
-                    <TableCell className="py-2 text-xs">
-                      {new Date(e.timestamp).toLocaleString('pt-BR')}
+                    <TableCell
+                      className="whitespace-nowrap py-2 text-xs"
+                      title={new Date(e.timestamp).toLocaleString('pt-BR')}
+                    >
+                      {/* Data e hora quebravam em duas linhas; aqui vão em uma
+                          só, no formato curto, com o completo no title */}
+                      {dataHoraCurta(e.timestamp)}
                     </TableCell>
-                    <TableCell className="py-2">
-                      <div className="text-sm">{e.usuarios?.nome || 'Desconhecido'}</div>
-                      <div className="text-xs text-muted-foreground">{e.usuarios?.email}</div>
+                    <TableCell className="max-w-[200px] py-2">
+                      <div className="truncate text-sm" title={e.usuarios?.nome || 'Desconhecido'}>
+                        {e.usuarios?.nome || 'Desconhecido'}
+                      </div>
+                      <div className="truncate text-xs text-muted-foreground" title={e.usuarios?.email}>
+                        {e.usuarios?.email}
+                      </div>
                     </TableCell>
                     <TableCell className="py-2">
                       <Badge
@@ -230,10 +286,27 @@ export const TrilhaAuditoria = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="py-2">
+                      {/* O JSON cru estourava a tabela e ninguém lia. Agora o
+                          resumo cabe na linha e o conteúdo inteiro fica a um
+                          clique, para quem precisa auditar de verdade. */}
                       {e.dados_novos || e.dados_anteriores ? (
-                        <code className="text-xs text-muted-foreground">
-                          {JSON.stringify(e.dados_novos ?? e.dados_anteriores).slice(0, 120)}
-                        </code>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="max-w-full truncate text-left text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                              title="Ver o registro completo"
+                            >
+                              {resumoLegivel(e.dados_novos ?? e.dados_anteriores)}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent align="end" className="w-[420px]">
+                            <p className="mb-2 text-xs font-medium">Registro completo</p>
+                            <pre className="max-h-64 overflow-auto rounded bg-muted p-2 text-[11px] leading-snug">
+                              {JSON.stringify(e.dados_novos ?? e.dados_anteriores, null, 2)}
+                            </pre>
+                          </PopoverContent>
+                        </Popover>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
                       )}

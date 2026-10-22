@@ -109,6 +109,20 @@ const FornecedoresPage = () => {
     )
   }
 
+  /**
+   * Tira marcação HTML que veio junto na importação.
+   *
+   * "MATERIAL<BR />SERVIÇO" aparecia com a tag literal no meio do texto,
+   * porque o valor é exibido como texto e não como HTML — e ainda bem, porque
+   * injetar HTML de um cadastro na tela seria pior que o incômodo visual.
+   */
+  const limparMarcacao = (valor?: string | null) =>
+    (valor ?? '')
+      .replace(/<br\s*\/?>/gi, ' · ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+
   const colunas: ColunaDataTable<any>[] = [
     {
       id: 'nome',
@@ -118,23 +132,51 @@ const FornecedoresPage = () => {
       valor: (f) =>
         `${f.nome ?? ''} ${f.cnpj ?? ''} ${f.cpf ?? ''} ${f.contato ?? ''} ${f.email ?? ''}`.trim(),
       valorOrdenacao: (f) => f.nome ?? '',
-      celula: (f) => <span className="font-medium">{f.nome}</span>,
+      // Sem teto, nomes de razão social quebravam em 4–6 linhas e a linha da
+      // tabela chegava a 110px de altura
+      largura: 260,
+      celula: (f) => (
+        <span className="line-clamp-2 font-medium" title={f.nome}>
+          {f.nome}
+        </span>
+      ),
     },
     {
       id: 'documento',
       cabecalho: 'Documento',
       semFiltro: true,
+      // CNPJ quebrava no hífen ("48.656.511/0002- / 73")
+      largura: 150,
+      nowrap: true,
       valor: (f) => (f.cnpj ? formatarCNPJ(f.cnpj) : f.cpf ? formatarCPF(f.cpf) : '—'),
     },
     {
       id: 'tipo_fornecimento',
       cabecalho: 'Tipo de fornecimento',
-      valor: (f) => f.tipo_fornecimento || '—',
+      cabecalhoCurto: 'Tipo forn.',
+      largura: 180,
+      // O campo veio da importação com "<BR />" literal no meio do texto:
+      // aparecia cru na tela. Aqui a marcação vira separador de leitura; a
+      // limpeza no banco é outra conversa, e este render cobre o que já está
+      // gravado.
+      valor: (f) => limparMarcacao(f.tipo_fornecimento) || '—',
+      celula: (f) => {
+        const texto = limparMarcacao(f.tipo_fornecimento)
+        if (!texto) return <span className="text-muted-foreground">—</span>
+        return (
+          <span className="line-clamp-2" title={texto}>
+            {texto}
+          </span>
+        )
+      },
     },
     {
       id: 'site',
       cabecalho: 'Site',
       semFiltro: true,
+      // Quase sempre vazia: fica fora por padrão em tela estreita
+      prioridade: 'baixa',
+      largura: 180,
       valor: (f) => enderecoWebLegivel(f.site) || '—',
       celula: (f) => {
         const url = enderecoWeb(f.site)
@@ -159,6 +201,7 @@ const FornecedoresPage = () => {
       id: 'contato',
       cabecalho: 'Contato',
       semFiltro: true,
+      largura: 200,
       valor: (f) => f.contato || f.email || '—',
       celula: (f) => (
         <div className="space-y-0.5">
@@ -171,6 +214,8 @@ const FornecedoresPage = () => {
     {
       id: 'status',
       cabecalho: 'Status',
+      largura: 110,
+      nowrap: true,
       valor: (f) => (f.ativo ? 'Ativo' : 'Inativo'),
       celula: (f) => <StatusBadge status={f.ativo ? 'ativo' : 'inativo'} />,
     },

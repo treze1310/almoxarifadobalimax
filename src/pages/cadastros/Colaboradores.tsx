@@ -178,22 +178,31 @@ const ColaboradoresPage = () => {
     },
     {
       id: 'cargo',
+      // "Aprendiz Assistente Administrativo" quebrava em duas linhas
+      larguraMax: 170,
       cabecalho: 'Cargo',
       valor: (c) => capitalizarTexto(c.cargo),
     },
     {
       id: 'setor',
+      larguraMax: 140,
       cabecalho: 'Setor',
       valor: (c) => capitalizarTexto(c.setor),
     },
     {
       id: 'centro_custo',
+      cabecalhoCurto: 'C. Custo',
+      prioridade: 'baixa',
+      larguraMax: 150,
       cabecalho: 'Centro de custo',
       valor: (c) =>
         c.centros_custo ? `${c.centros_custo.codigo} - ${c.centros_custo.descricao ?? ''}`.trim() : '—',
     },
     {
       id: 'cpf',
+      // O CPF mascarado quebrava no hífen
+      largura: 140,
+      nowrap: true,
       cabecalho: 'CPF',
       semFiltro: true,
       valor: (c) => mascararCPF(c.cpf),
@@ -218,6 +227,8 @@ const ColaboradoresPage = () => {
     },
     {
       id: 'status',
+      largura: 104,
+      nowrap: true,
       cabecalho: 'Status',
       valor: (c) => (c.ativo ? 'Ativo' : 'Inativo'),
       celula: (c) => <StatusBadge status={c.ativo ? 'ativo' : 'inativo'} />,

@@ -319,10 +319,13 @@ const RomaneiosPage = () => {
       valor: (r) =>
         `${r.numero ?? ''} ${r.colaboradores?.nome ?? ''} ${r.centro_custo_origem?.codigo ?? ''}`.trim(),
       valorOrdenacao: (r) => r.numero ?? '',
+      // "ROM-AL-2605151587-0001" quebrava em três linhas
+      largura: 210,
+      nowrap: true,
       celula: (r) => (
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-medium">{r.numero}</span>
+            <span className="font-mono text-xs font-medium">{r.numero}</span>
             {/* RF-09: romaneio com assinatura colhida na retirada assistida */}
             {(r as any).assinatura_retirada && (
               <span title="Assinado digitalmente" aria-label="Assinado digitalmente">
@@ -339,11 +342,15 @@ const RomaneiosPage = () => {
     {
       id: 'tipo',
       cabecalho: 'Tipo',
+      largura: 110,
+      nowrap: true,
       valor: (r) => (r.tipo ? r.tipo.charAt(0).toUpperCase() + r.tipo.slice(1) : '—'),
     },
     {
       id: 'colaborador',
       cabecalho: 'Colaborador',
+      // Estava largo demais e espremia Status, Valor e Devolução
+      largura: 220,
       valor: (r) => r.colaboradores?.nome ?? r.responsavel_retirada ?? '—',
       celula: (r) => (
         <div className="min-w-0">
@@ -357,6 +364,9 @@ const RomaneiosPage = () => {
     {
       id: 'centro_custo',
       cabecalho: 'Centro de custo',
+      cabecalhoCurto: 'C. Custo',
+      larguraMax: 150,
+      prioridade: 'baixa',
       valor: (r) =>
         r.centro_custo_origem
           ? `${r.centro_custo_origem.codigo} - ${r.centro_custo_origem.descricao ?? ''}`.trim()
@@ -367,6 +377,8 @@ const RomaneiosPage = () => {
       cabecalho: 'Itens',
       semFiltro: true,
       alinhamento: 'right',
+      largura: 70,
+      nowrap: true,
       valor: (r) => String(r.romaneios_itens?.length ?? 0),
       valorOrdenacao: (r) => r.romaneios_itens?.length ?? 0,
     },
@@ -375,6 +387,8 @@ const RomaneiosPage = () => {
       cabecalho: 'Valor',
       semFiltro: true,
       alinhamento: 'right',
+      largura: 110,
+      nowrap: true,
       valor: (r) =>
         new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
           r.valor_total ?? 0,
@@ -384,6 +398,8 @@ const RomaneiosPage = () => {
     {
       id: 'status',
       cabecalho: 'Status',
+      largura: 104,
+      nowrap: true,
       valor: (r) => rotuloStatus(r.status),
       celula: (r) => <StatusBadge status={r.status} />,
     },
@@ -392,6 +408,8 @@ const RomaneiosPage = () => {
       id: 'devolucao',
       cabecalho: 'Devolução',
       semFiltro: true,
+      largura: 130,
+      nowrap: true,
       valor: (r) => {
         const devolucao = statusDevolucoes.get(r.id)
         if (!devolucao) return '—'
@@ -454,7 +472,8 @@ const RomaneiosPage = () => {
               </Button>
             </Link>
             <Link to="/romaneios/novo?tipo=retirada">
-              <Button variant="ghost">Retirada avançada</Button>
+              {/* `ghost` fazia parecer texto solto no meio dos botões */}
+              <Button variant="outline">Retirada avançada</Button>
             </Link>
           </>
         }
@@ -467,7 +486,7 @@ const RomaneiosPage = () => {
         colunas={colunas}
         idLinha={(r) => r.id}
         chaveUrl="rom"
-        placeholderBusca="Buscar por número, colaborador ou centro de custo..."
+        placeholderBusca="Buscar por número, colaborador ou centro de custo…"
         nomeArquivoCsv="romaneios"
         onLinhaClick={(r) => setSelectedRomaneio(r)}
         vazio={

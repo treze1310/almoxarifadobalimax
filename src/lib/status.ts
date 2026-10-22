@@ -16,6 +16,8 @@ export type StatusCanonico =
   | 'rejeitado'
   | 'cancelado'
   | 'em_andamento'
+  | 'ativo'
+  | 'inativo'
 
 export interface DefinicaoStatus {
   /** Rótulo exibido, sempre com inicial maiúscula */
@@ -63,6 +65,24 @@ export const STATUS: Record<StatusCanonico, DefinicaoStatus & { rotuloFeminino?:
     rotulo: 'Em andamento',
     classe: 'bg-status-pendente/15 text-status-pendente border-status-pendente/30',
   },
+  /**
+   * Cadastro ligado/desligado é outra coisa que documento concluído.
+   *
+   * `ativo` caía em "concluido" e `inativo` em "cancelado": um fornecedor
+   * ativo aparecia como "Concluído" e um inativo como "Cancelado" riscado.
+   * O rótulo certo é Ativo/Inativo, e inativo não se risca — o registro não
+   * foi cancelado, só está desligado.
+   */
+  ativo: {
+    rotulo: 'Ativo',
+    rotuloFeminino: 'Ativa',
+    classe: 'bg-status-concluido/12 text-status-concluido border-status-concluido/25',
+  },
+  inativo: {
+    rotulo: 'Inativo',
+    rotuloFeminino: 'Inativa',
+    classe: 'bg-muted text-muted-foreground border-border',
+  },
 }
 
 /**
@@ -100,14 +120,16 @@ export const normalizarStatus = (status: string | null | undefined): StatusCanon
     lancada: 'concluido',
     lancado: 'concluido',
     atendida: 'concluido',
-    ativo: 'concluido',
+    ativo: 'ativo',
+    ativa: 'ativo',
     rejeitado: 'rejeitado',
     rejeitada: 'rejeitado',
     negado: 'rejeitado',
     negada: 'rejeitado',
     cancelado: 'cancelado',
     cancelada: 'cancelado',
-    inativo: 'cancelado',
+    inativo: 'inativo',
+    inativa: 'inativo',
     em_andamento: 'em_andamento',
     em_separacao: 'em_andamento',
     em_compra: 'em_andamento',

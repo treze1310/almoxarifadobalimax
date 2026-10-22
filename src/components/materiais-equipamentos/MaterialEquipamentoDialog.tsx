@@ -79,45 +79,30 @@ export const MaterialEquipamentoDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="sm:max-w-2xl max-h-[90vh] overflow-y-auto z-[9999]"
+      {/* `xl` para editar e criar terem a mesma largura: o mesmo formulário
+          aparecia em 672px ao editar e 800px ao criar. */}
+      <DialogContent
+        tamanho="xl"
+        className="flex max-h-[calc(100dvh-2rem)] flex-col z-[9999]"
         style={{
           position: 'absolute',
           top: dialogPosition.top,
           left: dialogPosition.left,
           transform: 'translate(-50%, -50%)',
           margin: 0,
-          maxHeight: '90vh',
-          width: 'min(95vw, 672px)',
-          overflowY: 'auto'
         }}
       >
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle>
-                {material ? 'Editar Item' : 'Novo Material ou Equipamento'}
-              </DialogTitle>
-              <DialogDescription>
-                {material
-                  ? 'Edite as informações do item.'
-                  : 'Preencha os dados para cadastrar um novo item.'}
-              </DialogDescription>
-            </div>
-            {material && onDelete && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDeleteClick}
-                className="text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700 hover:border-red-400"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Excluir
-              </Button>
-            )}
-          </div>
+          <DialogTitle>
+            {material ? 'Editar Item' : 'Novo Material ou Equipamento'}
+          </DialogTitle>
+          <DialogDescription>
+            {material
+              ? 'Edite as informações do item.'
+              : 'Preencha os dados para cadastrar um novo item.'}
+          </DialogDescription>
         </DialogHeader>
-        <div className="p-1 pt-4">
+        <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 pt-2">
           <MaterialEquipamentoForm
             initialData={material as any}
             onSubmit={onSubmit || (async () => {})}
@@ -151,6 +136,23 @@ export const MaterialEquipamentoDialog = ({
             </>
           )}
         </div>
+        {/* O "Excluir" ficava no cabeçalho, por cima do X de fechar, e era o
+            primeiro elemento focável: ao abrir, o foco caía nele e um Enter
+            distraído excluía o item. Aqui ele é o último, na ordem visual e na
+            de tabulação. */}
+        {material && onDelete && (
+          <div className="shrink-0 border-t pt-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDeleteClick}
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Excluir este item
+            </Button>
+          </div>
+        )}
       </DialogContent>
 
       {/* Diálogo de confirmação de exclusão */}

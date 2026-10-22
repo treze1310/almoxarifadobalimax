@@ -134,34 +134,44 @@ export function CentroCustoSelector({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
+        {/* Uma linha só.
+            O conteúdo era empilhado (código + chip da empresa + descrição)
+            dentro de um botão de 40px: o chip passava por cima do texto. E o
+            placeholder não era truncado, então "Selecione o centro de custo
+            origem" vazava por cima do campo de destino. Agora é
+            `001 · Almoxarifado`, truncado, com o nome completo no title. */}
         <Button
           variant="outline"
           className={cn(
-            "w-full justify-between text-left font-normal",
-            !selectedCentroCusto && "text-muted-foreground"
+            'w-full min-w-0 justify-between text-left font-normal',
+            !selectedCentroCusto && 'text-muted-foreground',
           )}
           disabled={disabled}
+          title={
+            selectedCentroCusto
+              ? [
+                  selectedCentroCusto.codigo,
+                  selectedCentroCusto.descricao,
+                  selectedCentroCusto.empresas?.nome,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
+              : placeholder
+          }
         >
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
+          <span className="flex min-w-0 flex-1 items-center gap-2">
+            <Building2 className="h-4 w-4 shrink-0" />
             {selectedCentroCusto ? (
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono font-medium">{selectedCentroCusto.codigo}</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {selectedCentroCusto.empresas?.nome || 'Sem empresa'}
-                  </Badge>
-                </div>
+              <span className="min-w-0 truncate">
+                <span className="font-mono font-medium">{selectedCentroCusto.codigo}</span>
                 {selectedCentroCusto.descricao && (
-                  <span className="text-xs text-muted-foreground truncate">
-                    {selectedCentroCusto.descricao}
-                  </span>
+                  <span className="text-muted-foreground"> · {selectedCentroCusto.descricao}</span>
                 )}
-              </div>
+              </span>
             ) : (
-              placeholder
+              <span className="min-w-0 truncate">{placeholder}</span>
             )}
-          </div>
+          </span>
           <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </DialogTrigger>

@@ -3,8 +3,8 @@ import { APP_VERSION } from '@/lib/versao'
 export const Footer = () => {
   const currentYear = new Date().getFullYear()
   return (
-    <footer className="border-t py-4">
-      <div className="container text-center text-sm text-muted-foreground">
+    <footer className="shrink-0 border-t py-3">
+      <div className="px-4 text-center text-xs text-muted-foreground">
         <p>
           &copy; {currentYear} Sistema de Almoxarifado. Todos os direitos
           reservados. Versão {APP_VERSION}
