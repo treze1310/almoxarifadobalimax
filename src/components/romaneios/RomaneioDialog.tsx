@@ -1,3 +1,4 @@
+import { usePermissoes } from '@/contexts/PermissionsContext'
 import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -85,6 +86,8 @@ const getStatusBadgeVariant = (status: string) => {
 }
 
 const RomaneioDialog = ({ romaneio, trigger, onRomaneioUpdated }: RomaneioDialogProps) => {
+  const { can, isAdmin } = usePermissoes()
+  const podeExcluir = isAdmin && can('romaneios', 'delete')
   const [isOpen, setIsOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
@@ -245,6 +248,7 @@ const RomaneioDialog = ({ romaneio, trigger, onRomaneioUpdated }: RomaneioDialog
                 <Button variant="outline" size="sm">
                   <Edit className="h-4 w-4" />
                 </Button>
+                {podeExcluir && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="outline" size="sm">
@@ -259,7 +263,7 @@ const RomaneioDialog = ({ romaneio, trigger, onRomaneioUpdated }: RomaneioDialog
                       </AlertDialogTitle>
                       <AlertDialogDescription>
                         Tem certeza que deseja excluir o romaneio {romaneio.numero}? 
-                        Esta ação não pode ser desfeita.
+                        As movimentações serão revertidas e a exclusão ficará registrada na auditoria. Esta ação não pode ser desfeita.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -274,6 +278,7 @@ const RomaneioDialog = ({ romaneio, trigger, onRomaneioUpdated }: RomaneioDialog
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+                )}
               </div>
             </div>
           </DialogTitle>

@@ -1,5 +1,6 @@
+import { ArrowLeft } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { usePermissoes } from '@/contexts/PermissionsContext'
 import { Button } from '@/components/ui/button'
@@ -10,6 +11,7 @@ const status: Record<string, string> = { disponivel: 'Disponível', em_uso: 'Em 
 
 export default function UnidadePage() {
   const { codigo } = useParams()
+  const navigate = useNavigate()
   const { can } = usePermissoes()
   const [unidade, setUnidade] = useState<any>(null)
   const [historico, setHistorico] = useState<any[]>([])
@@ -52,7 +54,13 @@ export default function UnidadePage() {
   }, [codigo, podeRomaneios, podeNfe, podeColaboradores])
 
   return <main className="space-y-6 p-4 md:p-6">
-    <div><h1 className="text-2xl font-bold">Unidade {codigo}</h1><p className="text-muted-foreground">Localização, origem e histórico da peça</p></div>
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div><h1 className="text-2xl font-bold">Unidade {codigo}</h1><p className="text-muted-foreground">Localização, origem e histórico da peça</p></div>
+      <Button variant="outline" onClick={() => {
+        if ((window.history.state?.idx ?? 0) > 0) navigate(-1)
+        else navigate(unidade?.material?.id ? `/materiais-equipamentos?item=${unidade.material.id}` : '/materiais-equipamentos', { replace: true })
+      }}><ArrowLeft className="mr-2 h-4 w-4" />Voltar</Button>
+    </div>
     {carregando ? <p role="status">Carregando unidade…</p> : <>
       {erro && <p role="alert">{erro}</p>}
       {!unidade && !erro && <p>Unidade não encontrada. Confira o código da etiqueta.</p>}

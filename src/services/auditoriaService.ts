@@ -29,6 +29,7 @@ export type AcaoAuditavel =
   | 'seguranca.acesso_negado'
   | 'colaborador.cpf_consultado'
   | 'romaneio.cancelar'
+  | 'romaneio.excluir'
   | 'nfe.conferir'
   | 'nfe.lancar_estoque'
   | 'romaneio.retirada_assistida'

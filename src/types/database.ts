@@ -1079,6 +1079,7 @@ export type Database = {
       }
       romaneios_itens: {
         Row: {
+          material_excluido: Json | null
           codigo_patrimonial: string | null
           created_at: string | null
           data_devolucao: string | null
@@ -1093,6 +1094,7 @@ export type Database = {
           valor_unitario: number | null
         }
         Insert: {
+          material_excluido?: Json | null
           codigo_patrimonial?: string | null
           created_at?: string | null
           data_devolucao?: string | null
@@ -1107,6 +1109,7 @@ export type Database = {
           valor_unitario?: number | null
         }
         Update: {
+          material_excluido?: Json | null
           codigo_patrimonial?: string | null
           created_at?: string | null
           data_devolucao?: string | null
@@ -1520,6 +1523,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      excluir_romaneio: { Args: { p_romaneio_id: string }; Returns: undefined }
       confirm_user_email: { Args: { user_email: string }; Returns: undefined }
       generate_sequential_number: {
         Args: { prefix: string; table_name: string }

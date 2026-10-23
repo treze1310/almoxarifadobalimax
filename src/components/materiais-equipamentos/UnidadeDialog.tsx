@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -262,7 +262,8 @@ export const UnidadeDialog = ({
             onClick={() => onOpenChange(false)}
             disabled={salvando}
           >
-            Fechar
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
           </Button>
           {podeEditar && (
             <Button onClick={salvar} disabled={salvando}>

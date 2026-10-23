@@ -8,6 +8,7 @@ export interface MaterialDependency {
     | 'movimentacao_estoque'
     | 'material_unidades'
   count: number
+  blockingCount?: number
   details: any[]
 }
 
@@ -32,6 +33,13 @@ export interface MaterialDependencies {
   podeExcluirComHistorico: boolean
   dependencies: MaterialDependency[]
   totalReferences: number
+}
+
+export function contarRomaneiosBloqueantes(itens: Array<{ romaneios?: { status?: string | null } | { status?: string | null }[] | null }>): number {
+  return itens.filter(item => {
+    const doc = Array.isArray(item.romaneios) ? item.romaneios[0] : item.romaneios
+    return doc?.status !== 'cancelado'
+  }).length
 }
 
 export const materialDependencyService = {
@@ -80,6 +88,7 @@ export const materialDependencyService = {
           romaneios:romaneio_id (
             numero,
             tipo,
+            status,
             data_romaneio,
             colaboradores:colaborador_id (nome)
           )
@@ -92,6 +101,7 @@ export const materialDependencyService = {
         dependencies.push({
           type: 'romaneios_itens',
           count: romaneiosItens.length,
+          blockingCount: contarRomaneiosBloqueantes(romaneiosItens),
           details: romaneiosItens
         })
         totalReferences += romaneiosItens.length
@@ -158,7 +168,7 @@ export const materialDependencyService = {
         totalReferences += unidades.length
       }
 
-      const impedem = dependencies.filter((d) => DEPENDENCIAS_QUE_IMPEDEM.includes(d.type))
+      const impedem = dependencies.filter((d) => DEPENDENCIAS_QUE_IMPEDEM.includes(d.type) && (d.blockingCount ?? d.count) > 0)
 
       const result: MaterialDependencies = {
         material_id: materialId,
@@ -227,6 +237,9 @@ export const materialDependencyService = {
 
       const resumo = (data ?? {}) as Record<string, number>
       const warnings: string[] = []
+      if (resumo.romaneios_desvinculados > 0) {
+        warnings.push(`${resumo.romaneios_desvinculados} vínculo(s) com romaneios cancelados removido(s); os documentos e seus dados históricos foram preservados`)
+      }
       if (resumo.nfe_desvinculados > 0) {
         warnings.push(`${resumo.nfe_desvinculados} item(ns) de NF-e desvinculado(s); as notas continuam no histórico`)
       }

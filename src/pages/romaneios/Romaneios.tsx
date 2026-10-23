@@ -1,3 +1,4 @@
+import { usePermissoes } from '@/contexts/PermissionsContext'
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useScrollRestaurado } from '@/hooks/useScrollRestaurado'
@@ -120,9 +121,8 @@ const getStatusBadgeVariant = (status: string) => {
 }
 
 /**
- * RF-04: documento aprovado é imutável. Editar e excluir só valem enquanto o
- * romaneio está pendente ou cancelado; depois disso, a correção é por
- * cancelamento com motivo. A regra também é aplicada por trigger no banco.
+ * A edição continua restrita a pendentes/cancelados. A exclusão é separada:
+ * somente administradores, pelo procedimento transacional do banco.
  */
 const documentoEditavel = (status?: string | null) =>
   status === 'pendente' || status === 'cancelado' || !status
@@ -131,6 +131,10 @@ const RomaneiosPage = () => {
   // Voltar para a listagem devolve a rolagem onde estava
   useScrollRestaurado()
 
+  const { can, isAdmin } = usePermissoes()
+  const podeExcluir = isAdmin && can('romaneios', 'delete')
+  const podeCancelar = can('romaneios', 'update')
+  const [excluindo, setExcluindo] = useState(false)
   const navigate = useNavigate()
   const [selectedRomaneio, setSelectedRomaneio] = useState<Romaneio | null>(null)
   const [motivoCancelamento, setMotivoCancelamento] = useState('')
@@ -790,7 +794,7 @@ const RomaneiosPage = () => {
                   )}
                   
                   {/* Cancelar */}
-                  {(selectedRomaneio.status === 'pendente' || selectedRomaneio.status === 'aprovado') && (
+                  {podeCancelar && ['pendente', 'aprovado', 'retirado'].includes(selectedRomaneio.status || '') && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="outline">
@@ -803,8 +807,8 @@ const RomaneiosPage = () => {
                           <AlertDialogTitle>Cancelar Romaneio</AlertDialogTitle>
                           <AlertDialogDescription>
                             O romaneio {selectedRomaneio.numero} será cancelado. Como o documento
-                            não pode ser editado nem excluído depois de aprovado, o motivo é
-                            obrigatório e fica registrado na auditoria.
+                            não pode ser editado depois de aprovado, o motivo é obrigatório
+                            e fica registrado na auditoria.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <div className="space-y-2">
@@ -836,8 +840,8 @@ const RomaneiosPage = () => {
                     </AlertDialog>
                   )}
                   
-                  {/* Excluir — indisponível após aprovação (RF-04) */}
-                  {documentoEditavel(selectedRomaneio.status) && (
+                  {/* Somente administradores podem excluir, com estorno transacional. */}
+                  {podeExcluir && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive">
@@ -850,19 +854,25 @@ const RomaneiosPage = () => {
                         <AlertDialogTitle>Excluir Romaneio</AlertDialogTitle>
                         <AlertDialogDescription>
                           Tem certeza que deseja excluir permanentemente o romaneio {selectedRomaneio.numero}? 
-                          Esta ação não pode ser desfeita e todos os dados serão perdidos.
+                          As movimentações de estoque serão revertidas e a exclusão ficará registrada na auditoria. Devoluções vinculadas e documentos posteriores precisam ser desfeitos primeiro. Esta ação não pode ser desfeita.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={async () => {
-                            await deleteRomaneio(selectedRomaneio.id)
-                            handleRomaneioUpdated()
+                          disabled={excluindo}
+                          onClick={async (event) => {
+                            event.preventDefault()
+                            if (excluindo) return
+                            setExcluindo(true)
+                            try {
+                              const result = await deleteRomaneio(selectedRomaneio.id)
+                              if (!result.error) handleRomaneioUpdated()
+                            } finally { setExcluindo(false) }
                           }}
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                          Excluir Permanentemente
+                          {excluindo ? 'Excluindo…' : 'Excluir Permanentemente'}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

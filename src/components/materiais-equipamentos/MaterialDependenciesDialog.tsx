@@ -206,13 +206,14 @@ export function MaterialDependenciesDialog({
    * como dependência crítica e a tela virava um beco sem saída: só dava para
    * cancelar, e o item ficava lá para sempre.
    */
-  const hasCriticalDeps = (romaneiosDep?.count || 0) + (solicitacoesDep?.count || 0) > 0
+  const hasCriticalDeps = !dependencies?.podeExcluirComHistorico
 
   /** O que será apagado junto, para a exclusão não ser surpresa */
   const vaiJunto = [
     movimentacoesDep && `${movimentacoesDep.count} movimentação(ões) de estoque`,
     unidadesDep && `${unidadesDep.count} peça(s) numerada(s)`,
     nfeDep && `${nfeDep.count} vínculo(s) de NF-e (as notas continuam no histórico)`,
+    romaneiosDep && !hasCriticalDeps && `${romaneiosDep.count} vínculo(s) com romaneios cancelados (os documentos e a identificação do item são preservados)`,
   ].filter(Boolean) as string[]
 
   return (
@@ -227,7 +228,7 @@ export function MaterialDependenciesDialog({
             {materialName && `Material: ${materialName}`}
             <br />
             {hasCriticalDeps
-              ? 'Este item aparece em documento emitido e por isso não pode ser excluído.'
+              ? 'Este item aparece em romaneio não cancelado ou solicitação de compra e por isso não pode ser excluído.'
               : 'Confira o que será apagado junto com o item.'}
           </DialogDescription>
         </DialogHeader>
@@ -313,7 +314,7 @@ export function MaterialDependenciesDialog({
                       </p>
                       {hasCriticalDeps ? (
                         <p className="text-sm text-muted-foreground">
-                          {romaneiosDep?.count ? `Aparece em ${romaneiosDep.count} romaneio(s). ` : ''}
+                          {romaneiosDep?.count ? `Aparece em ${romaneiosDep.count} romaneio(s); ${romaneiosDep.blockingCount ?? romaneiosDep.count} não cancelado(s). ` : ''}
                           {solicitacoesDep?.count
                             ? `Aparece em ${solicitacoesDep.count} solicitação(ões) de compra. `
                             : ''}

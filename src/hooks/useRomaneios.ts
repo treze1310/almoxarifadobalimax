@@ -1,3 +1,4 @@
+import { restaurarItensHistoricos } from '@/lib/romaneioHistorico'
 import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { registrarAuditoria } from '@/services/auditoriaService'
@@ -109,7 +110,7 @@ export function useRomaneios() {
           centro_custo_destino:centro_custo_destino_id (codigo, descricao, empresas:empresa_id(nome)),
           fornecedores:fornecedor_id (nome)
           ${options?.includeItens ? `, romaneios_itens (
-            id, quantidade, valor_unitario, valor_total, 
+            id, material_excluido, quantidade, valor_unitario, valor_total,
             numero_serie, codigo_patrimonial, observacoes, material_unidade_id,
             material_unidades:material_unidade_id (codigo, status),
             materiais_equipamentos:material_equipamento_id (id, codigo, nome, unidade_medida, codigo_ncm, centros_custo:centro_custo_id (codigo, descricao, empresas:empresa_id(nome)))
@@ -129,8 +130,9 @@ export function useRomaneios() {
 
       if (error) throw error
 
-      setRomaneios((data as any) || [])
-      return { data: data || [], error: null }
+      const documentos = (data || []).map(item => restaurarItensHistoricos(item as any))
+      setRomaneios(documentos)
+      return { data: documentos, error: null }
     } catch (error: any) {
       console.error('Erro ao buscar romaneios:', error)
       toast({
@@ -155,7 +157,7 @@ export function useRomaneios() {
           centro_custo_destino:centro_custo_destino_id (codigo, descricao, empresas:empresa_id(nome)),
           fornecedores:fornecedor_id (nome),
           romaneios_itens (
-            id, quantidade, valor_unitario, valor_total,
+            id, material_excluido, quantidade, valor_unitario, valor_total,
             numero_serie, codigo_patrimonial, observacoes, material_unidade_id,
             material_unidades:material_unidade_id (codigo, status),
             materiais_equipamentos:material_equipamento_id (id, codigo, nome, unidade_medida, codigo_ncm, centros_custo:centro_custo_id (codigo, descricao, empresas:empresa_id(nome)))
@@ -166,7 +168,7 @@ export function useRomaneios() {
 
       if (error) throw error
 
-      return { data, error: null }
+      return { data: restaurarItensHistoricos(data), error: null }
     } catch (error: any) {
       console.error('Erro ao buscar romaneio:', error)
       return { data: null, error }
@@ -404,166 +406,18 @@ export function useRomaneios() {
     }
   }, [toast, fetchRomaneios])
 
-  // Função para reverter o centro de custo quando um romaneio é excluído
-  const revertCentroCusto = async (romaneio: any) => {
-    if (!romaneio || !romaneio.romaneios_itens) return
-
-    const isRetirada = romaneio.tipo === 'retirada'
-    const isDevolucao = romaneio.tipo === 'devolucao'
-    const isTransferencia = romaneio.tipo === 'transferencia'
-
-    // Buscar centro de custo do almoxarifado para usar como padrão
-    const { data: almoxarifadoCC } = await supabase
-      .from('centros_custo')
-      .select('id')
-      .or('nome.ilike.%almoxarifado%,codigo.ilike.%almox%')
-      .eq('ativo', true)
-      .limit(1)
-      .single()
-
-    const almoxarifadoCentroCustoId = almoxarifadoCC?.id
-
-    for (const item of romaneio.romaneios_itens) {
-      let centroCustoAnterior = null
-
-      if (isRetirada || isTransferencia) {
-        // Para retiradas e transferências, voltar para centro de custo origem
-        centroCustoAnterior = romaneio.centro_custo_origem_id || almoxarifadoCentroCustoId
-      } else if (isDevolucao) {
-        // Para devoluções, usar centro de custo origem ou almoxarifado
-        // TODO: Implementar busca do romaneio original adequadamente
-        centroCustoAnterior = romaneio.centro_custo_origem_id || almoxarifadoCentroCustoId
-      }
-
-      // Atualizar o centro de custo do material
-      if (centroCustoAnterior) {
-        const { error: updateError } = await supabase
-          .from('materiais_equipamentos')
-          .update({ centro_custo_id: centroCustoAnterior })
-          .eq('id', item.material_equipamento_id)
-
-        if (updateError) {
-          console.error('Erro ao reverter centro de custo do material:', updateError)
-        }
-      }
-    }
-  }
-
   const deleteRomaneio = useCallback(async (id: string) => {
     setLoading(true)
     try {
-      // Buscar dados completos do romaneio antes de excluir
-      const { data: romaneio, error: romaneioFetchError } = await supabase
-        .from('romaneios')
-        .select(`
-          *,
-          romaneios_itens (
-            id,
-            material_equipamento_id,
-            materiais_equipamentos (
-              id,
-              centro_custo_id
-            )
-          )
-        `)
-        .eq('id', id)
-        .single()
-
-      if (romaneioFetchError) {
-        console.error('Erro ao buscar romaneio:', romaneioFetchError)
-        throw romaneioFetchError
-      }
-
-      // Verificar se o romaneio foi aprovado (tem movimentações de estoque)
-      const { data: movimentacoes, error: movError } = await supabase
-        .from('movimentacao_estoque')
-        .select('id, quantidade, material_equipamento_id, quantidade_anterior')
-        .eq('romaneio_id', id)
-
-      if (movError) {
-        console.error('Erro ao verificar movimentações:', movError)
-      }
-
-      // Se há movimentações, reverter o estoque antes de deletar
-      if (movimentacoes && movimentacoes.length > 0) {
-        toast({
-          title: 'Atenção',
-          description: 'Este romaneio possui movimentações de estoque. O estoque e centro de custo serão revertidos.',
-          variant: 'default',
-        })
-
-        // Reverter cada movimentação de estoque
-        for (const mov of movimentacoes) {
-          const { error: revertError } = await supabase
-            .from('materiais_equipamentos')
-            .update({ estoque_atual: mov.quantidade_anterior })
-            .eq('id', mov.material_equipamento_id)
-
-          if (revertError) {
-            console.error('Erro ao reverter estoque:', revertError)
-            toast({
-              title: 'Aviso',
-              description: `Erro ao reverter estoque do material ${mov.material_equipamento_id}`,
-              variant: 'destructive',
-            })
-          }
-        }
-
-        // Deletar movimentações de estoque
-        const { error: delMovError } = await supabase
-          .from('movimentacao_estoque')
-          .delete()
-          .eq('romaneio_id', id)
-
-        if (delMovError) throw delMovError
-
-        // Reverter centro de custo dos materiais
-        await revertCentroCusto(romaneio)
-      }
-
-      // Delete items
-      const { error: itensError } = await supabase
-        .from('romaneios_itens')
-        .delete()
-        .eq('romaneio_id', id)
-
-      if (itensError) throw itensError
-
-      // Remover vínculo de romaneios que referenciam este como origem
-      // (ex.: devoluções/transferências) para não violar a FK romaneio_origem_id
-      const { error: unlinkError } = await supabase
-        .from('romaneios')
-        .update({ romaneio_origem_id: null })
-        .eq('romaneio_origem_id', id)
-
-      if (unlinkError) throw unlinkError
-
-      // Finally delete romaneio
-      const { error: romaneioError } = await supabase
-        .from('romaneios')
-        .delete()
-        .eq('id', id)
-
-      if (romaneioError) throw romaneioError
-
-      toast({
-        title: 'Sucesso',
-        description: 'Romaneio excluído com sucesso! O estoque e centro de custo foram revertidos se necessário.',
-      })
-
+      const { error } = await supabase.rpc('excluir_romaneio', { p_romaneio_id: id })
+      if (error) throw error
+      toast({ title: 'Sucesso', description: 'Romaneio excluído e movimentações revertidas com sucesso.' })
       await fetchRomaneios()
       return { error: null }
     } catch (error: any) {
-      console.error('Erro ao excluir romaneio:', error)
-      toast({
-        title: 'Erro',
-        description: error?.message || 'Erro ao excluir romaneio',
-        variant: 'destructive',
-      })
+      toast({ title: 'Erro ao excluir romaneio', description: error?.message || 'Não foi possível excluir o romaneio.', variant: 'destructive' })
       return { error }
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }, [toast, fetchRomaneios])
 
   const getRomaneiosForReturn = useCallback(async () => {
@@ -577,7 +431,7 @@ export function useRomaneios() {
           centro_custo_origem:centro_custo_origem_id (codigo, descricao, empresas:empresa_id(nome)),
           centro_custo_destino:centro_custo_destino_id (codigo, descricao, empresas:empresa_id(nome)),
           romaneios_itens (
-            id, material_equipamento_id, quantidade, valor_unitario, valor_total,
+            id, material_equipamento_id, material_excluido, quantidade, valor_unitario, valor_total,
             numero_serie, codigo_patrimonial, observacoes, material_unidade_id,
             material_unidades:material_unidade_id (codigo, status),
             materiais_equipamentos:material_equipamento_id (id, codigo, nome, unidade_medida, codigo_ncm, centros_custo:centro_custo_id (codigo, descricao, empresas:empresa_id(nome)))
