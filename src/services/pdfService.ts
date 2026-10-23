@@ -1,3 +1,4 @@
+import { capturarDocumentoPDF } from '@/lib/pdfDocument'
 import { companyService } from './companyService'
 import { supabase } from '@/lib/supabase'
 
@@ -155,7 +156,6 @@ export const pdfService = {
       return false
     }
 
-    let printElement: HTMLElement | null = null
     const originalScrollX = window.scrollX
     const originalScrollY = window.scrollY
 
@@ -178,83 +178,9 @@ export const pdfService = {
 
       // 📦 Importações dinâmicas
       console.log('📦 Loading PDF libraries...')
-      const [jsPDFModule, html2canvasModule] = await Promise.all([
-        import('jspdf'),
-        import('html2canvas')
-      ])
-
-      // Verificar se foi abortado
-      if (controller.signal.aborted) {
-        throw new Error('PDF generation was aborted')
-      }
-
+      const jsPDFModule = await import('jspdf')
       const jsPDF = jsPDFModule.default
-      const html2canvas = html2canvasModule.default
-
-      // 🎨 Criar elemento temporário
-      console.log('🎨 Creating temporary element...')
-      printElement = document.createElement('div')
-      printElement.id = `pdf-temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      printElement.innerHTML = htmlContent
-      
-      // Estilos otimizados para PDF
-      Object.assign(printElement.style, {
-        position: 'fixed',
-        left: '0',
-        top: '0',
-        width: '210mm',
-        minHeight: '297mm',
-        backgroundColor: 'white',
-        zIndex: '-1000',
-        visibility: 'visible',
-        pointerEvents: 'none'
-      })
-
-      document.body.appendChild(printElement)
-
-      // Registrar cleanup
-      pdfStateManager.setCleanup(() => {
-        if (printElement && printElement.parentNode) {
-          printElement.parentNode.removeChild(printElement)
-          console.log('🧹 Temporary element cleaned up')
-        }
-        window.scrollTo(originalScrollX, originalScrollY)
-      })
-
-      // ⏳ Aguardar carregamento de recursos
-      console.log('⏳ Waiting for resources to load...')
-      await new Promise(resolve => setTimeout(resolve, 800))
-
-      // Verificar se foi abortado
-      if (controller.signal.aborted) {
-        throw new Error('PDF generation was aborted')
-      }
-
-      // 🔍 Verificar sessão novamente antes de operação pesada
-      const sessionStillValid = await this.ensureValidSession()
-      if (!sessionStillValid) {
-        throw new Error('Sessão perdida durante geração. Operação cancelada.')
-      }
-
-      // 🖼️ Gerar canvas
-      console.log('🖼️ Converting to canvas...', {
-        elementWidth: printElement.scrollWidth,
-        elementHeight: printElement.scrollHeight,
-        offsetWidth: printElement.offsetWidth,
-        offsetHeight: printElement.offsetHeight
-      })
-
-      const canvas = await html2canvas(printElement, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: 'white',
-        logging: false,
-        removeContainer: false,
-        foreignObjectRendering: true,
-        width: Math.max(printElement.scrollWidth, 794), // Largura mínima A4
-        height: Math.max(printElement.scrollHeight, 1123) // Altura mínima A4
-      })
+      const canvas = await capturarDocumentoPDF(htmlContent, controller.signal)
 
       console.log('🎨 Canvas criado:', {
         canvasWidth: canvas.width,

@@ -27,13 +27,9 @@ import { formatDate } from '@/lib/utils'
 import { useCenteredDialog } from '@/hooks/useCenteredDialog'
 
 
-import { generateRomaneoPDFContent } from '@/components/romaneios/RomaneioPDF'
-import { enriquecerComMaiorPreco } from '@/utils/romaneioPdf'
-import { companyService } from '@/services/companyService'
 import { devolucaoService } from '@/services/devolucaoService'
 import StatusDevolucaoLabel from '@/components/romaneios/StatusDevolucaoLabel'
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
+import { gerarRomaneioPDF } from '@/utils/romaneioPdf'
 import {
   } from "@/components/ui/dropdown-menu"
 import {
@@ -193,95 +189,7 @@ const RomaneiosPage = () => {
     setIsGeneratingPDF(true)
 
     try {
-      console.log('🔄 Iniciando geração de PDF para romaneio:', selectedRomaneio.numero)
-      
-      // Buscar dados da empresa com retry robusto
-      const company = await companyService.getActiveCompany()
-      
-      if (!company) {
-        throw new Error('Não foi possível carregar os dados da empresa')
-      }
-
-      console.log('✅ Dados da empresa carregados')
-      
-      // Enriquecer com o maior valor do histórico de preços
-      const romaneioParaPdf = await enriquecerComMaiorPreco(selectedRomaneio as any)
-
-      // Create a temporary element with the new PDF content
-      const printElement = document.createElement('div')
-      printElement.innerHTML = generateRomaneoPDFContent(romaneioParaPdf, company)
-      printElement.style.position = 'absolute'
-      printElement.style.left = '-9999px'
-      printElement.style.top = '0'
-      printElement.style.width = '210mm'
-      printElement.style.minHeight = '297mm'
-      printElement.style.backgroundColor = 'white'
-      document.body.appendChild(printElement)
-
-      // Wait a bit for images to load
-      console.log('⏳ Aguardando carregamento de imagens...')
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      console.log('🖨️ Convertendo para canvas...')
-      // Convert to canvas and then to PDF with retry logic
-      let canvas
-      let retryCount = 0
-      const maxRetries = 3
-
-      while (retryCount < maxRetries) {
-        try {
-          canvas = await html2canvas(printElement, {
-            scale: 2,
-            useCORS: true,
-            allowTaint: true,
-            backgroundColor: 'white',
-            width: printElement.scrollWidth,
-            height: printElement.scrollHeight
-          })
-          break
-        } catch (canvasError) {
-          retryCount++
-          console.warn(`⚠️ Tentativa ${retryCount}/${maxRetries} de conversão falhou:`, canvasError)
-          
-          if (retryCount < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
-          } else {
-            throw canvasError
-          }
-        }
-      }
-
-      if (!canvas) {
-        throw new Error('Falha na conversão para canvas após todas as tentativas')
-      }
-
-      console.log('📄 Gerando PDF...')
-      const imgData = canvas.toDataURL('image/png')
-      const pdf = new jsPDF('p', 'mm', 'a4')
-      
-      const imgWidth = 190
-      const pageHeight = 280
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
-      let heightLeft = imgHeight
-      
-      let position = 10
-      
-      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
-      
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight + 10
-        pdf.addPage()
-        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight)
-        heightLeft -= pageHeight
-      }
-      
-      pdf.save(`romaneio-${selectedRomaneio.numero}.pdf`)
-      console.log('✅ PDF gerado com sucesso!')
-      
-      // Clean up
-      document.body.removeChild(printElement)
-      
+      await gerarRomaneioPDF(selectedRomaneio)
     } catch (error) {
       console.error('💥 Erro ao gerar PDF:', error)
       

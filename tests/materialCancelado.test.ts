@@ -34,10 +34,10 @@ test('vínculo cujo documento não foi carregado não é tratado como cancelado'
   expect((await materialDependencyService.checkDependencies('material')).data?.podeExcluirComHistorico).toBe(false)
 })
 
-test('solicitações continuam bloqueando a exclusão mesmo com romaneios cancelados', async () => {
+test('solicitações não bloqueiam a exclusão com romaneios cancelados', async () => {
   mocks.tabelas.romaneios_itens = [{ romaneios: [{ status: 'cancelado' }] }]
   mocks.tabelas.solicitacoes_itens = [{ id: 'solicitacao' }]
-  expect((await materialDependencyService.checkDependencies('material')).data?.podeExcluirComHistorico).toBe(false)
+  expect((await materialDependencyService.checkDependencies('material')).data?.podeExcluirComHistorico).toBe(true)
 })
 
 test('usa a exclusão transacional e informa que os documentos cancelados permaneceram', async () => {

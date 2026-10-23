@@ -36,7 +36,7 @@ const formatDate = (dateString: string | null) => {
 export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyWithLogo | null): string => {
   const totalItens = romaneio.romaneios_itens?.length || 0
   const valorTotal = romaneio.valor_total || 0
-  
+
   // Calcular valor total se não estiver definido
   const calculatedTotal = romaneio.romaneios_itens?.reduce((sum, item) => {
     return sum + (item.valor_total || (item.quantidade * (item.valor_unitario || 0)))
@@ -54,21 +54,22 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
             margin: 10mm;
             size: A4;
           }
-          
-          body { 
-            font-family: Arial, sans-serif; 
+
+          html { color-scheme: light; }
+          body { color: #111111; background: #ffffff;
+            font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
             font-size: 12px;
             line-height: 1.3;
           }
-          
+
           .container {
             width: 100%;
             max-width: 210mm;
             margin: 0 auto;
           }
-          
+
           .header {
             display: flex;
             justify-content: space-between;
@@ -77,13 +78,13 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
             padding-bottom: 10px;
             margin-bottom: 15px;
           }
-          
+
           .logo-section {
             display: flex;
             align-items: center;
             gap: 15px;
           }
-          
+
           .logo {
             height: 35px;
             width: auto;
@@ -103,7 +104,7 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
             object-fit: contain;
             background: transparent;
           }
-          
+
           .title {
             font-size: 28px;
             font-weight: bold;
@@ -113,7 +114,7 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
             display: flex;
             align-items: center;
           }
-          
+
           .company-info {
             text-align: right;
             font-size: 9px;
@@ -121,60 +122,60 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
             color: #666;
             max-width: 200px;
           }
-          
+
           .company-name {
             font-weight: bold;
             color: #333;
             margin-bottom: 3px;
             font-size: 10px;
           }
-          
+
           .info-section {
             border: 2px solid #333;
             margin-bottom: 15px;
           }
-          
+
           .info-header {
             display: grid;
             grid-template-columns: 1fr 1fr;
             border-bottom: 1px solid #333;
           }
-          
+
           .info-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
             border-bottom: 1px solid #333;
           }
-          
+
           .info-row:last-child {
             border-bottom: none;
           }
-          
+
           .info-cell {
             padding: 8px 12px;
             border-right: 1px solid #333;
             display: flex;
             align-items: center;
           }
-          
+
           .info-cell:last-child {
             border-right: none;
           }
-          
+
           .info-label {
             font-weight: bold;
             margin-right: 8px;
             min-width: 80px;
           }
-          
+
           .info-value {
             flex: 1;
           }
-          
+
           .material-section {
             margin-bottom: 20px;
           }
-          
+
           .section-title {
             background: #4a90e2;
             color: white;
@@ -184,13 +185,13 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
             margin: 0 0 2px 0;
             text-align: center;
           }
-          
+
           .material-table {
             width: 100%;
             border-collapse: collapse;
             border: 2px solid #333;
           }
-          
+
           .material-table th {
             background: #4a90e2;
             color: white;
@@ -200,7 +201,7 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
             font-size: 11px;
             border: 1px solid #333;
           }
-          
+
           .material-table td {
             padding: 8px 6px;
             border: 1px solid #333;
@@ -208,29 +209,29 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
             font-size: 10px;
             vertical-align: middle;
           }
-          
+
           .material-table td:nth-child(2) {
             text-align: left;
             max-width: 200px;
             word-wrap: break-word;
           }
-          
+
           .material-table tr:nth-child(even) {
             background: #f9f9f9;
           }
-          
+
           .empty-row td {
             height: 25px;
             border: 1px solid #333;
           }
-          
+
           .total-section {
             margin-top: 15px;
             text-align: right;
             font-weight: bold;
             font-size: 14px;
           }
-          
+
           .verification-section {
             margin-top: 30px;
             padding: 10px;
@@ -238,14 +239,14 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
             text-align: center;
             font-weight: bold;
           }
-          
+
           .signature-section {
             margin-top: 10px;
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
             gap: 30px;
           }
-          
+
           .signature-box {
             text-align: center;
             font-weight: bold;
@@ -256,14 +257,14 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
             justify-content: flex-start;
             min-height: 130px;
           }
-          
+
           .signature-line {
             width: 100%;
             height: 1px;
             background-color: #333;
             margin: 80px 0 8px 0;
           }
-          
+
           /* Assinatura colhida na retirada assistida (RF-09) */
           .signature-image {
             width: 100%;
@@ -294,8 +295,8 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
           <div class="header">
             <div class="logo-section">
               <div class="logo">
-                ${company?.logo_url 
-                  ? `<img src="${company.logo_url}" alt="Logo da Empresa" />` 
+                ${company?.logo_url
+                  ? `<img src="${company.logo_url}" alt="Logo da Empresa" />`
                   : 'LOGO'
                 }
               </div>
@@ -322,7 +323,7 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
                 <span class="info-value">${formatDate(romaneio.data_romaneio || romaneio.created_at)}</span>
               </div>
             </div>
-            
+
             <div class="info-row">
               <div class="info-cell">
                 <span class="info-label">Responsável:</span>
@@ -333,7 +334,7 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
                 <span class="info-value">${romaneio.colaboradores?.matricula || romaneio.responsavel_retirada?.match(/\(([^)]+)\)/)?.[1] || 'N/A'}</span>
               </div>
             </div>
-            
+
             <div class="info-row">
               <div class="info-cell">
                 <span class="info-label">Centro de Custo:</span>
@@ -357,7 +358,7 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
           <!-- Material Section -->
           <div class="material-section">
             <h2 class="section-title">${romaneio.tipo === 'devolucao' ? 'Lista de Material Devolvido' : 'Lista de Material'}</h2>
-            
+
             <table class="material-table">
               <thead>
                 <tr>
@@ -386,7 +387,7 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
                     <td><strong>${item.valor_total ? `R$ ${item.valor_total.toFixed(2)}` : 'N/C'}</strong></td>
                   </tr>
                 `).join('') || ''}
-                
+
                 ${Array.from({ length: Math.max(0, 15 - (romaneio.romaneios_itens?.length || 0)) }, (_, i) => `
                   <tr class="empty-row">
                     <td>&nbsp;</td>

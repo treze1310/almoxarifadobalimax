@@ -12,18 +12,9 @@ export interface MaterialDependency {
   details: any[]
 }
 
-/**
- * O que impede de verdade a exclusão: documento emitido que aponta para o
- * item. Romaneio assinado e solicitação de compra não podem ficar apontando
- * para o nada.
- *
- * Movimentação de estoque e peças são o histórico do próprio item: vão junto
- * com ele. A tela dizia "dependências críticas" para uma única movimentação de
- * ajuste manual e não oferecia saída nenhuma.
- */
+/** Apenas romaneios não cancelados impedem excluir; solicitações preservam o histórico. */
 export const DEPENDENCIAS_QUE_IMPEDEM: MaterialDependency['type'][] = [
   'romaneios_itens',
-  'solicitacoes_itens',
 ]
 
 export interface MaterialDependencies {
@@ -131,7 +122,7 @@ export const materialDependencyService = {
         totalReferences += movimentacoes.length
       }
 
-      // 4. Solicitações de compra (bloqueiam: é documento)
+      // 4. Solicitações de compra (preservadas sem bloquear)
       const { data: solicitacoesItens, error: solError } = await supabase
         .from('solicitacoes_itens')
         .select(

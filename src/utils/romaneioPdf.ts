@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
+import { capturarDocumentoPDF } from '@/lib/pdfDocument'
 import { generateRomaneoPDFContent } from '@/components/romaneios/RomaneioPDF'
 import { companyService } from '@/services/companyService'
 import { supabase } from '@/lib/supabase'
@@ -57,63 +57,24 @@ export async function gerarRomaneioPDF(romaneioInput: any): Promise<void> {
   const romaneio = await enriquecerComMaiorPreco(romaneioInput)
   const company = await companyService.getActiveCompany()
 
-  const printElement = document.createElement('div')
-  printElement.innerHTML = generateRomaneoPDFContent(romaneio, company)
-  printElement.style.position = 'absolute'
-  printElement.style.left = '-9999px'
-  printElement.style.top = '0'
-  printElement.style.width = '210mm'
-  printElement.style.minHeight = '297mm'
-  printElement.style.backgroundColor = 'white'
-  document.body.appendChild(printElement)
+  const canvas = await capturarDocumentoPDF(generateRomaneoPDFContent(romaneio, company))
+  const imgData = canvas.toDataURL('image/png')
+  const pdf = new jsPDF('p', 'mm', 'a4')
+  const imgWidth = 190
+  const pageHeight = 280
+  const imgHeight = (canvas.height * imgWidth) / canvas.width
+  let heightLeft = imgHeight
+  let position = 10
 
-  try {
-    // Aguarda carregamento de imagens (logo, etc)
-    await new Promise((resolve) => setTimeout(resolve, 800))
+  pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight)
+  heightLeft -= pageHeight
 
-    let canvas: HTMLCanvasElement | undefined
-    let retry = 0
-    const maxRetries = 3
-    while (retry < maxRetries) {
-      try {
-        canvas = await html2canvas(printElement, {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: 'white',
-          width: printElement.scrollWidth,
-          height: printElement.scrollHeight,
-        })
-        break
-      } catch (err) {
-        retry++
-        if (retry >= maxRetries) throw err
-        await new Promise((resolve) => setTimeout(resolve, 800 * retry))
-      }
-    }
-
-    if (!canvas) throw new Error('Falha na conversão para canvas')
-
-    const imgData = canvas.toDataURL('image/png')
-    const pdf = new jsPDF('p', 'mm', 'a4')
-    const imgWidth = 190
-    const pageHeight = 280
-    const imgHeight = (canvas.height * imgWidth) / canvas.width
-    let heightLeft = imgHeight
-    let position = 10
-
+  while (heightLeft >= 0) {
+    position = heightLeft - imgHeight + 10
+    pdf.addPage()
     pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight)
     heightLeft -= pageHeight
-
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight + 10
-      pdf.addPage()
-      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
-    }
-
-    pdf.save(`romaneio-${romaneio.numero || 'comprovante'}.pdf`)
-  } finally {
-    if (printElement.parentNode) document.body.removeChild(printElement)
   }
+
+  pdf.save(`romaneio-${romaneio.numero || 'comprovante'}.pdf`)
 }

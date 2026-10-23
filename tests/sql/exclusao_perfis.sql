@@ -10,6 +10,7 @@ declare
   v_ok boolean;
   v_snapshot jsonb;
   v_novo uuid;
+  v_sol uuid := gen_random_uuid();
 begin
   select u.auth_user_id into v_admin from public.usuarios u
     left join public.perfis_acesso p on p.id = u.perfil_acesso_id
@@ -24,7 +25,18 @@ begin
     values(v_doc, '__TESTE_' || v_doc::text, 'retirada', 'cancelado');
   insert into public.romaneios_itens(id, romaneio_id, material_equipamento_id, quantidade)
     values(v_item, v_doc, v_mat, 1);
+  insert into public.solicitacoes(id, numero, tipo, status)
+    values(v_sol, '__TESTE_' || v_sol::text, 'compra', 'pendente');
+  insert into public.solicitacoes_itens(solicitacao_id, material_equipamento_id, descricao_item, quantidade)
+    values(v_sol, v_mat, 'Item solicitado', 3);
   perform public.excluir_material(v_mat);
+  if not exists(select 1 from public.solicitacoes_itens where solicitacao_id = v_sol
+    and material_equipamento_id is null and quantidade = 3
+    and descricao_item = 'Material teste cancelado' and material_excluido ->> 'nome' = 'Material teste cancelado')
+    then raise exception 'Solicitação bloqueou exclusão ou perdeu identificação.'; end if;
+  if not exists(select 1 from public.solicitacoes where id = v_sol and status = 'pendente')
+    then raise exception 'Solicitação não foi preservada.'; end if;
+
   if exists(select 1 from public.materiais_equipamentos where id = v_mat) then raise exception 'Material cancelado permaneceu.'; end if;
   select material_excluido into v_snapshot from public.romaneios_itens where id = v_item and material_equipamento_id is null;
   if v_snapshot ->> 'nome' is distinct from 'Material teste cancelado' then raise exception 'Identificação histórica perdida.'; end if;

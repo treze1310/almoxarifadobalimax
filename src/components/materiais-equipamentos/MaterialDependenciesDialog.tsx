@@ -210,6 +210,7 @@ export function MaterialDependenciesDialog({
 
   /** O que será apagado junto, para a exclusão não ser surpresa */
   const vaiJunto = [
+    solicitacoesDep && `${solicitacoesDep.count} vínculo(s) com solicitações (as solicitações e a descrição do item são preservadas)`,
     movimentacoesDep && `${movimentacoesDep.count} movimentação(ões) de estoque`,
     unidadesDep && `${unidadesDep.count} peça(s) numerada(s)`,
     nfeDep && `${nfeDep.count} vínculo(s) de NF-e (as notas continuam no histórico)`,
@@ -228,7 +229,7 @@ export function MaterialDependenciesDialog({
             {materialName && `Material: ${materialName}`}
             <br />
             {hasCriticalDeps
-              ? 'Este item aparece em romaneio não cancelado ou solicitação de compra e por isso não pode ser excluído.'
+              ? 'Este item aparece em romaneio não cancelado e por isso não pode ser excluído.'
               : 'Confira o que será apagado junto com o item.'}
           </DialogDescription>
         </DialogHeader>
@@ -316,7 +317,7 @@ export function MaterialDependenciesDialog({
                         <p className="text-sm text-muted-foreground">
                           {romaneiosDep?.count ? `Aparece em ${romaneiosDep.count} romaneio(s); ${romaneiosDep.blockingCount ?? romaneiosDep.count} não cancelado(s). ` : ''}
                           {solicitacoesDep?.count
-                            ? `Aparece em ${solicitacoesDep.count} solicitação(ões) de compra. `
+                            ? `As ${solicitacoesDep.count} solicitação(ões) de compra serão preservadas. `
                             : ''}
                           Documento emitido não pode apontar para um item que não existe mais —
                           marque o item como inativo para tirá-lo do uso sem apagar o histórico.

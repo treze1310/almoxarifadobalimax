@@ -40,7 +40,7 @@ export const useSolicitacoes = (): UseSolicitacoesReturn => {
   const fetchSolicitacoes = useCallback(async () => {
     setLoading(true)
     setError(null)
-    
+
     try {
       const { data, error } = await supabase
         .from('solicitacoes')
@@ -50,6 +50,7 @@ export const useSolicitacoes = (): UseSolicitacoesReturn => {
             id,
             material_equipamento_id,
             descricao_item,
+            material_excluido,
             quantidade,
             observacoes,
             materiais_equipamentos(
@@ -74,7 +75,7 @@ export const useSolicitacoes = (): UseSolicitacoesReturn => {
 
       if (error) throw error
 
-      // Transformar os dados para o formato esperado  
+      // Transformar os dados para o formato esperado
       const solicitacoesFormatadas: SolicitacaoCompra[] = data?.map(item => ({
         id: item.numero || item.id, // usar numero como ID principal
         data: new Date(item.data_solicitacao),
@@ -88,7 +89,7 @@ export const useSolicitacoes = (): UseSolicitacoesReturn => {
           (item.origem === 'automatica' ? 'Sistema (ponto de pedido)' : undefined),
         origem: item.origem === 'automatica' ? 'automatica' : 'manual',
         justificativa: item.justificativa || undefined,
-        status: item.status === 'pendente' ? 'Pendente' : 
+        status: item.status === 'pendente' ? 'Pendente' :
                 item.status === 'aprovada' ? 'Aprovada' :
                 item.status === 'rejeitada' ? 'Rejeitada' :
                 item.status === 'concluida' ? 'Concluída' :
@@ -103,8 +104,8 @@ export const useSolicitacoes = (): UseSolicitacoesReturn => {
           // Se não tem material_equipamento_id, é um item avulso
           item_avulso: !subItem.material_equipamento_id ? {
             descricao: subItem.descricao_item || 'Item avulso',
-            unidade_medida: undefined,
-            codigo: undefined
+            unidade_medida: subItem.material_excluido?.unidade_medida,
+            codigo: subItem.material_excluido?.codigo
           } : undefined
         })) || []
       })) || []
@@ -162,7 +163,7 @@ export const useSolicitacoes = (): UseSolicitacoesReturn => {
           // Para itens avulsos, usar a descrição. Para materiais, usar descrição padrão
           descricao_item: item.item_avulso?.descricao || 'Item solicitado'
         }))
-        
+
         const { error: itensError } = await supabase
           .from('solicitacoes_itens')
           .insert(itensParaInserir)
