@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/table'
 import { useToast } from '@/components/ui/use-toast'
 import { supabase } from '@/lib/supabase'
+import { comLimiteDeTempo } from '@/lib/comLimiteDeTempo'
 import { usePermissoes } from '@/contexts/PermissionsContext'
 import { contar } from '@/lib/plural'
 import { formatCurrency } from '@/lib/utils'
@@ -158,10 +159,12 @@ export const UnidadesDoMaterial = ({
 
     setGerando(true)
     try {
-      const { data, error } = await supabase.rpc('gerar_unidades_material', {
-        p_material_id: materialId,
-        p_quantidade: quantidade,
-      })
+      const { data, error } = await comLimiteDeTempo(
+        supabase.rpc('gerar_unidades_material', {
+          p_material_id: materialId,
+          p_quantidade: quantidade,
+        }),
+      )
       if (error) throw error
 
       const criadas = (data as Array<{ codigo: string }>) ?? []
@@ -189,20 +192,30 @@ export const UnidadesDoMaterial = ({
       atuais.map((u) => (u.id === unidade.id ? { ...u, status } : u)),
     )
 
-    const { error } = await supabase
-      .from('material_unidades')
-      .update({ status })
-      .eq('id', unidade.id)
-
-    if (error) {
+    const desfazer = (motivo: string) => {
       setUnidades((atuais) =>
         atuais.map((u) => (u.id === unidade.id ? { ...u, status: anterior } : u)),
       )
-      toast({
-        title: 'Erro ao mudar o status',
-        description: error.message,
-        variant: 'destructive',
-      })
+      toast({ title: 'Erro ao mudar o status', description: motivo, variant: 'destructive' })
+    }
+
+    try {
+      // `select` revela a gravação barrada por permissão, que volta sem erro e
+      // sem linha nenhuma — a tela mostrava o status novo e o banco ficava no
+      // antigo até a próxima recarga
+      const { data, error } = await comLimiteDeTempo(
+        supabase.from('material_unidades').update({ status }).eq('id', unidade.id).select('id'),
+      )
+
+      if (error) throw error
+      if (!data || data.length === 0) {
+        throw new Error(
+          'A peça não foi alterada. Confira se o seu perfil tem permissão para editar materiais.',
+        )
+      }
+    } catch (erro) {
+      console.error('Erro ao mudar o status da peça:', erro)
+      desfazer(erro instanceof Error ? erro.message : 'Erro desconhecido')
     }
   }
 
@@ -218,12 +231,18 @@ export const UnidadesDoMaterial = ({
 
     setExcluindo(true)
     try {
-      const { error } = await supabase
-        .from('material_unidades')
-        .delete()
-        .eq('id', unidadeParaExcluir.id)
+      const { data, error } = await comLimiteDeTempo(
+        supabase
+          .from('material_unidades')
+          .delete()
+          .eq('id', unidadeParaExcluir.id)
+          .select('id'),
+      )
 
       if (error) throw error
+      if (!data || data.length === 0) {
+        throw new Error('A peça não foi excluída. Só administrador pode excluir peça')
+      }
 
       toast({
         title: `Peça ${unidadeParaExcluir.codigo} excluída`,
@@ -232,6 +251,7 @@ export const UnidadesDoMaterial = ({
       setUnidadeParaExcluir(null)
       await carregar()
     } catch (erro) {
+      console.error('Erro ao excluir a peça:', erro)
       toast({
         title: 'Erro ao excluir a peça',
         description:

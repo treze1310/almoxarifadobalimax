@@ -577,7 +577,7 @@ export function useRomaneios() {
           centro_custo_origem:centro_custo_origem_id (codigo, descricao, empresas:empresa_id(nome)),
           centro_custo_destino:centro_custo_destino_id (codigo, descricao, empresas:empresa_id(nome)),
           romaneios_itens (
-            id, quantidade, valor_unitario, valor_total,
+            id, material_equipamento_id, quantidade, valor_unitario, valor_total,
             numero_serie, codigo_patrimonial, observacoes, material_unidade_id,
             material_unidades:material_unidade_id (codigo, status),
             materiais_equipamentos:material_equipamento_id (id, codigo, nome, unidade_medida, codigo_ncm, centros_custo:centro_custo_id (codigo, descricao, empresas:empresa_id(nome)))

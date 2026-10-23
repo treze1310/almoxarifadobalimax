@@ -17,6 +17,7 @@ import { palavrasDaBusca, textoComparavel } from '../src/lib/textoComparavel'
 import { expandirItensPorPeca, type LinhaComPecas } from '../src/lib/romaneioPecas'
 import { chaveDeRascunho, limparRascunhos } from '../src/hooks/usePersistentState'
 import { ehErroDeChunk } from '../src/lib/erroDeChunk'
+import { comLimiteDeTempo, TempoEsgotado } from '../src/lib/comLimiteDeTempo'
 import {
   agruparSugestoes,
   forcaDaSugestao,
@@ -1007,5 +1008,35 @@ describe('vínculo do item da NF-e ao material', () => {
 
   test('produto nunca visto é o único que vira item novo', () => {
     expect(escolher({ code: '99999' }, null, null)).toEqual({ id: null, origem: 'criar' })
+  })
+})
+
+/**
+ * Chamada ao banco que não responde.
+ *
+ * O botão "Salvar" da ficha da peça ficava girando para sempre quando a
+ * resposta não vinha: a pessoa não sabia se tinha gravado, se falhou ou se
+ * estava lento. Desistir com mensagem é pior que gravar, mas melhor que
+ * deixar a tela mentindo.
+ */
+describe('limite de tempo nas chamadas ao banco', () => {
+  test('resposta que chega a tempo passa direto', async () => {
+    await expect(comLimiteDeTempo(Promise.resolve('pronto'), 1)).resolves.toBe('pronto')
+  })
+
+  test('erro do banco continua sendo erro do banco', async () => {
+    await expect(comLimiteDeTempo(Promise.reject(new Error('RLS')), 1)).rejects.toThrow('RLS')
+  })
+
+  // O caso do defeito: a promessa nunca termina
+  test('resposta que nunca vem vira aviso, não espera infinita', async () => {
+    const nuncaTermina = new Promise(() => {})
+    await expect(comLimiteDeTempo(nuncaTermina, 0.01)).rejects.toBeInstanceOf(TempoEsgotado)
+  })
+
+  test('a mensagem diz o que fazer', async () => {
+    const erro = new TempoEsgotado(20)
+    expect(erro.message).toContain('20 segundos')
+    expect(erro.message).toMatch(/outra aba/)
   })
 })

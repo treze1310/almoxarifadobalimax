@@ -22,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import { LocalizacaoComboboxWithAdd } from '@/components/materiais-equipamentos/LocalizacaoComboboxWithAdd'
 import { supabase } from '@/lib/supabase'
+import { comLimiteDeTempo, SEGUNDOS_ATE_DESISTIR } from '@/lib/comLimiteDeTempo'
 import { formatCurrency } from '@/lib/utils'
 import { usePermissoes } from '@/contexts/PermissionsContext'
 
@@ -101,7 +102,14 @@ export const UnidadeDialog = ({
 
     setSalvando(true)
     try {
-      const { error } = await supabase
+      /**
+       * `select` para saber quantas linhas mudaram.
+       *
+       * Sem ele, uma gravação barrada pela permissão volta "com sucesso" e sem
+       * linha nenhuma — e a tela dizia "peça salva" com o banco intacto. Com a
+       * linha de volta, dá para diferenciar "gravou" de "não tinha permissão".
+       */
+      const gravar = supabase
         .from('material_unidades')
         .update({
           numero_serie: numeroSerie.trim() || null,
@@ -111,19 +119,31 @@ export const UnidadeDialog = ({
           observacoes: observacoes.trim() || null,
         })
         .eq('id', unidade.id)
+        .select('id')
+
+      const { data, error } = await comLimiteDeTempo(gravar, SEGUNDOS_ATE_DESISTIR)
 
       if (error) throw error
+
+      if (!data || data.length === 0) {
+        throw new Error(
+          'A peça não foi alterada. Confira se o seu perfil tem permissão para editar materiais e se a peça ainda existe.',
+        )
+      }
 
       toast({ title: `Peça ${unidade.codigo} salva` })
       onSalvo()
       onOpenChange(false)
     } catch (erro) {
+      // No console fica o erro inteiro, para quando a mensagem não bastar
+      console.error('Erro ao salvar a peça:', erro)
       toast({
         title: 'Erro ao salvar a peça',
         description: erro instanceof Error ? erro.message : 'Erro desconhecido',
         variant: 'destructive',
       })
     } finally {
+      // Sempre: o botão não pode ficar girando para sempre
       setSalvando(false)
     }
   }

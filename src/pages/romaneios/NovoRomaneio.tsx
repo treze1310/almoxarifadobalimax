@@ -1,3 +1,4 @@
+import { RomaneioDevolucaoDetalhes } from '@/components/romaneios/RomaneioDevolucaoDetalhes'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { contar } from '@/lib/plural'
 import { useForm, useFieldArray } from 'react-hook-form'
@@ -9,7 +10,7 @@ import { ToastAction } from '@/components/ui/toast'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
-import { Calendar as CalendarIcon, PlusCircle, Trash2, ArrowLeft, Search, Package, Eye } from 'lucide-react'
+import { Calendar as CalendarIcon, PlusCircle, Trash2, ArrowLeft, Search, Package } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -59,10 +60,11 @@ type MaterialEquipamento = Tables<'materiais_equipamentos'>
 type Colaborador = Tables<'colaboradores'>
 type RomaneioRetirada = Tables<'romaneios'> & {
   colaboradores?: { nome: string; matricula: string } | null
-  centro_custo_origem?: { codigo: string; nome: string } | null
-  centro_custo_destino?: { codigo: string; nome: string } | null
+  centro_custo_origem?: { codigo: string; descricao: string } | null
+  centro_custo_destino?: { codigo: string; descricao: string } | null
   romaneios_itens?: Array<{
     id: string
+    material_equipamento_id?: string
     quantidade: number
     valor_unitario: number | null
     valor_total: number | null
@@ -266,8 +268,21 @@ const NovoRomaneioPage = () => {
   }, [availableRomaneios, searchTerm])
 
   // Create options for comboboxes
-  const itemOptions: ComboboxOption[] = materiaisEquipamentos.map((item) => ({
-    value: item.id,
+  // A retirada já traz os materiais vinculados. Eles podem estar fora das
+  // primeiras 1.000 linhas do catálogo, ou ter sido inativados depois da saída.
+  const materiaisDisponiveis = useMemo(() => {
+    const porId = new Map<string, Partial<MaterialEquipamento>>()
+    for (const item of selectedRomaneio?.romaneios_itens ?? []) {
+      const material = item.materiais_equipamentos
+      const id = item.material_equipamento_id || material?.id
+      if (id && material) porId.set(id, { ...material, id })
+    }
+    for (const material of materiaisEquipamentos) porId.set(material.id, material)
+    return porId
+  }, [materiaisEquipamentos, selectedRomaneio])
+
+  const itemOptions: ComboboxOption[] = [...materiaisDisponiveis].map(([id, item]) => ({
+    value: id,
     label: `${item.codigo} - ${item.nome}`,
   }))
 
@@ -365,11 +380,12 @@ const NovoRomaneioPage = () => {
       setResponsavelData({ type: 'nome', nome, displayName: nome })
     }
     
-    // Load items from original romaneio - Use setTimeout to ensure form is ready
+    // Preencher antes de exibir o passo seguinte, sem temporizador concorrendo
+    // com o formulário ou com uma segunda seleção.
     if (romaneio.romaneios_itens) {
       const itemsWithOriginalQty = romaneio.romaneios_itens
         .map((item) => {
-          const materialId = item.materiais_equipamentos?.id || ''
+          const materialId = item.material_equipamento_id || item.materiais_equipamentos?.id || ''
           const jaDevolvido = devolvidoPorMaterial.get(materialId) || 0
           // Saldo restante a devolver (qtd original - devoluções anteriores)
           const saldo = Math.max(item.quantidade - jaDevolvido, 0)
@@ -387,12 +403,7 @@ const NovoRomaneioPage = () => {
         // Itens já totalmente devolvidos não aparecem
         .filter((it) => it.quantidadeOriginal > 0)
 
-      // Use setTimeout to ensure the form state is updated after the step change
-      setTimeout(() => {
-        replace(itemsWithOriginalQty)
-        // Force form to recognize the new items
-        form.setValue('itens', itemsWithOriginalQty)
-      }, 100)
+      replace(itemsWithOriginalQty)
     }
     setStep(2)
   }
@@ -578,7 +589,7 @@ const NovoRomaneioPage = () => {
   )
 
   const getSelectedItem = (materialId: string) => {
-    return materiaisEquipamentos.find(item => item.id === materialId)
+    return materiaisDisponiveis.get(materialId)
   }
 
   if (isDevolucao && step === 1) {
@@ -671,7 +682,7 @@ const NovoRomaneioPage = () => {
                                 <Package className="h-4 w-4 text-blue-500" />
                                 <div className="flex flex-col">
                                   <span className="text-xs text-muted-foreground">CC Origem:</span>
-                                  <span>{romaneio.centro_custo_origem.codigo} - {romaneio.centro_custo_origem.nome}</span>
+                                  <span>{romaneio.centro_custo_origem.codigo} - {romaneio.centro_custo_origem.descricao}</span>
                                 </div>
                               </div>
                             )}
@@ -680,7 +691,7 @@ const NovoRomaneioPage = () => {
                                 <Package className="h-4 w-4 text-green-500" />
                                 <div className="flex flex-col">
                                   <span className="text-xs text-muted-foreground">CC Destino:</span>
-                                  <span>{romaneio.centro_custo_destino.codigo} - {romaneio.centro_custo_destino.nome}</span>
+                                  <span>{romaneio.centro_custo_destino.codigo} - {romaneio.centro_custo_destino.descricao}</span>
                                 </div>
                               </div>
                             )}
@@ -712,14 +723,7 @@ const NovoRomaneioPage = () => {
                           >
                             Selecionar
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {/* Implementar visualização */}}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Ver Detalhes
-                          </Button>
+                          <RomaneioDevolucaoDetalhes romaneio={romaneio} />
                         </div>
                       </div>
                     </CardContent>
