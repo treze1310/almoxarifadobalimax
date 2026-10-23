@@ -53,13 +53,16 @@ export function LocalizacaoComboboxWithAdd({
   const [criando, setCriando] = useState(false)
   const [editando, setEditando] = useState<Tables<'localizacao'> | null>(null)
   const { data: localizacoes, fetchData: recarregar } = useSupabaseTable('localizacao', {
-    order: { column: 'codigo' },
+    order: { column: 'nome' },
   })
   const { toast } = useToast()
 
   const posicaoDialogo = useCenteredDialog(criando || !!editando)
 
-  const ativas = localizacoes?.filter((l) => l.ativo) || []
+  const ativas = (localizacoes ?? [])
+    .filter((l) => l.ativo || l.id === value)
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base', numeric: true })
+      || a.codigo.localeCompare(b.codigo, 'pt-BR', { numeric: true }))
   const termo = busca.toLowerCase()
   const filtradas = ativas.filter(
     (l) =>
@@ -124,6 +127,7 @@ export function LocalizacaoComboboxWithAdd({
             <Button
               variant="outline"
               role="combobox"
+              aria-label="Localização"
               aria-expanded={open}
               className="w-full justify-between font-normal"
               disabled={disabled}
@@ -134,7 +138,7 @@ export function LocalizacaoComboboxWithAdd({
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[10001]" align="start">
+          <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[10060]" align="start">
             <Command shouldFilter={false}>
               <CommandInput
                 placeholder="Buscar por código ou nome..."
@@ -229,7 +233,8 @@ export function LocalizacaoComboboxWithAdd({
         }}
       >
         <DialogContent
-          className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto items-start fixed z-[10002]"
+          overlayClassName="z-[10070]"
+          className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto items-start fixed z-[10080]"
           style={{
             top: posicaoDialogo.top,
             left: posicaoDialogo.left,

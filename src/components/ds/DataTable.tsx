@@ -43,6 +43,8 @@ export interface ColunaDataTable<T> {
   celula?: (linha: T) => React.ReactNode
   /** Valor textual usado em busca, filtro, ordenação e CSV */
   valor: (linha: T) => string
+  /** Texto adicional da busca geral, sem alterar as opções do filtro da coluna. */
+  valorBusca?: (linha: T) => string
   /** Valor usado só na ordenação, quando difere do texto (ex.: número, data) */
   valorOrdenacao?: (linha: T) => string | number
   /** Fixa a coluna: não pode ser escondida */
@@ -315,7 +317,7 @@ export function DataTable<T>({
     const termo = buscaAplicada.trim().toLowerCase()
     return dados.filter((linha) => {
       if (termo) {
-        const casa = colunasEstaveis.some((c) => c.valor(linha).toLowerCase().includes(termo))
+        const casa = colunasEstaveis.some((c) => (c.valorBusca?.(linha) ?? c.valor(linha)).toLowerCase().includes(termo))
         if (!casa) return false
       }
       return Object.entries(filtros).every(([colunaId, valores]) => {

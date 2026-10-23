@@ -202,7 +202,7 @@ export const UnidadeDialog = ({
                 <SelectTrigger id="unidade-status">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="z-[10002]">
+                <SelectContent className="z-[10060]">
                   {Object.entries(STATUS_UNIDADE).map(([valor, rotulo]) => (
                     <SelectItem key={valor} value={valor}>
                       {rotulo}

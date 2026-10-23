@@ -195,15 +195,14 @@ const LocalizacaoPage = () => {
       id: 'codigo',
       cabecalho: 'Código',
       fixa: true,
-      semFiltro: true,
-      valor: (l) => `${l.codigo ?? ''} ${l.nome ?? ''} ${l.descricao ?? ''}`.trim(),
+      valor: (l) => l.codigo ?? '',
+      valorBusca: (l) => `${l.codigo ?? ''} ${l.nome ?? ''} ${l.descricao ?? ''}`.trim(),
       valorOrdenacao: (l) => l.codigo ?? '',
       celula: (l) => <span className="font-medium">{l.codigo}</span>,
     },
     {
       id: 'nome',
       cabecalho: 'Nome',
-      semFiltro: true,
       valor: (l) => l.nome ?? '—',
       celula: (l) => (
         <div className="min-w-0">
@@ -262,7 +261,9 @@ const LocalizacaoPage = () => {
       />
 
       <DataTable
-        dados={localizacoes ?? []}
+        dados={[...(localizacoes ?? [])].sort((a, b) =>
+          a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base', numeric: true })
+          || a.codigo.localeCompare(b.codigo, 'pt-BR', { numeric: true }))}
         colunas={colunas}
         idLinha={(l) => l.id}
         chaveUrl="loc"
