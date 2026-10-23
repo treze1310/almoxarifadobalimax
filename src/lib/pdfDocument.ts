@@ -87,7 +87,7 @@ export function capturarPaginasRomaneioPDF(html: string, signal?: AbortSignal): 
       }
     }
     const imagens: HTMLCanvasElement[] = []
-    for (const [indice, folha] of paginas.entries()) {
+    for (const folha of paginas) {
       if (signal?.aborted) throw new Error('Geração de PDF cancelada')
       doc.body.replaceChildren(folha)
       const tabela = folha.querySelector('.material-table tbody')!
@@ -97,10 +97,6 @@ export function capturarPaginasRomaneioPDF(html: string, signal?: AbortSignal): 
         tabela.appendChild(vazia)
         if (folha.scrollHeight > 1123) { vazia.remove(); break }
       }
-      const rodape = doc.createElement('div')
-      rodape.textContent = `Página ${indice + 1} de ${paginas.length}`
-      rodape.style.cssText = 'position:absolute;bottom:12px;right:0;font-size:10px;line-height:14px;color:#333'
-      folha.appendChild(rodape)
       imagens.push(await capturarElemento(folha))
     }
     return imagens

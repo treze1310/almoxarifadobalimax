@@ -63,7 +63,7 @@ test('romaneio curto permanece em uma página com observações e assinaturas', 
   carregarFrame(ficha([40, 40]), true)
   capture.mockImplementation(async elemento => {
     expect(elemento.textContent).toContain('Assinaturas / Observações')
-    expect(elemento.textContent).toContain('Página 1 de 1')
+    expect(elemento.textContent).not.toContain('Página 1 de 1')
     expect(elemento.scrollHeight).toBeLessThanOrEqual(1123)
     return document.createElement('canvas')
   })
@@ -88,13 +88,16 @@ test('linhas altas continuam em novas folhas sem perder itens ou repetir linhas'
 
 test.each([[794, 1400], [1200, 700]])('folha %s por %s mantém todo o conteúdo dentro das margens A4', (width, height) => {
   const addImage = vi.fn()
-  const pdf = { internal: { pageSize: { getWidth: () => 210, getHeight: () => 297 } }, addImage }
+  const text = vi.fn()
+  const pdf = { text, setFont: vi.fn(), setFontSize: vi.fn(), setTextColor: vi.fn(), internal: { pageSize: { getWidth: () => 210, getHeight: () => 297 } }, addImage }
   const canvas = { width, height, toDataURL: () => 'data:image/png;base64,teste' }
-  adicionarFolhaPDF(pdf as any, canvas as HTMLCanvasElement)
+  adicionarFolhaPDF(pdf as any, canvas as HTMLCanvasElement, 2, 3)
   const [, , x, y, largura, altura] = addImage.mock.calls[0]
   expect(x).toBeGreaterThanOrEqual(10)
   expect(y).toBe(10)
   expect(x + largura).toBeLessThanOrEqual(200)
   expect(y + altura).toBeLessThanOrEqual(287)
   expect(largura / altura).toBeCloseTo(width / height)
+  expect(y + altura).toBeLessThanOrEqual(279)
+  expect(text).toHaveBeenCalledWith('Página 2 de 3', 200, 287, { align: 'right' })
 })

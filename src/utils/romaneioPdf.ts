@@ -61,7 +61,7 @@ async function criarRomaneioPDF(romaneioInput: any): Promise<jsPDF> {
   const pdf = new jsPDF('p', 'mm', 'a4')
   paginas.forEach((canvas, indice) => {
     if (indice > 0) pdf.addPage()
-    adicionarFolhaPDF(pdf, canvas)
+    adicionarFolhaPDF(pdf, canvas, indice + 1, paginas.length)
   })
 
   return pdf
