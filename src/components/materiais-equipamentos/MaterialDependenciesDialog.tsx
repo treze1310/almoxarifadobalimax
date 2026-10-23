@@ -31,6 +31,8 @@ import {
   AlertTriangle,
   FileText,
   Package,
+  ShoppingCart,
+  Tag,
   TrendingUp,
   Unlink,
   Trash2,
@@ -192,9 +194,26 @@ export function MaterialDependenciesDialog({
 
   const nfeDep = dependencies?.dependencies.find(d => d.type === 'nfe_itens')
   const romaneiosDep = dependencies?.dependencies.find(d => d.type === 'romaneios_itens')
+  const solicitacoesDep = dependencies?.dependencies.find(d => d.type === 'solicitacoes_itens')
   const movimentacoesDep = dependencies?.dependencies.find(d => d.type === 'movimentacao_estoque')
+  const unidadesDep = dependencies?.dependencies.find(d => d.type === 'material_unidades')
 
-  const hasCriticalDeps = (romaneiosDep?.count || 0) + (movimentacoesDep?.count || 0) > 0
+  /**
+   * O que impede mesmo: documento emitido apontando para o item.
+   *
+   * Movimentação de estoque e peça numerada são o histórico do próprio item e
+   * vão junto com ele. Antes, uma única movimentação de "ajuste manual" contava
+   * como dependência crítica e a tela virava um beco sem saída: só dava para
+   * cancelar, e o item ficava lá para sempre.
+   */
+  const hasCriticalDeps = (romaneiosDep?.count || 0) + (solicitacoesDep?.count || 0) > 0
+
+  /** O que será apagado junto, para a exclusão não ser surpresa */
+  const vaiJunto = [
+    movimentacoesDep && `${movimentacoesDep.count} movimentação(ões) de estoque`,
+    unidadesDep && `${unidadesDep.count} peça(s) numerada(s)`,
+    nfeDep && `${nfeDep.count} vínculo(s) de NF-e (as notas continuam no histórico)`,
+  ].filter(Boolean) as string[]
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -207,7 +226,9 @@ export function MaterialDependenciesDialog({
           <DialogDescription>
             {materialName && `Material: ${materialName}`}
             <br />
-            Este material possui vínculos que impedem a exclusão direta.
+            {hasCriticalDeps
+              ? 'Este item aparece em documento emitido e por isso não pode ser excluído.'
+              : 'Confira o que será apagado junto com o item.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -219,7 +240,7 @@ export function MaterialDependenciesDialog({
           ) : dependencies ? (
             <>
               {/* Resumo das Dependências */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex items-center space-x-2">
@@ -247,10 +268,34 @@ export function MaterialDependenciesDialog({
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex items-center space-x-2">
+                      <ShoppingCart className="h-4 w-4 text-amber-500" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Solicitações</p>
+                        <p className="text-xl font-bold">{solicitacoesDep?.count || 0}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
                       <TrendingUp className="h-4 w-4 text-purple-500" />
                       <div>
                         <p className="text-sm text-muted-foreground">Movimentações</p>
                         <p className="text-xl font-bold">{movimentacoesDep?.count || 0}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <Tag className="h-4 w-4 text-sky-500" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Peças</p>
+                        <p className="text-xl font-bold">{unidadesDep?.count || 0}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -260,18 +305,28 @@ export function MaterialDependenciesDialog({
               {/* Status de Exclusão */}
               <Card className="mb-4">
                 <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <Info className="h-4 w-4" />
+                  <div className="flex items-start space-x-2">
+                    <Info className="mt-0.5 h-4 w-4 shrink-0" />
                     <div>
                       <p className="font-medium">
-                        {dependencies.canDelete ? 'Pode ser excluído' : 'Não pode ser excluído diretamente'}
+                        {hasCriticalDeps ? 'Não pode ser excluído' : 'Pode ser excluído'}
                       </p>
-                      {!dependencies.canDelete && (
+                      {hasCriticalDeps ? (
                         <p className="text-sm text-muted-foreground">
-                          {hasCriticalDeps 
-                            ? 'Possui dependências críticas que impedem a exclusão'
-                            : 'Possui vínculos com NFe que podem ser removidos'
-                          }
+                          {romaneiosDep?.count ? `Aparece em ${romaneiosDep.count} romaneio(s). ` : ''}
+                          {solicitacoesDep?.count
+                            ? `Aparece em ${solicitacoesDep.count} solicitação(ões) de compra. `
+                            : ''}
+                          Documento emitido não pode apontar para um item que não existe mais —
+                          marque o item como inativo para tirá-lo do uso sem apagar o histórico.
+                        </p>
+                      ) : vaiJunto.length > 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          Será apagado junto: {vaiJunto.join(' · ')}.
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Este item não tem nenhum vínculo.
                         </p>
                       )}
                     </div>
@@ -477,14 +532,20 @@ export function MaterialDependenciesDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
+            {/* Com movimentação ou peça, o botão sumia e sobrava só
+                "Cancelar": o item não tinha como ser excluído nunca. */}
             {!hasCriticalDeps && (
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 onClick={handleForceDelete}
                 disabled={unlinkingNFe || forceDeleting}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                {forceDeleting ? 'Excluindo...' : 'Excluir Material'}
+                {forceDeleting
+                  ? 'Excluindo...'
+                  : vaiJunto.length > 0
+                    ? 'Excluir item e histórico'
+                    : 'Excluir item'}
               </Button>
             )}
           </div>
