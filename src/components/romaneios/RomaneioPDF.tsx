@@ -221,6 +221,7 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
           }
 
           .empty-row td {
+            padding: 0;
             height: 25px;
             border: 1px solid #333;
           }

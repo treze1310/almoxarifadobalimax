@@ -1,5 +1,6 @@
+import { adicionarFolhaPDF } from '@/lib/pdfPage'
 import jsPDF from 'jspdf'
-import { capturarDocumentoPDF } from '@/lib/pdfDocument'
+import { capturarPaginasRomaneioPDF } from '@/lib/pdfDocument'
 import { generateRomaneoPDFContent } from '@/components/romaneios/RomaneioPDF'
 import { companyService } from '@/services/companyService'
 import { supabase } from '@/lib/supabase'
@@ -51,30 +52,39 @@ export async function enriquecerComMaiorPreco(romaneio: any): Promise<any> {
  * Gera e baixa o comprovante de romaneio em PDF.
  * Reutilizável tanto na listagem quanto na criação (Salvar e Aprovar).
  */
-export async function gerarRomaneioPDF(romaneioInput: any): Promise<void> {
-  if (!romaneioInput) return
+async function criarRomaneioPDF(romaneioInput: any): Promise<jsPDF> {
 
   const romaneio = await enriquecerComMaiorPreco(romaneioInput)
   const company = await companyService.getActiveCompany()
 
-  const canvas = await capturarDocumentoPDF(generateRomaneoPDFContent(romaneio, company))
-  const imgData = canvas.toDataURL('image/png')
+  const paginas = await capturarPaginasRomaneioPDF(generateRomaneoPDFContent(romaneio, company))
   const pdf = new jsPDF('p', 'mm', 'a4')
-  const imgWidth = 190
-  const pageHeight = 280
-  const imgHeight = (canvas.height * imgWidth) / canvas.width
-  let heightLeft = imgHeight
-  let position = 10
+  paginas.forEach((canvas, indice) => {
+    if (indice > 0) pdf.addPage()
+    adicionarFolhaPDF(pdf, canvas)
+  })
 
-  pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight)
-  heightLeft -= pageHeight
+  return pdf
+}
 
-  while (heightLeft >= 0) {
-    position = heightLeft - imgHeight + 10
-    pdf.addPage()
-    pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight)
-    heightLeft -= pageHeight
+export async function gerarRomaneioPDF(romaneioInput: any): Promise<void> {
+  if (!romaneioInput) return
+  const pdf = await criarRomaneioPDF(romaneioInput)
+  pdf.save(`romaneio-${romaneioInput.numero || 'comprovante'}.pdf`)
+}
+
+/** A impressão usa as mesmas folhas do download, evitando outra quebra pelo navegador. */
+export async function imprimirRomaneioPDF(romaneioInput: any): Promise<void> {
+  const janela = window.open('', '_blank')
+  if (!janela) throw new Error('Permita abrir a janela de impressão para este site.')
+  try {
+    const pdf = await criarRomaneioPDF(romaneioInput)
+    pdf.autoPrint()
+    const url = URL.createObjectURL(pdf.output('blob'))
+    janela.location.href = url
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
+  } catch (error) {
+    janela.close()
+    throw error
   }
-
-  pdf.save(`romaneio-${romaneio.numero || 'comprovante'}.pdf`)
 }

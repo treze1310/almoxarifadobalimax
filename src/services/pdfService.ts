@@ -1,4 +1,5 @@
-import { capturarDocumentoPDF } from '@/lib/pdfDocument'
+import { adicionarFolhaPDF } from '@/lib/pdfPage'
+import { capturarDocumentoPDF, capturarPaginasRomaneioPDF } from '@/lib/pdfDocument'
 import { companyService } from './companyService'
 import { supabase } from '@/lib/supabase'
 
@@ -143,6 +144,7 @@ export const pdfService = {
   async generatePDF(options: {
     filename: string
     htmlContent: string
+    paginarRomaneio?: boolean
     onStart?: () => void
     onFinish?: () => void
     onError?: (error: any) => void
@@ -180,6 +182,17 @@ export const pdfService = {
       console.log('📦 Loading PDF libraries...')
       const jsPDFModule = await import('jspdf')
       const jsPDF = jsPDFModule.default
+      if (options.paginarRomaneio) {
+        const paginas = await capturarPaginasRomaneioPDF(htmlContent, controller.signal)
+        const pdf = new jsPDF('p', 'mm', 'a4')
+        paginas.forEach((canvas, indice) => {
+          if (indice > 0) pdf.addPage()
+          adicionarFolhaPDF(pdf, canvas)
+        })
+        if (controller.signal.aborted) throw new Error('Geração de PDF cancelada')
+        pdf.save(filename)
+        return true
+      }
       const canvas = await capturarDocumentoPDF(htmlContent, controller.signal)
 
       console.log('🎨 Canvas criado:', {

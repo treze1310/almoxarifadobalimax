@@ -1,3 +1,4 @@
+import { imprimirRomaneioPDF } from '@/utils/romaneioPdf'
 import { usePermissoes } from '@/contexts/PermissionsContext'
 import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -132,17 +133,10 @@ const RomaneioDialog = ({ romaneio, trigger, onRomaneioUpdated }: RomaneioDialog
 
   const handlePrint = async () => {
     try {
-      const company = await companyService.getActiveCompany()
-      const printContent = generateRomaneoPDFContent(romaneio as any, company)
-      
-      const printWindow = window.open('', '_blank')
-      if (printWindow) {
-        printWindow.document.write(printContent)
-        printWindow.document.close()
-        printWindow.print()
-      }
+      await imprimirRomaneioPDF(romaneio)
     } catch (error) {
       console.error('Erro ao imprimir:', error)
+      toast({ title: 'Erro ao imprimir', description: error instanceof Error ? error.message : 'Não foi possível preparar a impressão.', variant: 'destructive' })
     }
   }
 
@@ -174,6 +168,7 @@ const RomaneioDialog = ({ romaneio, trigger, onRomaneioUpdated }: RomaneioDialog
       const success = await pdfService.generatePDF({
         filename: `romaneio-${romaneio.numero}.pdf`,
         htmlContent: generateRomaneoPDFContent(romaneio as any, company),
+        paginarRomaneio: true,
         onStart: () => {
           setIsGeneratingPDF(true)
           console.log('🚀 Starting PDF generation for romaneio:', romaneio.numero)
