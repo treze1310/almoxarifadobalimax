@@ -499,7 +499,7 @@ export const RetiradaAssistida = () => {
     setItens((atuais) =>
       atuais.map((item) =>
         chaveDaLinha(item) === chave
-          ? { ...item, quantidade: Math.max(1, Math.min(quantidade, item.estoqueAtual)) }
+          ? { ...item, quantidade }
           : item,
       ),
     )
@@ -509,11 +509,11 @@ export const RetiradaAssistida = () => {
     passo === 1
       ? !!responsavel && !!centroCustoId && !!data
       : passo === 2
-        ? itens.length > 0 && itensSemSaldo.length === 0
+        ? itens.length > 0 && itensSemSaldo.length === 0 && itens.every(item => item.quantidade > 0)
         : !!assinatura
 
   const confirmar = async () => {
-    if (!assinatura) return
+    if (!assinatura || itens.some(item => !Number.isFinite(item.quantidade) || item.quantidade <= 0)) return
     setSalvando(true)
     try {
       const { data: romaneio, error } = await createRomaneio({
@@ -831,9 +831,11 @@ export const RetiradaAssistida = () => {
                               </Button>
                               <Input
                                 type="number"
+                                min={1}
+                                max={item.estoqueAtual}
                                 value={item.quantidade}
                                 onChange={(e) =>
-                                  mudarQuantidade(chaveDaLinha(item), parseInt(e.target.value) || 1)
+                                  mudarQuantidade(chaveDaLinha(item), parseInt(e.target.value) || 0)
                                 }
                                 className="h-8 w-16 text-center tabular-nums"
                               />

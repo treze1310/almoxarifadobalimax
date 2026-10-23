@@ -578,8 +578,8 @@ const RelatoriosPage = () => {
               type="number"
               min="1"
               max="365"
-              value={filters.diasAlerta || 30}
-              onChange={(e) => setFilters(prev => ({ ...prev, diasAlerta: parseInt(e.target.value) }))}
+              value={filters.diasAlerta ?? 30}
+              onChange={(e) => setFilters(prev => ({ ...prev, diasAlerta: e.target.value ? parseInt(e.target.value) : undefined }))}
             />
           </div>
         )}
@@ -625,7 +625,7 @@ const RelatoriosPage = () => {
               type="number"
               min="1"
               max="100"
-              value={filters.limitarTop || ''}
+              value={filters.limitarTop ?? ''}
               onChange={(e) => setFilters(prev => ({ ...prev, limitarTop: e.target.value ?parseInt(e.target.value) : undefined }))}
               placeholder="Ex: 10"
             />

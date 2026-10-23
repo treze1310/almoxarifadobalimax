@@ -580,7 +580,7 @@ const NovaSolicitacaoPage = () => {
                                   type="number" 
                                   min="1"
                                   {...formField}
-                                  onChange={(e) => formField.onChange(parseInt(e.target.value) || 1)}
+                                  onChange={(e) => formField.onChange(parseInt(e.target.value) || 0)}
                                 />
                                 <FormMessage />
                               </FormItem>

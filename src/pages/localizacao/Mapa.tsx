@@ -469,7 +469,7 @@ const MapaPage = () => {
                   min="50"
                   max="100"
                   value={customMapSize.width}
-                  onChange={(e) => setCustomMapSize(prev => ({ ...prev, width: parseInt(e.target.value) || 100 }))}
+                  onChange={(e) => setCustomMapSize(prev => ({ ...prev, width: parseInt(e.target.value) || 0 }))}
                   className="w-16"
                 />
                 <span className="text-sm text-muted-foreground">vw</span>
@@ -481,7 +481,7 @@ const MapaPage = () => {
                   min="40"
                   max="90"
                   value={customMapSize.height}
-                  onChange={(e) => setCustomMapSize(prev => ({ ...prev, height: parseInt(e.target.value) || 75 }))}
+                  onChange={(e) => setCustomMapSize(prev => ({ ...prev, height: parseInt(e.target.value) || 0 }))}
                   className="w-16"
                 />
                 <span className="text-sm text-muted-foreground">vh</span>

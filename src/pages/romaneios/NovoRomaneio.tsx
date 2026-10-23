@@ -411,6 +411,10 @@ const NovoRomaneioPage = () => {
 
   const onSubmit = async (data: ComponentFormValues, saveAndApprove: boolean = false) => {
     try {
+      if (data.itens.some(item => !Number.isFinite(item.quantidade) || item.quantidade <= 0)) {
+        toast({ title: 'Quantidade inválida', description: 'Informe uma quantidade maior que zero para cada item.', variant: 'destructive' })
+        return
+      }
       const responsavelText = data.responsavel_retirada || data.responsavel_nome
       const colaboradorSelecionado =
         data.colaborador_id
@@ -995,11 +999,11 @@ const NovoRomaneioPage = () => {
                                     type="number"
                                     min={1}
                                     {...formField}
-                                    onChange={(e) => formField.onChange(parseInt(e.target.value) || 1)}
+                                    onChange={(e) => formField.onChange(parseInt(e.target.value) || 0)}
                                     className={excede ? 'border-destructive focus-visible:ring-destructive' : ''}
                                   />
                                 )}
-                                {selectedMat && !porPeca && (
+                                {selectedMat && !porPeca && !isDevolucao && (
                                   <p className={`text-xs mt-1 ${excede ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
                                     {excede
                                       ? `⚠️ Excede estoque! Atual: ${estoqueDisponivel} ${selectedMat.unidade_medida || ''}`

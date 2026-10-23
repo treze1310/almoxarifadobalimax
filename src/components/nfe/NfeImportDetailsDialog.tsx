@@ -231,7 +231,7 @@ export function NfeImportDetailsDialog({
                         <Input
                           type="number"
                           step="0.01"
-                          value={editedData.valor_total || ''}
+                          value={editedData.valor_total ?? ''}
                           onChange={(e) => setEditedData(prev => ({
                             ...prev,
                             valor_total: parseFloat(e.target.value) || 0

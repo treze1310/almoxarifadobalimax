@@ -245,7 +245,7 @@ export function EPIAtribuicaoDialog({ materialId, colaboradorId, onSuccess }: EP
               type="number"
               min="1"
               value={formData.quantidade_atribuida}
-              onChange={(e) => setFormData(prev => ({ ...prev, quantidade_atribuida: parseInt(e.target.value) || 1 }))}
+              onChange={(e) => setFormData(prev => ({ ...prev, quantidade_atribuida: parseInt(e.target.value) || 0 }))}
               required
             />
           </div>

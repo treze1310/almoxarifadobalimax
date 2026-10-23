@@ -93,10 +93,9 @@ const DevolucaoSeletivaDialog = ({ romaneio, trigger, onDevolucaoRealizada }: De
   const handleQuantidadeChange = (itemId: string, quantidade: number) => {
     setItensParaDevolucao(prev => prev.map(item => {
       if (item.itemId === itemId) {
-        const maxQuantidade = getQuantidadeDisponivel(itemId)
         return {
           ...item,
-          quantidadeDevolver: Math.min(Math.max(0, quantidade), maxQuantidade)
+          quantidadeDevolver: quantidade
         }
       }
       return item
@@ -140,6 +139,11 @@ const DevolucaoSeletivaDialog = ({ romaneio, trigger, onDevolucaoRealizada }: De
         description: 'Selecione pelo menos um item para devolução',
         variant: 'destructive'
       })
+      return
+    }
+
+    if (itensSelecionados.some(item => !Number.isFinite(item.quantidadeDevolver) || item.quantidadeDevolver > getQuantidadeDisponivel(item.itemId))) {
+      toast({ title: 'Quantidade inválida', description: 'A quantidade não pode ultrapassar o saldo disponível para devolução.', variant: 'destructive' })
       return
     }
 

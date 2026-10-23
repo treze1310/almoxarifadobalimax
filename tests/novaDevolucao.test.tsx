@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, expect, test, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import NovoRomaneioPage from '../src/pages/romaneios/NovoRomaneio'
 
@@ -61,11 +61,28 @@ test('Ver Detalhes abre os itens da retirada sem selecionar ou movimentar o roma
 test('devolução mostra nome e unidade do item fora do catálogo e mantém o saldo restante', async () => {
   abrir()
   fireEvent.click(await screen.findByRole('button', { name: 'Selecionar', exact: true }))
-  const item = await screen.findByRole('combobox', { name: '11934 - RÁDIO COMUNICADOR', exact: true })
+  await screen.findByText('11934 - RÁDIO COMUNICADOR')
+  const item = screen.getByText('11934 - RÁDIO COMUNICADOR').closest('button')!
   expect(item.hasAttribute('disabled')).toBe(true)
   expect(screen.getByRole('cell', { name: 'UN', exact: true })).toBeTruthy()
   expect((screen.getByRole('spinbutton') as HTMLInputElement).value).toBe('2')
-  expect(screen.getByRole('cell', { name: '2', exact: true })).toBeTruthy()
+  expect(within(item.closest('tr')!).getAllByRole('cell')[2].textContent).toBe('2')
   expect(mocks.criar).not.toHaveBeenCalled()
   expect(mocks.atualizar).not.toHaveBeenCalled()
+})
+
+
+test('editar quantidade permite apagar e digitar zero, mas não salva devolução com quantidade zero', async () => {
+  abrir()
+  fireEvent.click(await screen.findByRole('button', { name: 'Selecionar', exact: true }))
+  await screen.findByText('11934 - RÁDIO COMUNICADOR')
+  const input = screen.getByRole('spinbutton') as HTMLInputElement
+  fireEvent.focus(input)
+  fireEvent.change(input, { target: { value: '' } })
+  expect(input.value).toBe('')
+  fireEvent.change(input, { target: { value: '0' } })
+  expect(input.value).toBe('0')
+  fireEvent.click(screen.getByRole('button', { name: 'Salvar rascunho', exact: true }))
+  expect(mocks.criar).not.toHaveBeenCalled()
+  expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Quantidade inválida' }))
 })
