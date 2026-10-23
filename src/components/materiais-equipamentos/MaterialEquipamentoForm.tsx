@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom'
-import { useCallback, useEffect, useState, useId } from 'react'
+import { useCallback, useEffect, useRef, useState, useId } from 'react'
 import { useForm } from 'react-hook-form'
+import { contar } from '@/lib/plural'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { verificarStatusCalibracao } from '@/utils/calibracao'
 import { Button } from '@/components/ui/button'
@@ -171,6 +172,27 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel, foote
     if (!form.getValues('codigo')) void sugerirCodigo()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData])
+
+  /**
+   * Item que não é de consumo já nasce com controle peça a peça.
+   *
+   * É a regra que o almoxarifado usa na prática: material permanente e item
+   * alugado são equipamento/ferramenta, e cada peça precisa do seu número para
+   * sair em romaneio e voltar identificada. Consumo e EPI seguem por saldo.
+   *
+   * É sugestão, não imposição: assim que alguém mexe no botão, a escolha é
+   * dele — inclusive na edição, onde nunca mexemos no que já está gravado.
+   */
+  const escolheuIdentificacao = useRef(false)
+  const categoriaEscolhida = form.watch('categoria')
+
+  useEffect(() => {
+    if (initialData || escolheuIdentificacao.current || !categoriaEscolhida) return
+
+    const porSaldo = /consumo|epi|epc/i.test(categoriaEscolhida)
+    form.setValue('exige_identificacao_individual', !porSaldo)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoriaEscolhida, initialData])
 
   const handleSubmit = async (data: MaterialEquipamentoFormData) => {
     const codigo = (data.codigo ?? '').trim()
@@ -436,9 +458,26 @@ export function MaterialEquipamentoForm({ initialData, onSubmit, onCancel, foote
                   <span className="font-mono">{form.watch('codigo') || '00125'}-2</span>) e é
                   acompanhada dentro deste item. Material de consumo não precisa.
                 </div>
+                {!initialData && field.value && (form.watch('estoque_atual') ?? 0) > 0 && (
+                  <p className="pt-1 text-xs text-primary">
+                    Ao salvar, serão criadas{' '}
+                    {contar(
+                      Math.floor(form.watch('estoque_atual') ?? 0),
+                      'peça numerada',
+                      'peças numeradas',
+                    )}
+                    , uma para cada unidade da quantidade informada.
+                  </p>
+                )}
               </div>
               <FormControl>
-                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={(marcado) => {
+                    escolheuIdentificacao.current = true
+                    field.onChange(marcado)
+                  }}
+                />
               </FormControl>
             </FormItem>
           )}

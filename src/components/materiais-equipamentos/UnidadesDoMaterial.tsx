@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Loader2, Package, Plus, Tag } from 'lucide-react'
+import { Loader2, Package, Pencil, Plus, Tag } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,6 +25,7 @@ import { usePermissoes } from '@/contexts/PermissionsContext'
 import { contar } from '@/lib/plural'
 import { formatCurrency } from '@/lib/utils'
 import { TableSkeleton } from '@/components/ds/EstadosPagina'
+import { UnidadeDialog } from '@/components/materiais-equipamentos/UnidadeDialog'
 
 /**
  * As unidades individuais (FILHOS) de um material ou equipamento.
@@ -44,6 +45,7 @@ interface Unidade {
   data_aquisicao: string | null
   valor_aquisicao: number | null
   observacoes: string | null
+  localizacao_id: string | null
   localizacao: { codigo: string; nome: string } | null
   colaboradores: { nome: string } | null
   nfe_importacao: { id: string; numero_nfe: string | null } | null
@@ -62,12 +64,15 @@ interface UnidadesDoMaterialProps {
   codigoMaterial: string
   /** Saldo do PAI, para avisar quando as unidades não batem com ele */
   estoqueAtual?: number | null
+  /** Nome do item PAI, mostrado na ficha da peça */
+  nomeMaterial?: string
 }
 
 export const UnidadesDoMaterial = ({
   materialId,
   codigoMaterial,
   estoqueAtual,
+  nomeMaterial,
 }: UnidadesDoMaterialProps) => {
   const { toast } = useToast()
   const { can } = usePermissoes()
@@ -78,6 +83,8 @@ export const UnidadesDoMaterial = ({
   const [carregando, setCarregando] = useState(true)
   const [gerando, setGerando] = useState(false)
   const [quantidadeNova, setQuantidadeNova] = useState('1')
+  /** Peça aberta na ficha; é onde se edita série, patrimônio e localização */
+  const [unidadeAberta, setUnidadeAberta] = useState<Unidade | null>(null)
 
   const carregar = useCallback(async () => {
     setCarregando(true)
@@ -87,6 +94,7 @@ export const UnidadesDoMaterial = ({
         .select(
           `id, codigo, sequencia, numero_serie, patrimonio_anterior, status,
            data_aquisicao, valor_aquisicao, observacoes,
+           localizacao_id,
            localizacao:localizacao_id (codigo, nome),
            colaboradores:colaborador_id (nome),
            nfe_importacao:nfe_id (id, numero_nfe)`,
@@ -263,6 +271,7 @@ export const UnidadesDoMaterial = ({
                 <TableHead>Localização</TableHead>
                 <TableHead>Origem</TableHead>
                 <TableHead className="min-w-[150px]">Status</TableHead>
+                <TableHead className="w-[70px] text-right">Ficha</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -333,12 +342,35 @@ export const UnidadesDoMaterial = ({
                       </Badge>
                     )}
                   </TableCell>
+                  <TableCell className="py-2 text-right">
+                    {/* Ficha da peça: série, patrimônio, localização e
+                        observações são dela, não do item */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      title={`Abrir a ficha de ${unidade.codigo}`}
+                      aria-label={`Abrir a ficha de ${unidade.codigo}`}
+                      onClick={() => setUnidadeAberta(unidade)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </div>
       )}
+
+      <UnidadeDialog
+        unidade={unidadeAberta}
+        nomeDoItem={nomeMaterial}
+        onOpenChange={(aberto) => {
+          if (!aberto) setUnidadeAberta(null)
+        }}
+        onSalvo={carregar}
+      />
     </div>
   )
 }

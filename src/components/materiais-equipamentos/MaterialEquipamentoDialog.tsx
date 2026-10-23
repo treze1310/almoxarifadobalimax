@@ -130,6 +130,7 @@ export const MaterialEquipamentoDialog = ({
                       materialId={(material as any).id}
                       codigoMaterial={(material as any).codigo}
                       estoqueAtual={(material as any).estoque_atual}
+                      nomeMaterial={(material as any).nome}
                     />
                   </div>
                 </>

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { palavrasDaBusca } from '@/lib/textoComparavel'
+import { contar } from '@/lib/plural'
 import { materialEquipamentoCampos } from '@/lib/validations'
 import { buscarTodasAsPaginas, executarPaginado } from '@/lib/consultaPaginada'
 import { useToast } from '@/components/ui/use-toast'
@@ -350,16 +351,59 @@ export function useMateriaisEquipamentos() {
         })
       }
 
+      /**
+       * Equipamento nasce com as peças já numeradas.
+       *
+       * Quem cadastra 5 esmerilhadeiras quer 5 peças (00125-1 a 00125-5), não
+       * um saldo 5 e a obrigação de gerar as unidades depois, item por item —
+       * e peça sem número não entra na retirada por etiqueta. Material de
+       * consumo não passa por aqui: parafuso não tem número de série.
+       */
+      let unidadesCriadas = 0
+      if (materialData.exige_identificacao_individual && (materialData.estoque_atual ?? 0) > 0) {
+        const { data: unidades, error: erroUnidades } = await supabase.rpc(
+          'gerar_unidades_material',
+          {
+            p_material_id: data.id,
+            p_quantidade: Math.floor(materialData.estoque_atual ?? 0),
+            p_valor: materialData.valor_unitario ?? null,
+            p_data_aquisicao: materialData.data_aquisicao || null,
+            p_localizacao_id: materialData.localizacao_id ?? null,
+          },
+        )
+
+        if (erroUnidades) {
+          // O item existe e tem saldo; o que falhou foi a numeração das peças,
+          // e isso se resolve pelo botão "Gerar" dentro do item.
+          toast({
+            title: 'Item criado, peças não geradas',
+            description: `${erroUnidades.message}. Gere as unidades dentro do item.`,
+            variant: 'destructive',
+          })
+        } else {
+          unidadesCriadas = (unidades as unknown[] | null)?.length ?? 0
+        }
+      }
+
       await registrarAuditoria({
         acao: 'material.criar',
         tabela: 'materiais_equipamentos',
         registroId: data.id,
-        dadosNovos: { codigo: data.codigo, nome: materialData.nome, tipo: materialData.tipo }
+        dadosNovos: {
+          codigo: data.codigo,
+          nome: materialData.nome,
+          tipo: materialData.tipo,
+          unidades_criadas: unidadesCriadas,
+        },
       })
 
       toast({
         title: 'Sucesso',
-        description: `${materialData.tipo === 'material' ? 'Material' : 'Equipamento'} "${materialData.nome}" cadastrado com sucesso!`,
+        description:
+          `${materialData.tipo === 'material' ? 'Material' : 'Equipamento'} "${materialData.nome}" cadastrado com sucesso!` +
+          (unidadesCriadas > 0
+            ? ` ${contar(unidadesCriadas, 'peça numerada foi criada', 'peças numeradas foram criadas')} (${data.codigo}-1 em diante).`
+            : ''),
       })
 
       await fetchMateriais()
