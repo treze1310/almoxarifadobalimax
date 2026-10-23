@@ -26,12 +26,14 @@ type Romaneio = Tables<'romaneios'> & {
     observacoes: string | null
     material_unidade_id?: string | null
     /** Peça individual desta linha, quando o item é acompanhado peça a peça */
-    material_unidades?: { codigo: string; status: string } | null
+    material_unidades?: { codigo: string; status: string; numero_serie?: string | null } | null
     materiais_equipamentos?: {
       codigo: string
       nome: string
       unidade_medida: string
       codigo_ncm: string | null
+      numero_serie?: string | null
+      marcas?: { nome: string } | null
       centros_custo?: {
         codigo: string
         nome: string
@@ -112,8 +114,8 @@ export function useRomaneios() {
           ${options?.includeItens ? `, romaneios_itens (
             id, material_excluido, quantidade, valor_unitario, valor_total,
             numero_serie, codigo_patrimonial, observacoes, material_unidade_id,
-            material_unidades:material_unidade_id (codigo, status),
-            materiais_equipamentos:material_equipamento_id (id, codigo, nome, unidade_medida, codigo_ncm, centros_custo:centro_custo_id (codigo, descricao, empresas:empresa_id(nome)))
+            material_unidades:material_unidade_id (codigo, status, numero_serie),
+            materiais_equipamentos:material_equipamento_id (id, codigo, nome, unidade_medida, codigo_ncm, numero_serie, marcas:marca_id(nome), centros_custo:centro_custo_id (codigo, descricao, empresas:empresa_id(nome)))
           )` : ''}
         `)
         .order('created_at', { ascending: false })
@@ -159,8 +161,8 @@ export function useRomaneios() {
           romaneios_itens (
             id, material_excluido, quantidade, valor_unitario, valor_total,
             numero_serie, codigo_patrimonial, observacoes, material_unidade_id,
-            material_unidades:material_unidade_id (codigo, status),
-            materiais_equipamentos:material_equipamento_id (id, codigo, nome, unidade_medida, codigo_ncm, centros_custo:centro_custo_id (codigo, descricao, empresas:empresa_id(nome)))
+            material_unidades:material_unidade_id (codigo, status, numero_serie),
+            materiais_equipamentos:material_equipamento_id (id, codigo, nome, unidade_medida, codigo_ncm, numero_serie, marcas:marca_id(nome), centros_custo:centro_custo_id (codigo, descricao, empresas:empresa_id(nome)))
           )
         `)
         .eq('id', id)
@@ -433,8 +435,8 @@ export function useRomaneios() {
           romaneios_itens (
             id, material_equipamento_id, material_excluido, quantidade, valor_unitario, valor_total,
             numero_serie, codigo_patrimonial, observacoes, material_unidade_id,
-            material_unidades:material_unidade_id (codigo, status),
-            materiais_equipamentos:material_equipamento_id (id, codigo, nome, unidade_medida, codigo_ncm, centros_custo:centro_custo_id (codigo, descricao, empresas:empresa_id(nome)))
+            material_unidades:material_unidade_id (codigo, status, numero_serie),
+            materiais_equipamentos:material_equipamento_id (id, codigo, nome, unidade_medida, codigo_ncm, numero_serie, marcas:marca_id(nome), centros_custo:centro_custo_id (codigo, descricao, empresas:empresa_id(nome)))
           )
         `)
         .eq('tipo', 'retirada')
@@ -483,6 +485,8 @@ export function useRomaneios() {
         centro_custo_origem_id: data.centro_custo_origem_id && data.centro_custo_origem_id !== '' ? data.centro_custo_origem_id : null,
         centro_custo_destino_id: data.centro_custo_destino_id && data.centro_custo_destino_id !== '' ? data.centro_custo_destino_id : null,
         observacoes: data.observacoes,
+        fiscalizacao_nome: data.fiscalizacao_nome?.trim() || null,
+        transporte_nome: data.transporte_nome?.trim() || null,
       }
 
       // Update romaneio

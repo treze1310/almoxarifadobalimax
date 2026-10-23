@@ -257,6 +257,8 @@ export const romaneioSchema = z.object({
   responsavel_nome: z.string().max(255, 'Nome do responsável muito longo').optional(),
   responsavel_retirada: z.string().max(255, 'Responsável pela retirada muito longo').optional(),
   responsavel_entrega: z.string().max(255, 'Responsável pela entrega muito longo').optional(),
+  fiscalizacao_nome: z.string().trim().max(255, 'Nome da fiscalização muito longo').optional(),
+  transporte_nome: z.string().trim().max(255, 'Nome do transporte muito longo').optional(),
   observacoes: z.string().optional(),
   status: z.enum(['pendente', 'aprovado', 'retirado', 'devolvido', 'cancelado']).default('pendente'),
   valor_total: z.number().min(0, 'Valor deve ser positivo').optional(),

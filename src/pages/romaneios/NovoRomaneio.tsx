@@ -94,6 +94,8 @@ type ComponentFormValues = {
   centro_custo_destino_id?: string
   responsavel_retirada?: string
   observacoes?: string
+  fiscalizacao_nome?: string
+  transporte_nome?: string
   itens: Array<{
     material_equipamento_id: string
     quantidade: number
@@ -193,6 +195,8 @@ const NovoRomaneioPage = () => {
             centro_custo_origem_id: romaneio.centro_custo_origem_id || '',
             centro_custo_destino_id: romaneio.centro_custo_destino_id || '',
             observacoes: romaneio.observacoes || '',
+            fiscalizacao_nome: romaneio.fiscalizacao_nome || '',
+            transporte_nome: romaneio.transporte_nome || '',
             itens: itensForForm
           })
 
@@ -466,6 +470,8 @@ const NovoRomaneioPage = () => {
           centro_custo_origem_id: data.centro_custo_origem_id && data.centro_custo_origem_id !== '' ? data.centro_custo_origem_id : undefined,
           centro_custo_destino_id: data.centro_custo_destino_id && data.centro_custo_destino_id !== '' ? data.centro_custo_destino_id : undefined,
           observacoes: data.observacoes,
+          fiscalizacao_nome: data.fiscalizacao_nome,
+          transporte_nome: data.transporte_nome,
           itens: expandirItensPorPeca(data.itens),
         }
 
@@ -489,6 +495,8 @@ const NovoRomaneioPage = () => {
           centro_custo_destino_id: data.centro_custo_destino_id && data.centro_custo_destino_id !== '' ? data.centro_custo_destino_id : undefined,
           responsavel_retirada: responsavelRetirada,
           observacoes: data.observacoes,
+          fiscalizacao_nome: data.fiscalizacao_nome,
+          transporte_nome: data.transporte_nome,
           status: saveAndApprove ? 'aprovado' : 'pendente',
           romaneio_origem_id: selectedRomaneio?.id, // Para devoluções, salvar o romaneio original
           itens: expandirItensPorPeca(data.itens),
@@ -885,6 +893,14 @@ const NovoRomaneioPage = () => {
                 disabled={isDevolucao}
               />
             </div>
+            {(['fiscalizacao_nome', 'transporte_nome'] as const).map(nome => (
+              <FormField key={nome} control={form.control} name={nome} render={({ field }) => (
+                <FormItem><FormLabel>{nome === 'fiscalizacao_nome' ? 'Fiscalização' : 'Transporte'}</FormLabel>
+                  <FormControl><Input {...field} value={field.value ?? ''} maxLength={255} placeholder="Nome do responsável" /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            ))}
             <FormField
               control={form.control}
               name="observacoes"

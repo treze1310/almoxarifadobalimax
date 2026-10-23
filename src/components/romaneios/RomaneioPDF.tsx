@@ -9,6 +9,7 @@ type Romaneio = Tables<'romaneios'> & {
   fornecedores?: { nome: string } | null
   romaneios_itens?: Array<{
     id: string
+    material_unidades?: { codigo?: string; numero_serie?: string | null } | null
     quantidade: number
     valor_unitario: number | null
     valor_total: number | null
@@ -20,6 +21,8 @@ type Romaneio = Tables<'romaneios'> & {
       nome: string
       unidade_medida: string
       codigo_ncm: string | null
+      numero_serie?: string | null
+      marcas?: { nome: string } | null
     } | null
   }>
 }
@@ -31,10 +34,16 @@ interface RomaneioePDFProps {
 
 const formatDate = (dateString: string | null) => {
   if (!dateString) return 'Data não informada'
-  return new Date(dateString).toLocaleDateString('pt-BR')
+  return new Date(dateString).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
+const textoSeguro = (valor: string | null | undefined) => (valor || 'Não informado').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
+
 export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyWithLogo | null): string => {
+  const itensOrdenados = [...(romaneio.romaneios_itens ?? [])].sort((a, b) =>
+    (a.materiais_equipamentos?.nome ?? '').localeCompare(b.materiais_equipamentos?.nome ?? '', 'pt-BR', { sensitivity: 'base', numeric: true })
+    || (a.material_unidades?.codigo ?? '').localeCompare(b.material_unidades?.codigo ?? '', 'pt-BR', { numeric: true }))
+  const nomeCautelado = romaneio.colaboradores?.nome || romaneio.responsavel_nome || romaneio.responsavel_retirada
   const totalItens = romaneio.romaneios_itens?.length || 0
   const valorTotal = romaneio.valor_total || 0
 
@@ -245,8 +254,8 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
           .signature-section {
             margin-top: 10px;
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 30px;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
           }
 
           .signature-box {
@@ -282,6 +291,7 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
             margin-top: 2px;
           }
 
+          .signature-name { font-size: 10px; overflow-wrap: anywhere; margin-bottom: 4px; }
           .signature-title {
             font-size: 9px;
             color: #666;
@@ -375,14 +385,14 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
                 </tr>
               </thead>
               <tbody>
-                ${romaneio.romaneios_itens?.map(item => `
+                ${itensOrdenados.map(item => `
                   <tr>
                     <td>${(item as any).material_unidades?.codigo || item.materiais_equipamentos?.codigo || 'N/C'}</td>
                     <td style="text-align: left; padding-left: 8px;">
                       ${item.materiais_equipamentos?.nome || 'N/A'}
                     </td>
-                    <td>GENÉRICA</td>
-                    <td>${item.numero_serie || 'N/C'}</td>
+                    <td>${textoSeguro(item.materiais_equipamentos?.marcas?.nome)}</td>
+                    <td>${textoSeguro(item.material_unidades ? (item.material_unidades.numero_serie || item.numero_serie) : (item.numero_serie || item.materiais_equipamentos?.numero_serie))}</td>
                     <td><strong>${item.quantidade}</strong></td>
                     <td>${item.valor_unitario != null ? formatCurrency(item.valor_unitario) : 'N/C'}</td>
                     <td><strong>${item.materiais_equipamentos?.codigo_ncm || 'N/C'}</strong></td>
@@ -420,6 +430,7 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
             <div class="signature-box">
               <div>${romaneio.tipo === 'devolucao' ? 'RECEBIMENTO' : 'EXPEDIÇÃO'}</div>
               <div class="signature-line"></div>
+              <div class="signature-name">${textoSeguro(romaneio.expedicao_nome)}</div>
               <div class="signature-title">${romaneio.tipo === 'devolucao' ? 'Responsável pelo Recebimento' : 'Responsável pela Expedição'}</div>
             </div>
             <div class="signature-box">
@@ -431,12 +442,19 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
               ` : `
                 <div class="signature-line"></div>
               `}
-              <div class="signature-title">${romaneio.tipo === 'devolucao' ? 'Responsável pela Devolução' : 'Responsável pelo Recebimento'}</div>
+              <div class="signature-name">${textoSeguro(nomeCautelado)}</div>
+              <div class="signature-title">Pessoa cautelada / ${romaneio.tipo === 'devolucao' ? 'Devolução' : 'Recebimento'}</div>
             </div>
             <div class="signature-box">
               <div>FISCALIZAÇÃO</div>
               <div class="signature-line"></div>
+              <div class="signature-name">${textoSeguro(romaneio.fiscalizacao_nome)}</div>
               <div class="signature-title">Fiscalização / Aprovação</div>
+            </div>
+            <div class="signature-box">
+              <div>TRANSPORTE</div><div class="signature-line"></div>
+              <div class="signature-name">${textoSeguro(romaneio.transporte_nome)}</div>
+              <div class="signature-title">Responsável pelo transporte</div>
             </div>
           </div>
 

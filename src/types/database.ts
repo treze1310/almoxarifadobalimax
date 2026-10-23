@@ -967,6 +967,9 @@ export type Database = {
         Row: {
           centro_custo_destino_id: string | null
           centro_custo_origem_id: string | null
+          expedicao_nome: string | null
+          fiscalizacao_nome: string | null
+          transporte_nome: string | null
           assinatura_em: string | null
           assinatura_retirada: string | null
           colaborador_id: string | null
@@ -992,6 +995,9 @@ export type Database = {
         Insert: {
           centro_custo_destino_id?: string | null
           centro_custo_origem_id?: string | null
+          expedicao_nome?: string | null
+          fiscalizacao_nome?: string | null
+          transporte_nome?: string | null
           assinatura_em?: string | null
           assinatura_retirada?: string | null
           colaborador_id?: string | null
@@ -1017,6 +1023,9 @@ export type Database = {
         Update: {
           centro_custo_destino_id?: string | null
           centro_custo_origem_id?: string | null
+          expedicao_nome?: string | null
+          fiscalizacao_nome?: string | null
+          transporte_nome?: string | null
           assinatura_em?: string | null
           assinatura_retirada?: string | null
           colaborador_id?: string | null
@@ -1523,6 +1532,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      romaneio_dados_expedicao: { Args: { p_romaneio_id: string }; Returns: Json }
       excluir_romaneio: { Args: { p_romaneio_id: string }; Returns: undefined }
       confirm_user_email: { Args: { user_email: string }; Returns: undefined }
       generate_sequential_number: {

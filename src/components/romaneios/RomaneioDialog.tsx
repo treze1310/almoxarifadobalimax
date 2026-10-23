@@ -1,4 +1,4 @@
-import { imprimirRomaneioPDF } from '@/utils/romaneioPdf'
+import { imprimirRomaneioPDF, gerarRomaneioPDF } from '@/utils/romaneioPdf'
 import { usePermissoes } from '@/contexts/PermissionsContext'
 import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -20,8 +20,6 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import { formatDate, formatDateTime, formatCurrency } from '@/lib/utils'
-import { generateRomaneoPDFContent } from './RomaneioPDF'
-import { companyService } from '@/services/companyService'
 import pdfService from '@/services/pdfService'
 import { useRomaneios } from '@/hooks/useRomaneios'
 import { useToast } from '@/components/ui/use-toast'
@@ -158,41 +156,9 @@ const RomaneioDialog = ({ romaneio, trigger, onRomaneioUpdated }: RomaneioDialog
     }
 
     try {
-      // 🏢 Buscar dados da empresa com cache
-      const company = await companyService.getActiveCompany()
-      if (!company) {
-        throw new Error('Dados da empresa não encontrados')
-      }
+      setIsGeneratingPDF(true)
+      await gerarRomaneioPDF(romaneio)
 
-      // 🚀 Gerar PDF usando o serviço otimizado
-      const success = await pdfService.generatePDF({
-        filename: `romaneio-${romaneio.numero}.pdf`,
-        htmlContent: generateRomaneoPDFContent(romaneio as any, company),
-        paginarRomaneio: true,
-        onStart: () => {
-          setIsGeneratingPDF(true)
-          console.log('🚀 Starting PDF generation for romaneio:', romaneio.numero)
-        },
-        onFinish: () => {
-          setIsGeneratingPDF(false)
-          console.log('✅ PDF generation finished for romaneio:', romaneio.numero)
-        },
-        onError: (error) => {
-          console.error('❌ PDF generation failed:', error)
-          toast({
-            title: 'Erro',
-            description: error.message || 'Erro ao gerar PDF',
-            variant: 'destructive',
-          })
-        }
-      })
-
-      if (success) {
-        toast({
-          title: 'Sucesso',
-          description: 'PDF gerado com sucesso!',
-        })
-      }
     } catch (error: any) {
       console.error('❌ Unexpected error in PDF generation:', error)
       setIsGeneratingPDF(false)
@@ -201,6 +167,8 @@ const RomaneioDialog = ({ romaneio, trigger, onRomaneioUpdated }: RomaneioDialog
         description: error.message || 'Erro inesperado ao gerar PDF',
         variant: 'destructive',
       })
+    } finally {
+      setIsGeneratingPDF(false)
     }
   }
 

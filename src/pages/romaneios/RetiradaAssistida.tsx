@@ -115,6 +115,8 @@ interface RascunhoRetirada {
   data: string
   itens: ItemRetirada[]
   observacoes: string
+  fiscalizacao_nome?: string
+  transporte_nome?: string
 }
 
 const horaLocalAgora = () => {
@@ -525,6 +527,8 @@ export const RetiradaAssistida = () => {
         centro_custo_origem_id: centroCustoOrigemId || undefined,
         centro_custo_destino_id: centroCustoId,
         observacoes: observacoes || undefined,
+        fiscalizacao_nome: rascunho.fiscalizacao_nome,
+        transporte_nome: rascunho.transporte_nome,
         // 'aprovado' faz o estoqueService dar a baixa no estoque
         status: 'aprovado',
         valor_total: valorTotal,
@@ -971,6 +975,15 @@ export const RetiradaAssistida = () => {
                 />
               </div>
 
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2"><Label>Expedição</Label><Input aria-label="Expedição" value={usuario?.nome || ''} readOnly /></div>
+                {(['fiscalizacao_nome', 'transporte_nome'] as const).map(nome => (
+                  <div className="space-y-2" key={nome}>
+                    <Label htmlFor={nome}>{nome === 'fiscalizacao_nome' ? 'Fiscalização' : 'Transporte'}</Label>
+                    <Input id={nome} value={rascunho[nome] ?? ''} maxLength={255} onChange={e => campo(nome)(e.target.value)} placeholder="Nome do responsável" />
+                  </div>
+                ))}
+              </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>Assinatura de quem recebe</Label>

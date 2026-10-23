@@ -55,6 +55,11 @@ export async function enriquecerComMaiorPreco(romaneio: any): Promise<any> {
 async function criarRomaneioPDF(romaneioInput: any): Promise<jsPDF> {
 
   const romaneio = await enriquecerComMaiorPreco(romaneioInput)
+  if (!romaneio.expedicao_nome && romaneio.id) {
+    const { data, error } = await supabase.rpc('romaneio_dados_expedicao', { p_romaneio_id: romaneio.id })
+    if (error) throw error
+    romaneio.expedicao_nome = (data as { nome?: string } | null)?.nome ?? null
+  }
   const company = await companyService.getActiveCompany()
 
   const paginas = await capturarPaginasRomaneioPDF(generateRomaneoPDFContent(romaneio, company))
