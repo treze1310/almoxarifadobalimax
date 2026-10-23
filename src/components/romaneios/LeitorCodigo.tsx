@@ -37,7 +37,7 @@ interface LeitorCodigoProps {
   /** Texto do campo, quando quem usa o componente precisa limpá-lo de fora */
   valor?: string
   placeholder?: string
-  /** Mantém o foco no campo para o leitor físico funcionar sem clique */
+  /** Foca o leitor ao abrir, sem tirar o foco dos outros campos durante a edição. */
   autoFoco?: boolean
 }
 
@@ -152,10 +152,6 @@ export const LeitorCodigo = ({
               e.preventDefault()
               emitir(texto)
               escrever('')
-            }}
-            // O leitor físico perde o bipe se o foco escapar
-            onBlur={() => {
-              if (autoFoco && !camera) setTimeout(() => campoRef.current?.focus(), 80)
             }}
             placeholder={placeholder}
             className="pl-9"

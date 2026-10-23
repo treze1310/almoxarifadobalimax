@@ -19,7 +19,7 @@ import {
   Building,
   AlertTriangle
 } from 'lucide-react'
-import { formatDate, formatDateTime } from '@/lib/utils'
+import { formatDate, formatDateTime, formatCurrency } from '@/lib/utils'
 import { generateRomaneoPDFContent } from './RomaneioPDF'
 import { companyService } from '@/services/companyService'
 import pdfService from '@/services/pdfService'
@@ -423,10 +423,10 @@ const RomaneioDialog = ({ romaneio, trigger, onRomaneioUpdated }: RomaneioDialog
                             {item.materiais_equipamentos?.unidade_medida || '-'}
                           </td>
                           <td className="py-2 px-4 text-right">
-                            {item.valor_unitario ? `R$ ${item.valor_unitario.toFixed(2)}` : '-'}
+                            {item.valor_unitario != null ? formatCurrency(item.valor_unitario) : '-'}
                           </td>
                           <td className="py-2 px-4 text-right font-medium">
-                            {item.valor_total ? `R$ ${item.valor_total.toFixed(2)}` : '-'}
+                            {item.valor_total != null ? formatCurrency(item.valor_total) : '-'}
                           </td>
                         </tr>
                       ))}
@@ -439,7 +439,7 @@ const RomaneioDialog = ({ romaneio, trigger, onRomaneioUpdated }: RomaneioDialog
                         <div className="text-right">
                           <p className="text-sm text-muted-foreground">Total Geral</p>
                           <p className="text-lg font-bold">
-                            R$ {romaneio.valor_total.toFixed(2)}
+                            {formatCurrency(romaneio.valor_total)}
                           </p>
                         </div>
                       </div>

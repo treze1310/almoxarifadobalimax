@@ -831,13 +831,15 @@ export const RetiradaAssistida = () => {
                               </Button>
                               <Input
                                 type="number"
+                                aria-label={`Quantidade a retirar de ${item.nome}`}
+                                step={1}
                                 min={1}
                                 max={item.estoqueAtual}
                                 value={item.quantidade}
                                 onChange={(e) =>
                                   mudarQuantidade(chaveDaLinha(item), parseInt(e.target.value) || 0)
                                 }
-                                className="h-8 w-16 text-center tabular-nums"
+                                className="h-9 w-28 min-w-28 shrink-0 px-2 text-center text-base tabular-nums"
                               />
                               <Button
                                 type="button"

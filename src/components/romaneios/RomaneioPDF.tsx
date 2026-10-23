@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/lib/utils'
 import { Tables } from '@/types/database'
 import { CompanyWithLogo } from '@/services/companyService'
 
@@ -383,9 +384,9 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
                     <td>GENÉRICA</td>
                     <td>${item.numero_serie || 'N/C'}</td>
                     <td><strong>${item.quantidade}</strong></td>
-                    <td>${item.valor_unitario ? `R$ ${item.valor_unitario.toFixed(2)}` : 'N/C'}</td>
+                    <td>${item.valor_unitario != null ? formatCurrency(item.valor_unitario) : 'N/C'}</td>
                     <td><strong>${item.materiais_equipamentos?.codigo_ncm || 'N/C'}</strong></td>
-                    <td><strong>${item.valor_total ? `R$ ${item.valor_total.toFixed(2)}` : 'N/C'}</strong></td>
+                    <td><strong>${item.valor_total != null ? formatCurrency(item.valor_total) : 'N/C'}</strong></td>
                   </tr>
                 `).join('') || ''}
 
@@ -406,7 +407,7 @@ export const generateRomaneoPDFContent = (romaneio: Romaneio, company?: CompanyW
           </div>
 
           <div class="total-section">
-            R$ ${finalTotal > 0 ? finalTotal.toFixed(2) : '-'}
+            ${formatCurrency(finalTotal)}
           </div>
 
           <!-- Verification Section -->
