@@ -58,6 +58,8 @@ interface MovimentacaoEstoqueProps {
   materialNome: string
   estoqueAtual: number
   unidadeMedida: string
+  /** Avisa a tela que o saldo mudou, para a listagem atrás se atualizar */
+  onMovimentado?: () => void
 }
 
 export function MovimentacaoEstoque({
@@ -65,6 +67,7 @@ export function MovimentacaoEstoque({
   materialNome,
   estoqueAtual,
   unidadeMedida,
+  onMovimentado,
 }: MovimentacaoEstoqueProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
@@ -96,6 +99,7 @@ export function MovimentacaoEstoque({
     if (result.error === null) {
       setIsOpen(false)
       form.reset()
+      onMovimentado?.()
     }
   }
 

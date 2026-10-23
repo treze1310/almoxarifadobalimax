@@ -281,10 +281,22 @@ const MateriaisEquipamentosPage = () => {
       })
     : paginaDeDados.dados
 
+  /**
+   * A listagem precisa ser recarregada por quem a montou.
+   *
+   * O que aparece na tela é a página servida pelo banco (`buscarPagina`), não
+   * a lista interna do hook. Criar, editar e excluir atualizavam só a lista do
+   * hook — que esta tela não usa —, então o item excluído continuava na tela
+   * até alguém dar F5. Os contadores de alerta acompanham `paginaDeDados`, e
+   * por isso se atualizam junto.
+   */
+  const atualizarListagem = () => recarregarPagina()
+
   const handleCreate = async (data: MaterialEquipamentoFormData) => {
     const result = await createMaterial(data)
     if (result.error === null) {
       setIsCreateDialogOpen(false)
+      await atualizarListagem()
     }
   }
 
@@ -317,6 +329,7 @@ const MateriaisEquipamentosPage = () => {
     const result = await createMaterial(payload)
     if (result.error === null) {
       setCloningMaterial(null)
+      await atualizarListagem()
     }
   }
 
@@ -325,6 +338,7 @@ const MateriaisEquipamentosPage = () => {
     const result = await updateMaterial(editingMaterial.id, data)
     if (result.error === null) {
       setEditingMaterial(null)
+      await atualizarListagem()
     }
   }
 
@@ -352,14 +366,14 @@ const MateriaisEquipamentosPage = () => {
     const result = await deleteMaterial(deletingMaterial.id)
     if (result.error === null) {
       setDeletingMaterial(null)
+      await atualizarListagem()
     }
   }
 
-  const handleDependenciesResolved = () => {
+  const handleDependenciesResolved = async () => {
     setDependenciesDialogOpen(false)
     setMaterialWithDependencies(null)
-    // Recarregar dados
-    fetchMateriais({ includeInactive: showInactive })
+    await atualizarListagem()
   }
 
   const getStatusColor = (status: string) => {
@@ -1106,6 +1120,7 @@ const MateriaisEquipamentosPage = () => {
               materialNome={movimentacaoMaterial.nome}
               estoqueAtual={movimentacaoMaterial.estoque_atual}
               unidadeMedida={movimentacaoMaterial.unidade_medida}
+              onMovimentado={atualizarListagem}
             />
           )}
         </DialogContent>
@@ -1125,7 +1140,7 @@ const MateriaisEquipamentosPage = () => {
         aberto={importarAberto}
         materiais={materiaisParaPlanilha}
         onFechar={() => setImportarAberto(false)}
-        onImportado={() => fetchMateriais({ includeInactive: showInactive })}
+        onImportado={atualizarListagem}
       />
 
     </div>
