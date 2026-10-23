@@ -51,10 +51,16 @@ const DialogContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
     /** sm=480 · md=640 · lg=896 · xl=1152 · full=tela menos 2rem */
     tamanho?: TamanhoDialogo
+    /**
+     * Classe do fundo escuro. Serve para empilhar um diálogo sobre outro: o
+     * fundo precisa subir junto com o conteúdo, senão o diálogo de cima
+     * aparece atrás do de baixo.
+     */
+    overlayClassName?: string
   }
->(({ className, children, tamanho, ...props }, ref) => (
+>(({ className, children, tamanho, overlayClassName, ...props }, ref) => (
   <DialogPortal>
-    <DialogOverlay />
+    <DialogOverlay className={overlayClassName} />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(

@@ -1,6 +1,16 @@
 import { Link } from 'react-router-dom'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Loader2, Package, Pencil, Plus, Tag } from 'lucide-react'
+import { Loader2, Package, Pencil, Plus, Tag, Trash2 } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -75,9 +85,11 @@ export const UnidadesDoMaterial = ({
   nomeMaterial,
 }: UnidadesDoMaterialProps) => {
   const { toast } = useToast()
-  const { can } = usePermissoes()
+  const { can, isAdmin } = usePermissoes()
   const podeEditar = can('materiais', 'update')
   const podeCriar = can('materiais', 'create')
+  // Apagar peça é coisa de administrador; o resto marca como baixada
+  const podeExcluir = isAdmin
 
   const [unidades, setUnidades] = useState<Unidade[]>([])
   const [carregando, setCarregando] = useState(true)
@@ -85,6 +97,9 @@ export const UnidadesDoMaterial = ({
   const [quantidadeNova, setQuantidadeNova] = useState('1')
   /** Peça aberta na ficha; é onde se edita série, patrimônio e localização */
   const [unidadeAberta, setUnidadeAberta] = useState<Unidade | null>(null)
+  /** Peça aguardando confirmação de exclusão */
+  const [unidadeParaExcluir, setUnidadeParaExcluir] = useState<Unidade | null>(null)
+  const [excluindo, setExcluindo] = useState(false)
 
   const carregar = useCallback(async () => {
     setCarregando(true)
@@ -191,6 +206,45 @@ export const UnidadesDoMaterial = ({
     }
   }
 
+  /**
+   * Excluir a peça de vez.
+   *
+   * O banco recusa peça que já saiu em romaneio (a linha do documento aponta
+   * para ela), e é melhor assim: o romaneio assinado não pode ficar apontando
+   * para o nada. Nesse caso o caminho é dar baixa, não apagar.
+   */
+  const excluirUnidade = async () => {
+    if (!unidadeParaExcluir) return
+
+    setExcluindo(true)
+    try {
+      const { error } = await supabase
+        .from('material_unidades')
+        .delete()
+        .eq('id', unidadeParaExcluir.id)
+
+      if (error) throw error
+
+      toast({
+        title: `Peça ${unidadeParaExcluir.codigo} excluída`,
+        description: 'O número dela não será reaproveitado nas próximas peças.',
+      })
+      setUnidadeParaExcluir(null)
+      await carregar()
+    } catch (erro) {
+      toast({
+        title: 'Erro ao excluir a peça',
+        description:
+          erro instanceof Error
+            ? `${erro.message}. Peça que já saiu em romaneio não pode ser excluída — marque como baixada.`
+            : 'Erro desconhecido',
+        variant: 'destructive',
+      })
+    } finally {
+      setExcluindo(false)
+    }
+  }
+
   if (carregando) return <TableSkeleton colunas={5} linhas={3} />
 
   return (
@@ -271,7 +325,7 @@ export const UnidadesDoMaterial = ({
                 <TableHead>Localização</TableHead>
                 <TableHead>Origem</TableHead>
                 <TableHead className="min-w-[150px]">Status</TableHead>
-                <TableHead className="w-[70px] text-right">Ficha</TableHead>
+                <TableHead className="w-[96px] text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -342,19 +396,33 @@ export const UnidadesDoMaterial = ({
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell className="py-2 text-right">
-                    {/* Ficha da peça: série, patrimônio, localização e
-                        observações são dela, não do item */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      title={`Abrir a ficha de ${unidade.codigo}`}
-                      aria-label={`Abrir a ficha de ${unidade.codigo}`}
-                      onClick={() => setUnidadeAberta(unidade)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+                  <TableCell className="py-2">
+                    <div className="flex items-center justify-end gap-1">
+                      {/* Ficha da peça: série, patrimônio, localização e
+                          observações são dela, não do item */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title={`Abrir a ficha de ${unidade.codigo}`}
+                        aria-label={`Abrir a ficha de ${unidade.codigo}`}
+                        onClick={() => setUnidadeAberta(unidade)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      {podeExcluir && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          title={`Excluir a peça ${unidade.codigo}`}
+                          aria-label={`Excluir a peça ${unidade.codigo}`}
+                          onClick={() => setUnidadeParaExcluir(unidade)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -362,6 +430,38 @@ export const UnidadesDoMaterial = ({
           </Table>
         </div>
       )}
+
+      <AlertDialog
+        open={!!unidadeParaExcluir}
+        onOpenChange={(aberto) => {
+          if (!aberto && !excluindo) setUnidadeParaExcluir(null)
+        }}
+      >
+        <AlertDialogContent className="z-[10050]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir a peça {unidadeParaExcluir?.codigo}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A peça sai do cadastro e o número dela não volta a ser usado. Se a peça existe mas
+              não está mais em uso, prefira marcar como <strong>Baixado</strong> ou{' '}
+              <strong>Extraviado</strong> — assim o histórico dela continua de pé.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={excluindo}>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                // O diálogo fecha sozinho ao clicar; aqui ele espera o banco
+                e.preventDefault()
+                void excluirUnidade()
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {excluindo && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <UnidadeDialog
         unidade={unidadeAberta}
