@@ -15,7 +15,9 @@
     "preview": "vite preview",
     "test": "vitest --run --cache",
     "test:watch": "vitest",
-    "typecheck": "tsc -p tsconfig.app.json --noEmit"
+    "typecheck": "tsc -p tsconfig.app.json --noEmit",
+    "backup:dados": "node scripts/backup/exportar-dados.mjs",
+    "backup:completo": "node scripts/backup/dump-completo.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",

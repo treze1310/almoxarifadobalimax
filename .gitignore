@@ -80,6 +80,10 @@ yarn.lock
 
 # Database dumps / backups (NEVER commit)
 banco de dados/
+# Só a pasta de backups da raiz: "backup/" solto também pegava scripts/backup/
+/backup/
+*.sql
+*.dump
 *.backup
 *.backup.gz
 *.storage
