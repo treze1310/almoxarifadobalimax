@@ -52,23 +52,63 @@ caminho é o mesmo.
 
 ## 2. Backup do banco — o que já existe
 
-Dois comandos no projeto (rodados na máquina que hoje conversa com a nuvem):
+### Para migrar de servidor — `npm run backup:migracao`
+
+```bash
+npm run backup:migracao
+```
+
+Gera, em `backup/migracao-<data>/`, o pacote que vai para o servidor novo:
+
+| Arquivo | O que leva |
+|---|---|
+| `01-estrutura.sql` | tabelas, colunas geradas, chaves, índices, funções, gatilhos, views, RLS e políticas, permissões |
+| `02-dados.sql` | todas as linhas, na ordem das chaves estrangeiras, com o acerto das sequências |
+| `03-usuarios.sql` | as contas de acesso **com a senha criptografada** — ninguém precisa de senha nova |
+| `migrations/` | o histórico das migrações do projeto, para referência |
+| `LEIA-ME.md` | ordem de restauração e as contagens a conferir |
+
+Não precisa da senha do Postgres: fala com o banco pela API de gerenciamento,
+com o token pessoal. A definição de cada objeto vem do próprio Postgres
+(`pg_get_constraintdef`, `pg_get_functiondef`, `pg_get_triggerdef`…), então é o
+mesmo texto que o `pg_dump` usaria.
+
+**Antes de mandar, prove que restaura:**
+
+```bash
+npm run backup:validar backup/migracao-<data>
+```
+
+Sobe um Postgres 17 limpo num contêiner, restaura estrutura e dados e mostra as
+contagens. É o único jeito de saber que o arquivo serve.
+
+```bash
+bash scripts/backup/empacotar.sh backup/migracao-<data>
+```
+
+Fecha o pacote em `.zip` com soma de verificação. **O `03-usuarios.sql` contém
+hash de senha** — mande por canal privado e apague do servidor depois de
+restaurar.
+
+### Rede de segurança dos dados — `npm run backup:dados`
 
 ```bash
 npm run backup:dados
 ```
 
-Exporta todas as tabelas como JSON, pela API, usando a chave de serviço. **Já
-rodei**: 41.260 linhas em 26 tabelas, ~20 MB, em `backup/dados-<data>/`. Serve
-como rede de segurança dos dados.
+Exporta todas as tabelas como JSON, pela API. Serve para conferência e para
+recuperar uma linha específica, **não** para mudar de servidor: leva as linhas,
+não a estrutura nem as regras de acesso. Restaurar só os dados num banco vazio
+dá um banco onde qualquer usuário autenticado enxerga e altera tudo.
+
+### Com a senha do banco — `npm run backup:completo`
 
 ```bash
 npm run backup:completo
 ```
 
-Esse é o backup **de referência**: `pg_dump` com estrutura e dados (tabelas,
-colunas geradas, índices, funções, gatilhos e as políticas de acesso). Precisa
-de uma linha em `.env.carga` (arquivo que não vai para o git):
+O `pg_dump` oficial, rodando em contêiner, se você puser uma linha em
+`.env.carga`:
 
 ```
 SUPABASE_DB_URL=postgresql://postgres.SEUPROJETO:SENHA@aws-0-sa-east-1.pooler.supabase.com:5432/postgres
@@ -77,17 +117,13 @@ SUPABASE_DB_URL=postgresql://postgres.SEUPROJETO:SENHA@aws-0-sa-east-1.pooler.su
 A string sai do painel do Supabase em **Connect → Session pooler** (porta
 5432). Se ninguém souber a senha, dá para trocar em **Settings → Database →
 Reset database password** — isso **não** invalida as chaves de API que o
-sistema usa hoje.
-
-> **Por que o JSON não basta para mudar de servidor:** ele leva as linhas, não a
-> estrutura. Restaurar só os dados num banco vazio dá um banco sem as regras de
-> acesso — qualquer usuário autenticado enxergaria e alteraria tudo.
+sistema usa hoje. Vale a pena ter: é o formato que o `pg_restore` restaura
+seletivamente, tabela a tabela.
 
 > **Ponto de atenção:** as mudanças de estrutura dos últimos dias foram
-> aplicadas direto no banco da nuvem; a pasta `supabase/migrations` está vazia.
-> Hoje **a estrutura só existe dentro do banco**. Guarde o
-> `estrutura-<data>.sql` junto dos backups — é o que permite recriar o sistema
-> do zero.
+> aplicadas direto no banco da nuvem; a pasta `supabase/migrations` do projeto
+> está vazia. Hoje **a estrutura só existe dentro do banco** — e nos arquivos
+> que estes comandos geram. Guarde-os fora da máquina.
 
 ---
 
@@ -454,8 +490,8 @@ estarem de pé.
 
 ## 10. Resumo da ordem de execução
 
-1. Pegar a senha do banco e rodar `npm run backup:completo` (na máquina que já
-   conversa com a nuvem).
+1. Gerar e **validar** o pacote de migração na máquina que já conversa com a
+   nuvem (`npm run backup:migracao` e `npm run backup:validar`).
 2. Atualizar BIOS/iDRAC, pôr os discos em AHCI, comprar o segundo SSD.
 3. Instalar o Ubuntu Server 24.04 com **RAID 1**, SSH e IP fixo.
 4. Docker, Node 24, `unattended-upgrades`, nobreak.

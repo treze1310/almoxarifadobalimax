@@ -17,7 +17,9 @@
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "backup:dados": "node scripts/backup/exportar-dados.mjs",
-    "backup:completo": "node scripts/backup/dump-completo.mjs"
+    "backup:completo": "node scripts/backup/dump-completo.mjs",
+    "backup:migracao": "node scripts/backup/gerar-dump.mjs",
+    "backup:validar": "bash scripts/backup/validar-dump.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
